@@ -186,7 +186,6 @@
   </div>
 </div>
 
-{# T-CHAT-CSS: non-blocking (chat is not LCP, 1,052ms → off critical chain) #}
-<link rel="stylesheet" href="{{ asset('AiChatAssistant42/assets/css/chat-widget.css', 'plugin') }}?v={{ cache_bust_version().css }}" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="{{ asset('AiChatAssistant42/assets/css/chat-widget.css', 'plugin') }}?v={{ cache_bust_version().css }}"></noscript>
-<script src="{{ asset('AiChatAssistant42/assets/js/chat-widget.js', 'plugin') }}?v={{ cache_bust_version().js }}" defer></script>
+<link rel="stylesheet" href="{{ asset('AiChatAssistant42/assets/css/chat-widget.css', 'plugin') }}" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="{{ asset('AiChatAssistant42/assets/css/chat-widget.css', 'plugin') }}"></noscript>
+<script src="{{ asset('AiChatAssistant42/assets/js/chat-widget.js', 'plugin') }}" defer></script>
