@@ -26,6 +26,7 @@ use Plugin\AiChatAssistant42\Service\AiModelRegistry;
 use Plugin\AiChatAssistant42\Service\ChatFlowService;
 use Plugin\AiChatAssistant42\Service\ChatLogger;
 use Plugin\AiChatAssistant42\Service\EmailReplyService;
+use Plugin\AiChatAssistant42\Service\NotificationService;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -48,6 +49,7 @@ class ChatApiController extends AbstractController
         EntityManagerInterface $entityManager,
         private ChatFlowService $chatFlowService,
         private EmailReplyService $emailReplyService,
+        private NotificationService $notificationService,
         private LoggerInterface $logger,
     ) {
         $this->entityManager = $entityManager;
@@ -365,6 +367,20 @@ class ChatApiController extends AbstractController
             $this->logger->warning('メール返信依頼の送信に失敗しました', [
                 'session_id' => $sessionId,
                 'email' => $email,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        // LINE / Webhook は NotificationService 経由で通知（email は EmailReplyService に一本化済みのため除外）
+        try {
+            $this->notificationService->checkAndSend('email_reply_request', [
+                'session_id' => $sessionId,
+                'email' => $email,
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->warning('LINE/Webhook 通知の送信に失敗しました', [
+                'session_id' => $sessionId,
+                'event' => 'email_reply_request',
                 'error' => $e->getMessage(),
             ]);
         }

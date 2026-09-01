@@ -19,6 +19,8 @@ use Plugin\AiChatAssistant42\Repository\NotificationRepository;
 use GuzzleHttp\Client as HttpClient;
 use GuzzleHttp\Exception\GuzzleException;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Email;
 
 /**
  * 通知の発行を管理するサービス。
@@ -31,6 +33,7 @@ class NotificationService
     public function __construct(
         private NotificationRepository $notificationRepository,
         private LoggerInterface $logger,
+        private ?MailerInterface $mailer = null,
     ) {
     }
 
@@ -183,6 +186,23 @@ class NotificationService
                 date('c'),
                 print_r($context, true)
             );
+
+            if ($this->mailer === null) {
+                $this->logger->warning('メール通知の送信に失敗しました: Mailer が注入されていません', [
+                    'to' => $to,
+                    'event' => $event,
+                ]);
+                return;
+            }
+
+            $email = (new Email())
+                ->from('no-reply@example.com')
+                ->to($to)
+                ->subject($subject)
+                ->text($messageBody);
+
+            $this->mailer->send($email);
+
             $this->logger->info('メール通知を送信しました', [
                 'to' => $to,
                 'subject' => $subject,
