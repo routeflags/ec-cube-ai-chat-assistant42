@@ -177,11 +177,12 @@ class ChatApiController extends AbstractController
         }
 
         $conn = $this->entityManager->getConnection();
+        $since = (new \DateTimeImmutable('-1 minute'))->format('Y-m-d H:i:s');
 
-        // セッション単位の制限: session:{sessionId}
+        // セッション単位の制限: session:{sessionId}（MySQL/SQLite両対応のためバインドパラメータで日時を渡す）
         $recentCount = (int) $conn->fetchOne(
-            'SELECT COUNT(*) FROM plg_ai_chat_assistant_log WHERE session_id = :sid AND created_at > DATE_SUB(NOW(), INTERVAL 1 MINUTE)',
-            ['sid' => $sessionId]
+            'SELECT COUNT(*) FROM plg_ai_chat_assistant_log WHERE session_id = :sid AND created_at > :since',
+            ['sid' => $sessionId, 'since' => $since]
         );
 
         if ($recentCount >= $rateLimit) {
@@ -196,8 +197,8 @@ class ChatApiController extends AbstractController
         if ($clientIp !== '') {
             try {
                 $ipCount = (int) $conn->fetchOne(
-                    'SELECT COUNT(*) FROM plg_ai_chat_assistant_log WHERE client_ip = :ip AND created_at > DATE_SUB(NOW(), INTERVAL 1 MINUTE)',
-                    ['ip' => $clientIp]
+                    'SELECT COUNT(*) FROM plg_ai_chat_assistant_log WHERE client_ip = :ip AND created_at > :since',
+                    ['ip' => $clientIp, 'since' => $since]
                 );
                 $ipLimit = $rateLimit * 2;
                 if ($ipCount >= $ipLimit) {

@@ -1,0 +1,30 @@
+services:
+  eccube:
+    image: php:8.1-apache-bullseye
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/var/www/html
+      - /Users/bookair18/OS/home/Codes/github.com/routeflags/ec-cube-ai-chat-assistant42:/var/www/html/app/Plugin/AiChatAssistant42:rw
+      - eccube_var:/var/www/html/var
+      - eccube_vendor:/var/www/html/vendor
+    environment:
+      APP_ENV: "dev"
+      APP_DEBUG: 1
+      DATABASE_URL: "sqlite:///var/eccube.db"
+      DATABASE_SERVER_VERSION: 3
+      ECCUBE_AUTH_MAGIC: "verify-magic"
+      ECCUBE_ADMIN_ROUTE: "admin"
+    command: >
+      bash -c "
+      apt-get update && apt-get install -y libicu-dev libzip-dev libpng-dev libjpeg-dev libfreetype6-dev libonig-dev libsqlite3-dev git unzip sqlite3 &&
+      docker-php-ext-configure gd --with-freetype --with-jpeg &&
+      docker-php-ext-install -j$$(nproc) zip gd intl pdo pdo_sqlite opcache &&
+      a2enmod rewrite &&
+      echo 'ServerName localhost' >> /etc/apache2/apache2.conf &&
+      apache2-foreground
+      "
+
+volumes:
+  eccube_var:
+  eccube_vendor:
