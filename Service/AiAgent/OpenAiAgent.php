@@ -253,8 +253,14 @@ class OpenAiAgent implements AiAgentInterface
         $payload = [
             'model' => $this->model,
             'messages' => $messages,
-            'max_tokens' => $this->maxTokens,
         ];
+
+        // gpt-5.6 系は max_tokens ではなく max_completion_tokens を使用（API の破壊的変更）
+        if (str_starts_with($this->model, 'gpt-5.6')) {
+            $payload['max_completion_tokens'] = $this->maxTokens;
+        } else {
+            $payload['max_tokens'] = $this->maxTokens;
+        }
 
         if (!empty($tools)) {
             $payload['tools'] = $tools;

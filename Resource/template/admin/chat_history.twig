@@ -41,6 +41,7 @@
                                     <option value="">すべて</option>
                                     <option value="resolved" {% if filters.status == 'resolved' %}selected{% endif %}>解決済</option>
                                     <option value="unresolved" {% if filters.status == 'unresolved' %}selected{% endif %}>未解決</option>
+                                    <option value="email_pending" {% if filters.status == 'email_pending' %}selected{% endif %}>要メール対応</option>
                                     <option value="error" {% if filters.status == 'error' %}selected{% endif %}>エラー</option>
                                 </select>
                             </div>
@@ -78,6 +79,7 @@
                                     <th>ユーザーメッセージ</th>
                                     <th style="width: 90px;" class="text-end">応答時間</th>
                                     <th style="width: 80px;">状態</th>
+                                    <th style="width: 160px;">メール</th>
                                     <th style="width: 140px;"></th>
                                 </tr>
                             </thead>
@@ -102,6 +104,13 @@
                                             <span class="badge badge-ec-green">解決済</span>
                                         {% else %}
                                             <span class="badge badge-ec-glay">未解決</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-truncate" style="max-width: 160px;">
+                                        {% if log.emailReplyAddress %}
+                                            <a href="mailto:{{ log.emailReplyAddress }}" title="{{ log.emailReplyAddress }}">{{ log.emailReplyAddress }}</a>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
                                         {% endif %}
                                     </td>
                                     <td class="text-end text-nowrap">

@@ -59,6 +59,15 @@
 
                         <dt class="col-sm-3">注文 ID</dt>
                         <dd class="col-sm-9">{{ log.orderId|default('-') }}</dd>
+
+                        <dt class="col-sm-3">メール返信先</dt>
+                        <dd class="col-sm-9">
+                            {% if log.emailReplyAddress %}
+                                <a href="mailto:{{ log.emailReplyAddress }}">{{ log.emailReplyAddress }}</a>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </dd>
                     </dl>
                 </div>
             </div>
