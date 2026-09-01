@@ -22,7 +22,7 @@ use PHPUnit\Framework\TestCase;
 /**
  * OpenAiAgent の Capability Matrix 対応テスト。
  *
- * gpt-5.6 系では tools 併用時に reasoning_effort を除去し、
+ * gpt-5 系では tools 併用時に reasoning_effort を除去し、
  * gpt-4o 系では維持されることを検証する。
  */
 class OpenAiAgentTest extends TestCase
@@ -87,18 +87,18 @@ class OpenAiAgentTest extends TestCase
     }
 
     // ================================================================
-    //  gpt-5.6 + tools あり => reasoning 除去
+    //  gpt-5 + tools あり => reasoning 除去
     // ================================================================
 
     public function testGpt56WithToolsStripsReasoningEffort(): void
     {
         $registry = new AiModelRegistry($this->configPath);
-        $agent = new OpenAiAgent('test-key', 'gpt-5.6', 4096, '', 'https://api.openai.com/v1', 'medium', $registry);
+        $agent = new OpenAiAgent('test-key', 'gpt-5', 4096, '', 'https://api.openai.com/v1', 'medium', $registry);
 
         $payload = $this->invokeBuildPayload($agent, $this->createDummyMessages(), $this->createDummyTools());
 
-        self::assertArrayNotHasKey('reasoning_effort', $payload, 'gpt-5.6 + tools では reasoning_effort が除去されるべき');
-        self::assertArrayNotHasKey('reasoningEffort', $payload, 'gpt-5.6 + tools では reasoningEffort が除去されるべき');
+        self::assertArrayNotHasKey('reasoning_effort', $payload, 'gpt-5 + tools では reasoning_effort が除去されるべき');
+        self::assertArrayNotHasKey('reasoningEffort', $payload, 'gpt-5 + tools では reasoningEffort が除去されるべき');
         self::assertArrayHasKey('tools', $payload);
         self::assertArrayHasKey('max_completion_tokens', $payload);
         self::assertArrayNotHasKey('max_tokens', $payload);
@@ -107,7 +107,7 @@ class OpenAiAgentTest extends TestCase
     public function testGpt56TerraWithToolsStripsReasoningEffort(): void
     {
         $registry = new AiModelRegistry($this->configPath);
-        $agent = new OpenAiAgent('test-key', 'gpt-5.6-terra', 4096, '', 'https://api.openai.com/v1', 'high', $registry);
+        $agent = new OpenAiAgent('test-key', 'gpt-5-mini', 4096, '', 'https://api.openai.com/v1', 'high', $registry);
 
         $payload = $this->invokeBuildPayload($agent, $this->createDummyMessages(), $this->createDummyTools());
 
@@ -118,7 +118,7 @@ class OpenAiAgentTest extends TestCase
     public function testGpt56LunaWithToolsStripsReasoningEffort(): void
     {
         $registry = new AiModelRegistry($this->configPath);
-        $agent = new OpenAiAgent('test-key', 'gpt-5.6-luna', 4096, '', 'https://api.openai.com/v1', 'low', $registry);
+        $agent = new OpenAiAgent('test-key', 'gpt-5-nano', 4096, '', 'https://api.openai.com/v1', 'low', $registry);
 
         $payload = $this->invokeBuildPayload($agent, $this->createDummyMessages(), $this->createDummyTools());
 
@@ -127,17 +127,17 @@ class OpenAiAgentTest extends TestCase
     }
 
     // ================================================================
-    //  gpt-5.6 without tools => reasoning 維持
+    //  gpt-5 without tools => reasoning 維持
     // ================================================================
 
     public function testGpt56WithoutToolsKeepsReasoningEffort(): void
     {
         $registry = new AiModelRegistry($this->configPath);
-        $agent = new OpenAiAgent('test-key', 'gpt-5.6', 4096, '', 'https://api.openai.com/v1', 'medium', $registry);
+        $agent = new OpenAiAgent('test-key', 'gpt-5', 4096, '', 'https://api.openai.com/v1', 'medium', $registry);
 
         $payload = $this->invokeBuildPayload($agent, $this->createDummyMessages(), []);
 
-        self::assertArrayHasKey('reasoning_effort', $payload, 'gpt-5.6 tools なしでは reasoning は維持されるべき');
+        self::assertArrayHasKey('reasoning_effort', $payload, 'gpt-5 tools なしでは reasoning は維持されるべき');
         self::assertSame('medium', $payload['reasoning_effort']);
         self::assertArrayNotHasKey('tools', $payload);
     }
@@ -192,7 +192,7 @@ class OpenAiAgentTest extends TestCase
     public function testFallbackWithoutRegistryStripsReasoningForGpt56WithTools(): void
     {
         // Registry を渡さずフォールバック経路をテスト
-        $agent = new OpenAiAgent('test-key', 'gpt-5.6', 4096, '', 'https://api.openai.com/v1', 'medium', null);
+        $agent = new OpenAiAgent('test-key', 'gpt-5', 4096, '', 'https://api.openai.com/v1', 'medium', null);
 
         $payload = $this->invokeBuildPayload($agent, $this->createDummyMessages(), $this->createDummyTools());
 
@@ -241,7 +241,7 @@ class OpenAiAgentTest extends TestCase
     {
         $registry = new AiModelRegistry($this->configPath);
 
-        $agent56 = new OpenAiAgent('test-key', 'gpt-5.6', 2048, '', 'https://api.openai.com/v1', null, $registry);
+        $agent56 = new OpenAiAgent('test-key', 'gpt-5', 2048, '', 'https://api.openai.com/v1', null, $registry);
         $payload56 = $this->invokeBuildPayload($agent56, $this->createDummyMessages(), []);
         self::assertSame(2048, $payload56['max_completion_tokens']);
 
@@ -271,14 +271,14 @@ class OpenAiAgentTest extends TestCase
         }
 
         // 必須モデルが存在し、capability が正しく設定されている
-        self::assertArrayHasKey('gpt-5.6', $byId);
-        self::assertFalse($byId['gpt-5.6']['supports_reasoning_with_tools'], 'gpt-5.6 は false であるべき');
+        self::assertArrayHasKey('gpt-5', $byId);
+        self::assertFalse($byId['gpt-5']['supports_reasoning_with_tools'], 'gpt-5 は false であるべき');
 
-        self::assertArrayHasKey('gpt-5.6-terra', $byId);
-        self::assertFalse($byId['gpt-5.6-terra']['supports_reasoning_with_tools']);
+        self::assertArrayHasKey('gpt-5-mini', $byId);
+        self::assertFalse($byId['gpt-5-mini']['supports_reasoning_with_tools']);
 
-        self::assertArrayHasKey('gpt-5.6-luna', $byId);
-        self::assertFalse($byId['gpt-5.6-luna']['supports_reasoning_with_tools']);
+        self::assertArrayHasKey('gpt-5-nano', $byId);
+        self::assertFalse($byId['gpt-5-nano']['supports_reasoning_with_tools']);
 
         self::assertArrayHasKey('gpt-4o', $byId);
         self::assertTrue($byId['gpt-4o']['supports_reasoning_with_tools'], 'gpt-4o は true であるべき');
@@ -303,9 +303,9 @@ class OpenAiAgentTest extends TestCase
     {
         $registry = new AiModelRegistry($this->configPath);
 
-        self::assertFalse($registry->supportsReasoningWithTools('openai', 'gpt-5.6'));
-        self::assertFalse($registry->supportsReasoningWithTools('openai', 'gpt-5.6-terra'));
-        self::assertFalse($registry->supportsReasoningWithTools('openai', 'gpt-5.6-luna'));
+        self::assertFalse($registry->supportsReasoningWithTools('openai', 'gpt-5'));
+        self::assertFalse($registry->supportsReasoningWithTools('openai', 'gpt-5-mini'));
+        self::assertFalse($registry->supportsReasoningWithTools('openai', 'gpt-5-nano'));
         self::assertTrue($registry->supportsReasoningWithTools('openai', 'gpt-4o'));
         self::assertTrue($registry->supportsReasoningWithTools('openai', 'gpt-4o-mini'));
         // 未知モデルは true（デグレ防止）

@@ -309,8 +309,8 @@ class OpenAiAgent implements AiAgentInterface
             'messages' => $messages,
         ];
 
-        // gpt-5.6 系は max_tokens ではなく max_completion_tokens を使用（API の破壊的変更）
-        if (str_starts_with($this->model, 'gpt-5.6')) {
+        // gpt-5 / o1 / o3 系は max_tokens ではなく max_completion_tokens を使用（API の破壊的変更）
+        if (str_starts_with($this->model, 'gpt-5') || str_starts_with($this->model, 'o1') || str_starts_with($this->model, 'o3')) {
             $payload['max_completion_tokens'] = $this->maxTokens;
         } else {
             $payload['max_tokens'] = $this->maxTokens;
