@@ -124,15 +124,22 @@ class NotificationService
             'timestamp' => date('c'),
         ];
 
+        // Controller で暗号化された headers を復号し、送信ヘッダーに付与する（空なら何もしない — 後方互換）
+        $headers = $this->resolveWebhookHeaders($config);
+
         try {
             $client = new HttpClient();
-            $client->post($url, [
+            $requestOptions = [
                 'json' => $payload,
                 'timeout' => 10,
                 'connect_timeout' => 5,
                 // M3: リダイレクトを追従しない — SSRF 経由のリダイレクト悪用を防止
                 'allow_redirects' => false,
-            ]);
+            ];
+            if ($headers !== []) {
+                $requestOptions['headers'] = $headers;
+            }
+            $client->post($url, $requestOptions);
 
             $this->logger->info('Webhook 通知を送信しました', [
                 'url' => $url,
@@ -300,6 +307,67 @@ class NotificationService
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Webhook 用のカスタムヘッダーを config から復号して取得する.
+     *
+     * Controller では webhook_headers 全体を encryptIfNeeded() で暗号化して保存する。
+     * 文字列（JSON）の場合は全体を decrypt 後に json_decode し、各値も個別に
+     * decryptIfNeeded() で復号する（値が個別に暗号化されているケースにも対応）。
+     * 配列で保存されているレガシーデータも考慮する。空/未設定なら空配列を返す。
+     *
+     * @param array $config 通知設定
+     *
+     * @return array<string, string>
+     */
+    private function resolveWebhookHeaders(array $config): array
+    {
+        $rawHeaders = $config['headers'] ?? null;
+        if ($rawHeaders === null || $rawHeaders === '') {
+            return [];
+        }
+
+        // レガシー: 既に配列で保存されている場合（各値を個別に復号）
+        if (is_array($rawHeaders)) {
+            $headers = [];
+            foreach ($rawHeaders as $key => $value) {
+                $headerKey = trim((string) $key);
+                if ($headerKey === '') {
+                    continue;
+                }
+                $headers[$headerKey] = $this->decryptIfNeeded((string) $value);
+            }
+
+            return $headers;
+        }
+
+        // 文字列: 全体が暗号化されている可能性があるためまず復号を試みる
+        $decrypted = $this->decryptIfNeeded((string) $rawHeaders);
+        if (trim($decrypted) === '') {
+            return [];
+        }
+
+        $decoded = json_decode($decrypted, true);
+        if (!is_array($decoded)) {
+            $this->logger->warning('Webhook headers の JSON 解析に失敗しました', [
+                'headers_preview' => substr($decrypted, 0, 100),
+            ]);
+
+            return [];
+        }
+
+        $headers = [];
+        foreach ($decoded as $key => $value) {
+            $headerKey = trim((string) $key);
+            if ($headerKey === '') {
+                continue;
+            }
+            // 値が個別に暗号化されている場合にも対応（防御的）
+            $headers[$headerKey] = $this->decryptIfNeeded((string) $value);
+        }
+
+        return $headers;
     }
 
     private function decryptIfNeeded(string $value): string

@@ -87,7 +87,29 @@ echo "Source  : ${PLUGIN_DIR}"
 echo ""
 
 echo "[1/2] Creating archive..."
-tar -czf "${OUTPUT}" "${EXCLUDE_ARGS[@]}" "${INCLUDE_FILES[@]}"
+# EC-CUBE プラグイン規約: アーカイブ内に AiChatAssistant42/ プレフィックスを付与する
+# GNU/BSD tar の --transform 非互換を避けるため staging 方式を採用
+STAGE="$(mktemp -d)"
+# shellcheck disable=SC2064
+trap "rm -rf \"$STAGE\"" EXIT
+mkdir -p "${STAGE}/AiChatAssistant42"
+for file in "${INCLUDE_FILES[@]}"; do
+    cp -a "${file}" "${STAGE}/AiChatAssistant42/"
+done
+# OUTPUT が相対パスの場合は PLUGIN_DIR 基準に解決する
+if [[ "${OUTPUT}" != /* ]]; then
+    OUTPUT_ABS="${PLUGIN_DIR}/${OUTPUT}"
+else
+    OUTPUT_ABS="${OUTPUT}"
+fi
+tar -czf "${OUTPUT_ABS}" -C "${STAGE}" AiChatAssistant42
+# OUTPUT が相対だった場合は相対パスに戻す（後続の tar -tzf で利用するため）
+if [[ "${OUTPUT}" != /* ]]; then
+    OUTPUT="${OUTPUT_ABS##${PLUGIN_DIR}/}"
+fi
+# staging を即時削除し trap を解除
+rm -rf "${STAGE}"
+trap - EXIT
 echo "  -> created: ${OUTPUT} ($(du -h "${OUTPUT}" | cut -f1))"
 
 echo ""
@@ -135,12 +157,12 @@ if [[ ${verification_failed} -ne 0 ]]; then
     exit 1
 fi
 
-# 必須ファイルが含まれていることを検証
+# 必須ファイルが含まれていることを検証（prefix 付き）
 REQUIRED_IN_ARCHIVE=(
-    "composer.json"
-    "eccube-plugin.yaml"
-    "Resource/config/services.yaml"
-    "README.md"
+    "AiChatAssistant42/composer.json"
+    "AiChatAssistant42/eccube-plugin.yaml"
+    "AiChatAssistant42/Resource/config/services.yaml"
+    "AiChatAssistant42/README.md"
 )
 for required in "${REQUIRED_IN_ARCHIVE[@]}"; do
     if ! echo "${ARCHIVE_LIST}" | grep -q "${required}"; then
