@@ -1,0 +1,145 @@
+{% extends '@admin/default_frame.twig' %}
+
+{% set menus = ['setting', 'ai_chat_assistant', 'ai_chat_assistant_history'] %}
+
+{% block title %}AI チャットアシスタント{% endblock %}
+{% block sub_title %}チャット履歴{% endblock %}
+
+{% block main %}
+<div class="c-contentsArea__cols">
+    <div class="c-contentsArea__primaryCol">
+        <div class="c-primaryCol">
+
+            {# ===== 検索フォーム ===== #}
+            <div class="card rounded border-0 mb-4">
+                <div class="card-header">
+                    <span class="card-title">検索</span>
+                </div>
+                <div class="card-body">
+                    <form method="get" action="{{ url('admin_ai_chat_assistant_history') }}">
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <label class="form-label">開始日</label>
+                                <input type="date" name="date_from" value="{{ filters.date_from }}" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">終了日</label>
+                                <input type="date" name="date_to" value="{{ filters.date_to }}" class="form-control">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">プロバイダ</label>
+                                <select name="provider" class="form-select">
+                                    <option value="">すべて</option>
+                                    {% for p in ['openai', 'anthropic', 'gemini'] %}
+                                        <option value="{{ p }}" {% if filters.provider == p %}selected{% endif %}>{{ p }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">ステータス</label>
+                                <select name="status" class="form-select">
+                                    <option value="">すべて</option>
+                                    <option value="resolved" {% if filters.status == 'resolved' %}selected{% endif %}>解決済</option>
+                                    <option value="unresolved" {% if filters.status == 'unresolved' %}selected{% endif %}>未解決</option>
+                                    <option value="error" {% if filters.status == 'error' %}selected{% endif %}>エラー</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button class="btn btn-ec-conversion me-2" type="submit">検索</button>
+                                <a class="btn btn-ec-regular" href="{{ url('admin_ai_chat_assistant_history') }}">リセット</a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {# ===== 検索結果一覧 ===== #}
+            <div class="card rounded border-0 mb-4">
+                <div class="card-header">
+                    <div class="row">
+                        <div class="col-8">
+                            <span class="card-title">チャット履歴一覧</span>
+                        </div>
+                        <div class="col-4 text-end">
+                            <span class="text-muted small">全 {{ total|number_format }} 件</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if logs %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th style="width: 150px;">日時</th>
+                                    <th style="width: 100px;">セッション</th>
+                                    <th style="width: 90px;">プロバイダ</th>
+                                    <th style="width: 120px;">モデル</th>
+                                    <th>ユーザーメッセージ</th>
+                                    <th style="width: 90px;" class="text-end">応答時間</th>
+                                    <th style="width: 80px;">状態</th>
+                                    <th style="width: 140px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in logs %}
+                                <tr>
+                                    <td class="text-nowrap">{{ log.createdAt ? log.createdAt|date('Y-m-d H:i') : '-' }}</td>
+                                    <td class="text-truncate" style="max-width: 100px;" title="{{ log.sessionId }}">
+                                        {{ log.sessionId|slice(0, 8) }}...
+                                        {% if sessionCounts[log.sessionId] is defined and sessionCounts[log.sessionId] > 1 %}<span class="badge badge-ec-glay ms-1">{{ sessionCounts[log.sessionId] }}件</span>{% endif %}
+                                    </td>
+                                    <td><span class="badge badge-ec-blue">{{ log.provider }}</span></td>
+                                    <td>{{ log.model }}</td>
+                                    <td class="text-truncate" style="max-width: 300px;" title="{{ log.userMessage }}">
+                                        {{ log.userMessage|length > 60 ? log.userMessage|slice(0, 60) ~ '...' : log.userMessage }}
+                                    </td>
+                                    <td class="text-end">{{ log.responseTimeMs ? log.responseTimeMs|number_format ~ 'ms' : '-' }}</td>
+                                    <td>
+                                        {% if log.errorMessage %}
+                                            <span class="badge badge-ec-red">エラー</span>
+                                        {% elseif log.isResolved %}
+                                            <span class="badge badge-ec-green">解決済</span>
+                                        {% else %}
+                                            <span class="badge badge-ec-glay">未解決</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end text-nowrap">
+                                        <a href="{{ url('admin_ai_chat_assistant_history_show', {id: log.id}) }}" class="btn btn-ec-regular btn-sm">
+                                            詳細
+                                        </a>
+                                        <form method="post" action="{{ url('admin_ai_chat_assistant_history_delete', {id: log.id}) }}?page={{ page }}" style="display:inline">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('admin_ai_chat_assistant_history_' ~ log.id) }}">
+                                            <input type="hidden" name="page" value="{{ page }}">
+                                            <button type="submit" class="btn btn-ec-delete btn-sm" onclick="return confirm('削除しますか？')">削除</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {# ページネーション #}
+                    {% if last_page > 1 %}
+                    <nav>
+                        <ul class="pagination mb-0 justify-content-center">
+                            {% for p in 1..last_page %}
+                                <li class="page-item {% if p == page %}active{% endif %}">
+                                    <a class="page-link" href="{{ url('admin_ai_chat_assistant_history', filters|merge({page: p})) }}">{{ p }}</a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+
+                    {% else %}
+                        <div class="text-muted text-center py-4">条件に一致するチャットログがありません。</div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

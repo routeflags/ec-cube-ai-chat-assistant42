@@ -1,0 +1,227 @@
+{% extends '@admin/default_frame.twig' %}
+
+{% set menus = ['setting', 'ai_chat_assistant', 'ai_chat_assistant_history'] %}
+
+{% block title %}AI チャットアシスタント{% endblock %}
+{% block sub_title %}チャット履歴 詳細{% endblock %}
+
+{% block main %}
+<div class="c-contentsArea__cols">
+    <div class="c-contentsArea__primaryCol">
+        <div class="c-primaryCol">
+
+            {# ===== ナビゲーション ===== #}
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <a href="{{ url('admin_ai_chat_assistant_history') }}" class="btn btn-ec-regular">
+                    <i class="fa fa-arrow-left me-1"></i> 一覧に戻る
+                </a>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted me-2">ID: {{ log.id }}</span>
+                    <form method="post" action="{{ url('admin_ai_chat_assistant_history_delete', {id: log.id}) }}" style="display:inline">
+                        <input type="hidden" name="_token" value="{{ csrf_token('admin_ai_chat_assistant_history_' ~ log.id) }}">
+                        <button type="submit" class="btn btn-ec-delete btn-sm" onclick="return confirm('削除しますか？')">削除</button>
+                    </form>
+                </div>
+            </div>
+
+            {# ===== 基本情報 ===== #}
+            <div class="card rounded border-0 mb-4">
+                <div class="card-header">
+                    <span class="card-title">基本情報</span>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-3">日時</dt>
+                        <dd class="col-sm-9">{{ log.createdAt ? log.createdAt|date('Y年m月d日 H:i:s') : '-' }}</dd>
+
+                        <dt class="col-sm-3">セッション ID</dt>
+                        <dd class="col-sm-9"><code>{{ log.sessionId }}</code>{% if relatedLogs is defined %} <span class="text-muted small">（全{{ totalInSession }}件中 {{ currentIndex + 1 }}件目）</span>{% endif %}</dd>
+
+                        <dt class="col-sm-3">プロバイダ</dt>
+                        <dd class="col-sm-9"><span class="badge badge-ec-blue">{{ log.provider }}</span></dd>
+
+                        <dt class="col-sm-3">モデル</dt>
+                        <dd class="col-sm-9">{{ log.model }}</dd>
+
+                        <dt class="col-sm-3">状態</dt>
+                        <dd class="col-sm-9">
+                            {% if log.errorMessage %}
+                                <span class="badge badge-ec-red">エラー</span>
+                            {% elseif log.isResolved %}
+                                <span class="badge badge-ec-green">解決済</span>
+                            {% else %}
+                                <span class="badge badge-ec-glay">未解決</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-3">商品 ID</dt>
+                        <dd class="col-sm-9">{{ log.productId|default('-') }}</dd>
+
+                        <dt class="col-sm-3">注文 ID</dt>
+                        <dd class="col-sm-9">{{ log.orderId|default('-') }}</dd>
+                    </dl>
+                </div>
+            </div>
+
+            {# ===== タイミング情報 ===== #}
+            <div class="card rounded border-0 mb-4">
+                <div class="card-header">
+                    <span class="card-title">パフォーマンス</span>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            <div class="text-muted small mb-1">応答時間</div>
+                            <div class="fs-4 fw-bold">{{ log.responseTimeMs ? log.responseTimeMs|number_format ~ 'ms' : '-' }}</div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="text-muted small mb-1">入力トークン</div>
+                            <div class="fs-4 fw-bold">{{ log.tokenInput ? log.tokenInput|number_format : '-' }}</div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="text-muted small mb-1">出力トークン</div>
+                            <div class="fs-4 fw-bold">{{ log.tokenOutput ? log.tokenOutput|number_format : '-' }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# ===== 使用ツール ===== #}
+            {% if log.toolsUsed %}
+            <div class="card rounded border-0 mb-4">
+                <div class="card-header">
+                    <span class="card-title">使用ツール</span>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for tool in log.toolsUsed %}
+                            <span class="badge badge-ec-glay">{{ tool }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {# ===== チャット exchanging ===== #}
+            <div class="card rounded border-0 mb-4">
+                <div class="card-header">
+                    <span class="card-title">チャット内容</span>
+                </div>
+                <div class="card-body">
+
+                    {# ユーザーメッセージ #}
+                    <div class="d-flex mb-4">
+                        <div class="flex-shrink-0 me-3">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                <i class="fa fa-user"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="text-muted small mb-1">ユーザー</div>
+                            <div class="border rounded p-3 bg-light">
+                                {{ log.userMessage|nl2br }}
+                            </div>
+                        </div>
+                    </div>
+
+                    {# アシスタント返答 #}
+                    <div class="d-flex mb-4">
+                        <div class="flex-shrink-0 me-3">
+                            <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                <i class="fa fa-robot"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="text-muted small mb-1">アシスタント</div>
+                            <div class="border rounded p-3">
+                                {% if log.assistantReply %}
+                                    {{ log.assistantReply|nl2br }}
+                                {% else %}
+                                    <span class="text-muted">（返答なし）</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            {# ===== セッション履歴（リレー） ===== #}
+            {% if relatedLogs is defined and relatedLogs|length > 0 %}
+            <div class="card rounded border-0 mb-4">
+                <div class="card-header">
+                    <span class="card-title">セッション履歴（リレー） — 全{{ totalInSession }}件</span>
+                    <span class="text-muted small ms-2">現在: {{ currentIndex + 1 }} / {{ totalInSession }}</span>
+                </div>
+                <div class="card-body">
+                    {% for r in relatedLogs %}
+                        <div class="border rounded p-3 mb-3 {% if r.id == log.id %}border-primary bg-light{% endif %}">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge {% if r.id == log.id %}badge-ec-blue{% else %}badge-ec-glay{% endif %}">ターン {{ loop.index }}</span>
+                                <span class="text-muted small">{{ r.createdAt ? r.createdAt|date('Y年m月d日 H:i:s') : '-' }} / ID: {{ r.id }}{% if r.id == log.id %} <span class="badge badge-ec-blue ms-1">表示中</span>{% endif %}</span>
+                            </div>
+                            <div class="mb-2">
+                                <span class="text-muted small">ユーザー</span>
+                                <div class="border rounded p-2 bg-light">{{ r.userMessage|nl2br }}</div>
+                            </div>
+                            <div>
+                                <span class="text-muted small">アシスタント</span>
+                                <div class="border rounded p-2 bg-white">{% if r.assistantReply %}{{ r.assistantReply|nl2br }}{% else %}<span class="text-muted">（返答なし）</span>{% endif %}</div>
+                            </div>
+                            {% if r.errorMessage %}
+                                <div class="mt-2">
+                                    <span class="badge badge-ec-red">エラー: {{ r.errorType|default('unknown') }}</span>
+                                    <pre class="mt-1 mb-0 bg-light p-2 rounded" style="white-space: pre-wrap;">{{ r.errorMessage }}</pre>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {# ===== エラー情報 ===== #}
+            {% if log.errorMessage %}
+            <div class="card rounded border-0 mb-4 border-danger">
+                <div class="card-header bg-danger text-white">
+                    <span class="card-title">エラー情報</span>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-3">エラータイプ</dt>
+                        <dd class="col-sm-9">{{ log.errorType|default('unknown') }}</dd>
+
+                        <dt class="col-sm-3">エラーメッセージ</dt>
+                        <dd class="col-sm-9">
+                            <pre class="mb-0 bg-light p-3 rounded" style="white-space: pre-wrap;">{{ log.errorMessage }}</pre>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+            {% endif %}
+
+            {# ===== 満足度 ===== #}
+            {% if log.satisfactionRating is not null %}
+            <div class="card rounded border-0 mb-4">
+                <div class="card-header">
+                    <span class="card-title">ユーザー満足度</span>
+                </div>
+                <div class="card-body text-center">
+                    <div class="fs-2">
+                        {% for i in 1..5 %}
+                            {% if i <= log.satisfactionRating %}
+                                <i class="fa fa-star text-warning"></i>
+                            {% else %}
+                                <i class="fa fa-star-o text-muted"></i>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="text-muted">{{ log.satisfactionRating }} / 5</div>
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+{% endblock %}

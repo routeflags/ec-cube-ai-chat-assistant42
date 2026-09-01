@@ -1,0 +1,81 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        public: false
+
+    Plugin\AiChatAssistant42\:
+        resource: '../../*'
+        exclude:
+            - '../../Tests/'
+
+    Plugin\AiChatAssistant42\Service\McpServerService:
+        arguments:
+            - '@Plugin\AiChatAssistant42\Repository\ProductRepository'
+
+    Plugin\AiChatAssistant42\Service\AiAgentFactory: ~
+
+    Plugin\AiChatAssistant42\Service\AiModelRegistry:
+        arguments:
+            - '%kernel.project_dir%/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json'
+
+    Plugin\AiChatAssistant42\Service\ChatLogger:
+        arguments:
+            - '@doctrine.orm.entity_manager'
+
+    Plugin\AiChatAssistant42\Service\LogSyncService:
+        arguments:
+            - '@doctrine.orm.entity_manager'
+            - '@GuzzleHttp\ClientInterface'
+            - '@logger'
+
+    Plugin\AiChatAssistant42\Controller\Api\ChatApiController:
+        public: true
+        autowire: true
+
+    Plugin\AiChatAssistant42\Controller\Api\ModelApiController:
+        arguments:
+            - '@Plugin\AiChatAssistant42\Service\AiModelRegistry'
+
+    Plugin\AiChatAssistant42\EventListener\ChatWidgetListener:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+        tags: ['kernel.event_subscriber']
+
+    Plugin\AiChatAssistant42\Command\AiChatAssistantCommand:
+        tags: ['console.command']
+
+    Plugin\AiChatAssistant42\Command\SyncChatLogsCommand:
+        tags: ['console.command']
+
+    Plugin\AiChatAssistant42\Service\NotificationService:
+        arguments:
+            - '@Plugin\AiChatAssistant42\Repository\NotificationRepository'
+            - '@logger'
+
+    Plugin\AiChatAssistant42\Service\AccessRuleService:
+        arguments:
+            - '@Plugin\AiChatAssistant42\Repository\AccessRuleRepository'
+            - '@logger'
+
+    Plugin\AiChatAssistant42\Service\DesignSettingsSyncService:
+        arguments:
+            $httpClient: '@GuzzleHttp\ClientInterface'
+            $logger: '@logger'
+            $projectDir: '%kernel.project_dir%'
+
+    Plugin\AiChatAssistant42\Controller\Admin\DesignController:
+        arguments:
+            - '@Plugin\AiChatAssistant42\Repository\ConfigRepository'
+            - '%kernel.project_dir%'
+            - '@Plugin\AiChatAssistant42\Service\DesignSettingsSyncService'
+
+    Plugin\AiChatAssistant42\Controller\Admin\NotificationController:
+        arguments:
+            - '@Plugin\AiChatAssistant42\Repository\NotificationRepository'
+
+    Plugin\AiChatAssistant42\Controller\Admin\AccessRuleController:
+        arguments:
+            - '@Plugin\AiChatAssistant42\Repository\AccessRuleRepository'
+
+    Plugin\AiChatAssistant42\Twig\Extension\CacheBustExtension:

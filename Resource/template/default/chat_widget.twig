@@ -1,0 +1,192 @@
+{# AI チャットアシスタント ウィジェット #}
+{#
+  AiChatAssistant42 — フロントチャットウィジェット
+  読み込み例: {% include 'AiChatAssistant42:default/chat_widget.twig' %}
+
+  前提メタタグ（base.html.twig の block javascript 内 or head 内）:
+    <meta name="csrf-token" content="{{ csrf_token('ai_chat') }}">
+
+  変数（ChatWidgetListener から注入）:
+    chat_widget_color — ウィジェット背景色（例: #2ec9bb）
+    chat_widget_size  — サイズ（small / medium / large）
+    chat_widget_position — 位置（bottom-right / bottom-left）
+    chat_greeting_message — 挨拶メッセージ
+    chat_assistant_display_name — ヘッダー表示名（例: 商品アドバイザー）
+#}
+
+{# ── CSS カスタムプロパティでデザイン設定を反映 ── #}
+<div id="ai-chat-assistant"
+     class="ai-chat-assistant ai-chat-assistant--{{ chat_widget_position|default('bottom-right') }}"
+     data-api-url="{{ url('ai_chat_assistant_api_chat') }}"
+     data-email-api-url="{{ url('ai_chat_assistant_api_email_reply_request') }}"
+     data-feedback-api-url="{{ url('ai_chat_assistant_api_feedback') }}"
+     style="--chat-widget-color: {{ chat_widget_color|default('#2ec9bb') }};">
+  {# ── トグルボタン ── #}
+  <button id="chat-toggle"
+          class="chat-toggle chat-toggle--{{ chat_widget_size|default('medium') }}"
+          type="button"
+          aria-label="チャットを開く"
+          aria-expanded="false"
+          aria-controls="chat-panel">
+    {# チャットアイコン（開いた状態で非表示） #}
+    <span class="chat-toggle__icon chat-toggle__icon--open" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+    </span>
+    {# 閉じるアイコン（閉じた状態で非表示） #}
+    <span class="chat-toggle__icon chat-toggle__icon--close" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"/>
+        <line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </span>
+  </button>
+
+  {# ── チャットパネル ── #}
+  <div id="chat-panel" class="chat-panel" role="dialog" aria-label="商品チャット" hidden>
+    {# ヘッダー #}
+    <div class="chat-header">
+      <span class="chat-header__title">
+        <svg class="chat-header__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        {{ chat_assistant_display_name|default('商品アドバイザー') }}
+      </span>
+      <button id="chat-close" class="chat-close" type="button" aria-label="チャットを閉じる">
+        &times;
+      </button>
+    </div>
+
+    {# メッセージエリア #}
+    <div id="chat-messages" class="chat-messages" role="log" aria-live="polite">
+      <div class="chat-message chat-message--assistant">
+        <div class="chat-message__content">{{- chat_greeting_message|default('こんにちは！商品についてお気軽にご質問ください。')|trim -}}</div>
+      </div>
+    </div>
+
+    {# 入力フォーム — WebMCP: data-mcp-form="ai-chat" でAIがformを一意特定。既存 id/name は変更しない。 #}
+    <form id="chat-form" class="chat-form" action="#" method="post" novalidate data-mcp-form="ai-chat" data-mcp-variant="chat">
+      <div class="chat-form__row">
+        <label for="chat-input" class="sr-only">メッセージ入力</label>
+        <input type="text"
+               id="chat-input"
+               class="chat-form__input"
+               placeholder="商品について質問してください..."
+               autocomplete="off"
+               maxlength="500"
+               aria-required="true"
+               data-mcp-field="ai-chat.message" />
+        <button type="submit" class="chat-form__send" aria-label="送信" data-mcp-field="ai-chat.submit">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+    </form>
+
+    {# ── License footer (T1: 中央寄せ単一ボタン、将来 terms_* で2項目へ自動拡張) ── #}
+    <div id="chat-license-footer" class="chat-license-footer{% if chat_terms_footer_label is defined and chat_terms_footer_label %} has-terms{% endif %}">
+      <button type="button" class="chat-license-footer__button" id="chat-license-footer-btn" aria-label="{{ chat_license_footer_label|default('ライセンスについて')|e }}">
+        <svg class="chat-license-footer__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M14.83 9.17a2.5 2.5 0 0 0-3.66 3.42"/>
+          <path d="M9.17 14.83a2.5 2.5 0 0 0 3.66-3.42"/>
+        </svg>
+        {{ chat_license_footer_label|default('ライセンスについて')|e }}
+      </button>
+      {% if chat_terms_footer_label is defined and chat_terms_footer_label %}
+        <span class="chat-license-footer__separator" aria-hidden="true">|</span>
+        {% if chat_terms_url is defined and chat_terms_url %}
+          <a href="{{ chat_terms_url|e('html_attr') }}" target="_blank" rel="noopener" class="chat-license-footer__link">{{ chat_terms_footer_label|e }}</a>
+        {% else %}
+          <button type="button" class="chat-license-footer__button chat-license-footer__button--terms" id="chat-terms-footer-btn" aria-label="{{ chat_terms_footer_label|e }}">{{ chat_terms_footer_label|e }}</button>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── License modal (R-B3/R-B5: |raw 禁止・split方式で安全にリンク化) ── #}
+  <div id="chat-license-modal" class="chat-license-modal" role="dialog" aria-modal="true" aria-labelledby="chat-license-title" aria-describedby="chat-license-desc" style="display:none;">
+    <div class="chat-license-modal__content">
+      <div class="chat-license-modal__header">
+        <span class="chat-license-modal__badge" aria-hidden="true">©</span>
+        <h3 id="chat-license-title" class="chat-license-modal__title">{{ chat_license_title|default('ソフトウェアライセンスについて')|e }}</h3>
+        <button type="button" class="chat-license-modal__close" id="chat-license-close-x" aria-label="ライセンス情報を閉じる">&times;</button>
+      </div>
+      <p id="chat-license-desc" class="chat-license-modal__lead">{{ chat_license_lead|default('AiChatAssistant42（チャットソフトウェア）の著作権は <a href="https://blog.routeflags.com/%e5%88%a9%e7%94%a8%e8%a6%8f%e7%b4%84/" target="_blank" rel="noopener">ROUTE FLAGS Co., Ltd.</a> に帰属し、GNU General Public License v2 (GPL-2.0-only) に基づき提供されています.')|raw }}</p>
+      <div class="chat-license-modal__items">
+        <div class="chat-license-modal__item">
+          <h4 class="chat-license-modal__item-heading">{{ chat_license_item1_heading|default('著作権')|e }}</h4>
+          <p class="chat-license-modal__item-body">{{ chat_license_item1_body|default('© 2024-2026 ROUTE FLAGS Co., Ltd. All Rights Reserved.')|e }}</p>
+        </div>
+        <div class="chat-license-modal__item">
+          <h4 class="chat-license-modal__item-heading">{{ chat_license_item2_heading|default('ライセンス (GPL-2.0-only)')|e }}</h4>
+          <p class="chat-license-modal__item-body">{{ chat_license_item2_body|default('本ソフトウェアのソースコードは GPL-2.0-only で提供されています。複製・改変・再配布する際は GPL-2.0 の条件（著作権表示とライセンス条文の保持、改変時の変更明示、ソースコードの提供等）を遵守してください。詳細は同梱の COPYING ファイルまたは <a href="https://www.gnu.org/licenses/gpl-2.0.html" target="_blank" rel="noopener">https://www.gnu.org/licenses/gpl-2.0.html</a> をご覧ください.')|raw }}</p>
+        </div>
+        <div class="chat-license-modal__item">
+          <h4 class="chat-license-modal__item-heading">{{ chat_license_item3_heading|default('オープンソースソフトウェアの利用')|e }}</h4>
+          <p class="chat-license-modal__item-body">{{ chat_license_item3_body|default('本ソフトウェアは以下のOSSを利用しています: EC-CUBE 4.2 (GPL-2.0-only)、Symfony 5.4 (MIT)、Doctrine ORM/DBAL (MIT)、Twig 2.x (BSD-3-Clause)、GuzzleHTTP (MIT)、Monolog (MIT)、KnpPaginatorBundle (MIT) ほか composer.json 記載のライブラリ。各OSSのライセンス詳細は各プロジェクトの配布物をご参照ください。')|e }}</p>
+        </div>
+        {% if chat_terms_footer_label is defined and chat_terms_footer_label and chat_terms_title is defined and chat_terms_title %}
+        <div class="chat-license-modal__item chat-license-modal__item--terms">
+          <h4 class="chat-license-modal__item-heading">{{ chat_terms_title|e }}</h4>
+          <p class="chat-license-modal__item-body">{{ chat_terms_body|default('')|e }}</p>
+        </div>
+        {% endif %}
+      </div>
+      <div class="chat-license-modal__footer">
+        <button type="button" class="chat-license-modal__close-btn" id="chat-license-close">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  {# ── Terms modal (将来拡張: terms_* が存在する場合のみ) ── #}
+  {% if chat_terms_footer_label is defined and chat_terms_footer_label and chat_terms_title is defined and chat_terms_title and chat_terms_url is not defined %}
+  <div id="chat-terms-modal" class="chat-license-modal" role="dialog" aria-modal="true" aria-labelledby="chat-terms-title" style="display:none;">
+    <div class="chat-license-modal__content">
+      <div class="chat-license-modal__header">
+        <span class="chat-license-modal__badge" aria-hidden="true">≡</span>
+        <h3 id="chat-terms-title" class="chat-license-modal__title">{{ chat_terms_title|e }}</h3>
+        <button type="button" class="chat-license-modal__close" id="chat-terms-close-x" aria-label="利用規約を閉じる">&times;</button>
+      </div>
+      <p class="chat-license-modal__lead">{{ chat_terms_body|default('')|e }}</p>
+      <div class="chat-license-modal__footer">
+        <button type="button" class="chat-license-modal__close-btn" id="chat-terms-close">閉じる</button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── メール返信依頼モーダル ── #}
+  <div id="chat-email-modal" class="chat-email-modal" role="dialog" aria-modal="true" aria-labelledby="chat-email-title" aria-describedby="chat-email-desc" style="display:none;">
+    <div class="chat-email-modal-content">
+      <h3 id="chat-email-title" class="chat-email-modal__title">メールで回答を受け取る</h3>
+      <p id="chat-email-desc" class="chat-email-modal__desc">メールアドレスを入力してください。後ほどご連絡いたします。</p>
+      <form id="chat-email-form" novalidate data-mcp-form="ai-chat-email" data-mcp-variant="email">
+        <label for="chat-email-input" class="chat-email-modal__label">メールアドレス</label>
+        <input type="email"
+               id="chat-email-input"
+               class="chat-email-modal__input"
+               placeholder="your@email.com"
+               required
+               autocomplete="email"
+               aria-required="true"
+               data-mcp-field="ai-chat-email.email" />
+        <div id="chat-email-error" class="chat-email-modal__error" role="alert" style="display:none;"></div>
+        <div class="chat-email-modal__buttons">
+          <button type="submit" class="chat-email-modal__submit" data-mcp-field="ai-chat-email.submit">送信</button>
+          <button type="button" class="chat-email-cancel chat-email-modal__cancel">キャンセル</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# T-CHAT-CSS: non-blocking (chat is not LCP, 1,052ms → off critical chain) #}
+<link rel="stylesheet" href="{{ asset('AiChatAssistant42/assets/css/chat-widget.css', 'plugin') }}?v={{ cache_bust_version().css }}" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="{{ asset('AiChatAssistant42/assets/css/chat-widget.css', 'plugin') }}?v={{ cache_bust_version().css }}"></noscript>
+<script src="{{ asset('AiChatAssistant42/assets/js/chat-widget.js', 'plugin') }}?v={{ cache_bust_version().js }}" defer></script>

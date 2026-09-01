@@ -1,0 +1,190 @@
+{#
+  AI チャットアシスタント — アクセスルール管理テンプレート
+
+  アクセスルールの一覧表示・新規作成・編集・削除を行う。
+#}
+
+{% extends '@admin/default_frame.twig' %}
+
+{% set menus = ['setting', 'ai_chat_assistant', 'ai_chat_assistant_access'] %}
+
+{% block title %}AI チャットアシスタント{% endblock %}
+{% block sub_title %}アクセスルール管理{% endblock %}
+
+{% block stylesheet %}
+<style>
+    .rule-help { font-size: 0.85em; color: #6c757d; margin-top: 4px; }
+</style>
+{% endblock stylesheet %}
+
+{% block main %}
+<div class="c-contentsArea__cols">
+    <div class="c-contentsArea__primaryCol">
+        <div class="c-primaryCol">
+
+            {# ── 新規作成フォーム ── #}
+            <div class="card rounded border-0 mb-4">
+                <div class="card-header">
+                    <span class="card-title">新規アクセスルール作成</span>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{{ url('admin_ai_chat_assistant_access_create') }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token(constant('Eccube\\Common\\Constant::TOKEN_NAME')) }}" />
+
+                        <div class="row mb-3">
+                            <label class="col-sm-3 col-form-label">ルール種別</label>
+                            <div class="col-sm-9">
+                                <select name="rule_type" class="form-select" id="rule_type_select">
+                                    <option value="ip">IP アドレス</option>
+                                    <option value="time">利用時間帯</option>
+                                    <option value="block_keyword">禁止キーワード</option>
+                                </select>
+                                <div id="rule_help_ip" class="rule-help">
+                                    例: <code>192.168.1.100</code>（完全一致）または <code>192.168.1.*</code>（プレフィックス一致）
+                                </div>
+                                <div id="rule_help_time" class="rule-help" style="display: none;">
+                                    例: <code>22:00-06:00</code>（日をまたぐ時間帯も対応）
+                                </div>
+                                <div id="rule_help_block_keyword" class="rule-help" style="display: none;">
+                                    例: <code>競合社名,禁止語</code>（カンマ区切りで複数指定可）
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <label class="col-sm-3 col-form-label">ルール値</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="rule_value" class="form-control" required
+                                       placeholder="IPアドレスまたはキーワードを入力" />
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <label class="col-sm-3 col-form-label">適用アクション</label>
+                            <div class="col-sm-9">
+                                <div class="btn-group" role="group">
+                                    <input type="radio" class="btn-check" name="action" value="deny" id="action_deny" checked />
+                                    <label class="btn btn-outline-danger" for="action_deny">拒否 (Deny)</label>
+
+                                    <input type="radio" class="btn-check" name="action" value="throttle" id="action_throttle" />
+                                    <label class="btn btn-outline-warning" for="action_throttle">スロットリング (Throttle)</label>
+
+                                    <input type="radio" class="btn-check" name="action" value="allow" id="action_allow" />
+                                    <label class="btn btn-outline-success" for="action_allow">許可 (Allow)</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col text-end">
+                                <button type="submit" class="btn btn-ec-conversion px-5">作成</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {# ── アクセスルール一覧 ── #}
+            <div class="card rounded border-0 mb-4">
+                <div class="card-header">
+                    <span class="card-title">登録済みアクセスルール</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if rules|length > 0 %}
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th class="border-top-0 pt-2 pb-3">ID</th>
+                                    <th class="border-top-0 pt-2 pb-3">種別</th>
+                                    <th class="border-top-0 pt-2 pb-3">ルール値</th>
+                                    <th class="border-top-0 pt-2 pb-3">アクション</th>
+                                    <th class="border-top-0 pt-2 pb-3">状態</th>
+                                    <th class="border-top-0 pt-2 pb-3">作成日</th>
+                                    <th class="border-top-0 pt-2 pb-3">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for rule in rules %}
+                                    <tr>
+                                        <td class="align-middle">{{ rule.id }}</td>
+                                        <td class="align-middle">
+                                            <span class="badge badge-ec-blue">
+                                                {% if rule.ruleType == 'ip' %}IP
+                                                {% elseif rule.ruleType == 'time' %}時間帯
+                                                {% elseif rule.ruleType == 'block_keyword' %}禁止KW
+                                                {% else %}{{ rule.ruleType }}{% endif %}
+                                            </span>
+                                        </td>
+                                        <td class="align-middle"><code>{{ rule.ruleValue }}</code></td>
+                                        <td class="align-middle">
+                                            {% if rule.action == 'deny' %}
+                                                <span class="badge badge-ec-red">拒否</span>
+                                            {% elseif rule.action == 'throttle' %}
+                                                <span class="badge badge-ec-yellow">スロットリング</span>
+                                            {% elseif rule.action == 'allow' %}
+                                                <span class="badge badge-ec-green">許可</span>
+                                            {% else %}
+                                                {{ rule.action }}
+                                            {% endif %}
+                                        </td>
+                                        <td class="align-middle">
+                                            {% if rule.isActive %}
+                                                <span class="badge badge-ec-green">有効</span>
+                                            {% else %}
+                                                <span class="badge badge-ec-glay">無効</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="align-middle">{{ rule.createDate ? rule.createDate|date('Y-m-d H:i') : '' }}</td>
+                                        <td class="align-middle">
+                                            <form method="post" action="{{ url('admin_ai_chat_assistant_access_delete', { id: rule.id }) }}" style="display: inline;"
+                                                  onsubmit="return confirm('このアクセスルールを削除してもよろしいですか？');">
+                                                <input type="hidden" name="_token" value="{{ csrf_token(constant('Eccube\\Common\\Constant::TOKEN_NAME')) }}" />
+                                                <button type="submit" class="btn btn-sm btn-outline-ec-delete">削除</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <div class="p-4 text-center text-muted">アクセスルールはまだ登録されていません。</div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock main %}
+
+{% block javascript %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var select = document.getElementById('rule_type_select');
+    var input = document.querySelector('input[name="rule_value"]');
+
+    function toggleHelp() {
+        var selected = select.value;
+        var helps = document.querySelectorAll('[id^="rule_help_"]');
+        for (var i = 0; i < helps.length; i++) {
+            helps[i].style.display = 'none';
+        }
+        var target = document.getElementById('rule_help_' + selected);
+        if (target) {
+            target.style.display = '';
+        }
+
+        if (selected === 'ip') {
+            input.placeholder = '192.168.1.100 または 192.168.1.*';
+        } else if (selected === 'time') {
+            input.placeholder = '22:00-06:00';
+        } else if (selected === 'block_keyword') {
+            input.placeholder = '禁止キーワード1,禁止キーワード2';
+        }
+    }
+
+    select.addEventListener('change', toggleHelp);
+    toggleHelp();
+});
+</script>
+{% endblock javascript %}

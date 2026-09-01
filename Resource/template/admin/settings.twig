@@ -1,0 +1,163 @@
+{% extends '@admin/default_frame.twig' %}
+{% set menus = ['setting', 'ai_chat_assistant', 'ai_chat_assistant_settings'] %}
+
+{% block title %}AI チャットアシスタント{% endblock %}
+{% block sub_title %}プラグイン設定{% endblock %}
+
+{% block main %}
+<div class="c-contentsArea__cols">
+  <div class="c-contentsArea__primaryCol">
+    <form method="post" action="{{ url('admin_ai_chat_assistant_settings') }}">
+      <input type="hidden" name="_token" value="{{ csrf_token(constant('Eccube\\Common\\Constant::TOKEN_NAME')) }}">
+
+      {# チャット有効/無効 #}
+      <div class="card mb-4">
+        <div class="card-header">
+          <span class="card-title">チャット有効/無効</span>
+        </div>
+        <div class="card-body">
+          <div class="form-group">
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="is_enabled" value="1"
+                     {% if config and config.getIsEnabled() %}checked{% endif %} id="enabled_on">
+              <label class="form-check-label" for="enabled_on">有効</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="is_enabled" value="0"
+                     {% if not config or not config.getIsEnabled() %}checked{% endif %} id="enabled_off">
+              <label class="form-check-label" for="enabled_off">無効</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# プロバイダ設定 #}
+      <div class="card mb-4">
+        <div class="card-header">
+          <span class="card-title">プロバイダ設定</span>
+        </div>
+        <div class="card-body">
+          <div class="form-group">
+            <label for="provider">デフォルトプロバイダ</label>
+            <select name="provider" id="provider" class="form-control">
+              <option value="openai" {% if config and config.getProvider() == 'openai' %}selected{% endif %}>OpenAI</option>
+              <option value="anthropic" {% if config and config.getProvider() == 'anthropic' %}selected{% endif %}>Anthropic</option>
+              <option value="gemini" {% if config and config.getProvider() == 'gemini' %}selected{% endif %}>Google Gemini</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="model">デフォルトモデル</label>
+            <select name="model" id="model" class="form-control">
+              {% for providerKey, provider in modelsByProvider %}
+                <optgroup label="{{ provider.name }} ({{ providerKey }})">
+                  {% for m in provider.models %}
+                    <option value="{{ m.id }}" data-provider="{{ providerKey }}" {% if config and config.getModel() == m.id %}selected{% endif %}>
+                      {{ m.name }} ({{ m.id }}) — {{ m.description }}
+                    </option>
+                  {% endfor %}
+                </optgroup>
+              {% endfor %}
+              {# 後方互換: 現在のモデルが JSON に存在しない旧モデルの場合でも選択肢として残す #}
+              {% if config and config.getModel() not in allModelIds %}
+                <option value="{{ config.getModel() }}" selected>（旧モデル）{{ config.getModel() }}</option>
+              {% endif %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="max_tokens">最大トークン数</label>
+            <input type="number" name="max_tokens" id="max_tokens" class="form-control" value="{{ config and config.getMaxTokens() ? config.getMaxTokens() : 4096 }}" min="256" max="128000" step="1" required>
+            <small class="text-muted">AIレスポンスの最大トークン数。モデルや用途に応じて調整してください（例: 4096）。</small>
+          </div>
+        </div>
+      </div>
+
+      {# API キー設定 #}
+      <div class="card mb-4">
+        <div class="card-header">
+          <span class="card-title">API キー設定</span>
+        </div>
+        <div class="card-body">
+          <div class="form-group">
+            <label for="api_key_openai">OpenAI API Key</label>
+            <input type="password" name="api_key_openai" id="api_key_openai" class="form-control"
+                   value=""
+                   placeholder="{{ config and config.getApiKeyOpenai() ? config.getApiKeyOpenai()|slice(0,7) ~ '...' ~ config.getApiKeyOpenai()|slice(-4) : 'sk-...' }}">
+            {% if config and config.getApiKeyOpenai() %}<small class="text-muted">設定済み。新しいキーを入力しない限り変更されません。</small>{% endif %}
+          </div>
+
+          <div class="form-group">
+            <label for="api_key_anthropic">Anthropic API Key</label>
+            <input type="password" name="api_key_anthropic" id="api_key_anthropic" class="form-control"
+                   value=""
+                   placeholder="{{ config and config.getApiKeyAnthropic() ? config.getApiKeyAnthropic()|slice(0,7) ~ '...' ~ config.getApiKeyAnthropic()|slice(-4) : 'sk-ant-...' }}">
+            {% if config and config.getApiKeyAnthropic() %}<small class="text-muted">設定済み。新しいキーを入力しない限り変更されません。</small>{% endif %}
+          </div>
+
+          <div class="form-group">
+            <label for="api_key_gemini">Google Gemini API Key</label>
+            <input type="password" name="api_key_gemini" id="api_key_gemini" class="form-control"
+                   value=""
+                   placeholder="{{ config and config.getApiKeyGemini() ? config.getApiKeyGemini()|slice(0,7) ~ '...' ~ config.getApiKeyGemini()|slice(-4) : 'AIza...' }}">
+            {% if config and config.getApiKeyGemini() %}<small class="text-muted">設定済み。新しいキーを入力しない限り変更されません。</small>{% endif %}
+          </div>
+        </div>
+      </div>
+
+      {# システムプロンプト #}
+      <div class="card mb-4">
+        <div class="card-header">
+          <span class="card-title">システムプロンプト</span>
+        </div>
+        <div class="card-body">
+          <div class="form-group">
+            <textarea name="system_prompt" class="form-control" rows="5"
+                      placeholder="AI の振る舞いを定義するプロンプト">{{ config ? config.getSystemPrompt() : '' }}</textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="c-conversionArea__btnArea">
+        <button type="submit" class="btn btn-primary">保存する</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block javascript %}{{ parent() }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var providerSelect = document.getElementById('provider');
+  var modelSelect = document.getElementById('model');
+  if (!providerSelect || !modelSelect) return;
+
+  function filterModels() {
+    var selectedProvider = providerSelect.value;
+    Array.from(modelSelect.options).forEach(function (opt) {
+      var optProvider = opt.getAttribute('data-provider');
+      // 旧モデル option は data-provider が無いため常に表示
+      if (!optProvider) return;
+      var isMatch = (optProvider === selectedProvider);
+      opt.hidden = !isMatch;
+      opt.disabled = !isMatch;
+    });
+
+    // 現在の選択が非表示なら、選択プロバイダの先頭モデルへフォールバック
+    var current = modelSelect.options[modelSelect.selectedIndex];
+    if (current && current.hidden) {
+      var fallback = Array.from(modelSelect.options).find(function (o) {
+        return !o.hidden && !o.disabled;
+      });
+      if (fallback) {
+        modelSelect.value = fallback.value;
+      }
+    }
+  }
+
+  providerSelect.addEventListener('change', filterModels);
+  filterModels();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,111 @@
+{
+  "version": "2.0.0",
+  "providers": {
+    "openai": {
+      "name": "OpenAI",
+      "api_base": "https://api.openai.com/v1",
+      "models": [
+        {
+          "id": "gpt-5.6",
+          "name": "GPT-5.6",
+          "description": "最新のフラッグシップモデル。複雑な問い合わせや高度なツール利用に最適",
+          "supports_tools": true,
+          "cost_tier": "high",
+          "is_default": false
+        },
+        {
+          "id": "gpt-5.6-terra",
+          "name": "GPT-5.6 Terra",
+          "description": "性能とコストのバランスに優れたモデル",
+          "supports_tools": true,
+          "cost_tier": "medium",
+          "is_default": false
+        },
+        {
+          "id": "gpt-5.6-luna",
+          "name": "GPT-5.6 Luna",
+          "description": "高速・低コスト。大量の商品問い合わせ処理に適したモデル",
+          "supports_tools": true,
+          "cost_tier": "low",
+          "is_default": false
+        },
+        {
+          "id": "gpt-4o",
+          "name": "GPT-4o",
+          "description": "最も賢いモデル。複雑な質問に最適",
+          "supports_tools": true,
+          "cost_tier": "high",
+          "is_default": true
+        },
+        {
+          "id": "gpt-4o-mini",
+          "name": "GPT-4o mini",
+          "description": "高速・低コスト。簡単な質問に最適",
+          "supports_tools": true,
+          "cost_tier": "low",
+          "is_default": false
+        }
+      ]
+    },
+    "anthropic": {
+      "name": "Anthropic",
+      "api_base": "https://api.anthropic.com/v1",
+      "models": [
+        {
+          "id": "claude-sonnet-5",
+          "name": "Claude Sonnet 5",
+          "description": "速度と知能のバランスに優れた最新世代モデル",
+          "supports_tools": true,
+          "cost_tier": "medium",
+          "is_default": true
+        },
+        {
+          "id": "claude-opus-5",
+          "name": "Claude Opus 5",
+          "description": "高度な推論を必要とする複雑なタスク向けモデル",
+          "supports_tools": true,
+          "cost_tier": "high",
+          "is_default": false
+        },
+        {
+          "id": "claude-haiku-4-5-20251001",
+          "name": "Claude Haiku 4.5",
+          "description": "高速・低コスト。大量の問い合わせ処理向け",
+          "supports_tools": true,
+          "cost_tier": "low",
+          "is_default": false
+        }
+      ]
+    },
+    "gemini": {
+      "name": "Google Gemini",
+      "api_base": "https://generativelanguage.googleapis.com/v1beta",
+      "models": [
+        {
+          "id": "gemini-3.7-flash",
+          "name": "Gemini 3.7 Flash",
+          "description": "最新の高性能Flashモデル。エージェントや複雑な処理にも対応",
+          "supports_tools": true,
+          "cost_tier": "medium",
+          "is_default": true
+        },
+        {
+          "id": "gemini-3.5-flash-lite",
+          "name": "Gemini 3.5 Flash-Lite",
+          "description": "高速・低コスト。大量の問い合わせ処理に最適",
+          "supports_tools": true,
+          "cost_tier": "low",
+          "is_default": false
+        },
+        {
+          "id": "gemini-3.1-pro-preview",
+          "name": "Gemini 3.1 Pro",
+          "description": "高度な推論と複雑なタスク向けのProモデル（Preview）",
+          "supports_tools": true,
+          "cost_tier": "high",
+          "is_default": false
+        }
+      ]
+    }
+  }
+}

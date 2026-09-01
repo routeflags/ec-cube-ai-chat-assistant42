@@ -1,0 +1,213 @@
+{#
+  AI チャットアシスタント — 通知ルール管理テンプレート
+
+  通知ルールの一覧表示・新規作成・編集・削除を行う。
+#}
+
+{% extends '@admin/default_frame.twig' %}
+
+{% set menus = ['setting', 'ai_chat_assistant', 'ai_chat_assistant_notification'] %}
+
+{% block title %}AI チャットアシスタント{% endblock %}
+{% block sub_title %}通知ルール管理{% endblock %}
+
+{% block main %}
+<div class="c-contentsArea__cols">
+    <div class="c-contentsArea__primaryCol">
+        <div class="c-primaryCol">
+
+            {# ── 新規作成フォーム ── #}
+            <div class="card rounded border-0 mb-4">
+                <div class="card-header">
+                    <span class="card-title">新規通知ルール作成</span>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{{ url('admin_ai_chat_assistant_notification_create') }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token(constant('Eccube\\Common\\Constant::TOKEN_NAME')) }}" />
+                        <div class="row mb-3">
+                            <label class="col-sm-3 col-form-label">通知チャネル</label>
+                            <div class="col-sm-9">
+                                <select name="notification_type" class="form-select" id="notification_type_select">
+                                    {% for type in notification_types %}
+                                        <option value="{{ type }}">
+                                            {% if type == 'email' %}メール{% elseif type == 'webhook' %}Webhook{% elseif type == 'line' %}LINE{% else %}{{ type }}{% endif %}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <label class="col-sm-3 col-form-label">トリガーイベント</label>
+                            <div class="col-sm-9">
+                                <select name="trigger_event" class="form-select">
+                                    {% for key, label in trigger_events %}
+                                        <option value="{{ key }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="form-text text-muted">このイベントが発生した際に通知が送信されます。</small>
+                            </div>
+                        </div>
+
+                        {# メール設定 #}
+                        <div id="email_config" class="notification-config">
+                            <div class="row mb-3">
+                                <label class="col-sm-3 col-form-label">送信先メール</label>
+                                <div class="col-sm-9">
+                                    <input type="email" name="email_to" class="form-control" placeholder="admin@example.com" />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label class="col-sm-3 col-form-label">件名</label>
+                                <div class="col-sm-9">
+                                    <input type="text" name="email_subject" class="form-control" value="[AI Chat Assistant] 通知" />
+                                </div>
+                            </div>
+                        </div>
+
+                        {# Webhook 設定 #}
+                        <div id="webhook_config" class="notification-config" style="display: none;">
+                            <div class="row mb-3">
+                                <label class="col-sm-3 col-form-label">Webhook URL</label>
+                                <div class="col-sm-9">
+                                    <input type="url" name="webhook_url" class="form-control" placeholder="https://hooks.example.com/notify" />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label class="col-sm-3 col-form-label">カスタムヘッダー</label>
+                                <div class="col-sm-9">
+                                    <input type="text" name="webhook_headers" class="form-control" placeholder='{"Authorization": "Bearer xxx"}' />
+                                    <small class="form-text text-muted">JSON 形式で指定してください。</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        {# LINE 設定 #}
+                        <div id="line_config" class="notification-config" style="display: none;">
+                            <div class="row mb-3">
+                                <label class="col-sm-3 col-form-label">Channel Access Token</label>
+                                <div class="col-sm-9">
+                                    <input type="text" name="line_channel_access_token" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label class="col-sm-3 col-form-label">ユーザー ID</label>
+                                <div class="col-sm-9">
+                                    <input type="text" name="line_user_id" class="form-control" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col text-end">
+                                <button type="submit" class="btn btn-ec-conversion px-5">作成</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {# ── 通知ルール一覧 ── #}
+            <div class="card rounded border-0 mb-4">
+                <div class="card-header">
+                    <span class="card-title">登録済み通知ルール</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if notifications|length > 0 %}
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th class="border-top-0 pt-2 pb-3">ID</th>
+                                    <th class="border-top-0 pt-2 pb-3">チャネル</th>
+                                    <th class="border-top-0 pt-2 pb-3">トリガー</th>
+                                    <th class="border-top-0 pt-2 pb-3">設定</th>
+                                    <th class="border-top-0 pt-2 pb-3">状態</th>
+                                    <th class="border-top-0 pt-2 pb-3">作成日</th>
+                                    <th class="border-top-0 pt-2 pb-3">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for notification in notifications %}
+                                    <tr>
+                                        <td class="align-middle">{{ notification.id }}</td>
+                                        <td class="align-middle">
+                                            <span class="badge badge-ec-blue">
+                                                {% if notification.notificationType == 'email' %}メール
+                                                {% elseif notification.notificationType == 'webhook' %}Webhook
+                                                {% elseif notification.notificationType == 'line' %}LINE
+                                                {% else %}{{ notification.notificationType }}{% endif %}
+                                            </span>
+                                        </td>
+                                        <td class="align-middle">
+                                            {% if trigger_events[notification.triggerEvent] is defined %}
+                                                {{ trigger_events[notification.triggerEvent] }}
+                                            {% else %}
+                                                {{ notification.triggerEvent }}
+                                            {% endif %}
+                                        </td>
+                                         <td class="align-middle">
+                                            <small class="text-muted">
+                                                {% if notification.configJson %}
+                                                    {% for key, value in notification.configJson %}
+                                                        {% if key in ['channel_access_token', 'webhook_headers', 'authorization'] %}
+                                                            {{ key }}: ******
+                                                        {% else %}
+                                                            {{ key }}: {{ value }}
+                                                        {% endif %}
+                                                        {% if not loop.last %}, {% endif %}
+                                                    {% endfor %}
+                                                {% endif %}
+                                            </small>
+                                        </td>
+                                        <td class="align-middle">
+                                            {% if notification.isActive %}
+                                                <span class="badge badge-ec-green">有効</span>
+                                            {% else %}
+                                                <span class="badge badge-ec-glay">無効</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="align-middle">{{ notification.createDate ? notification.createDate|date('Y-m-d H:i') : '' }}</td>
+                                        <td class="align-middle">
+                                            <form method="post" action="{{ url('admin_ai_chat_assistant_notification_delete', { id: notification.id }) }}" style="display: inline;"
+                                                  onsubmit="return confirm('この通知ルールを削除してもよろしいですか？');">
+                                                <input type="hidden" name="_token" value="{{ csrf_token(constant('Eccube\\Common\\Constant::TOKEN_NAME')) }}" />
+                                                <button type="submit" class="btn btn-sm btn-outline-ec-delete">削除</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <div class="p-4 text-center text-muted">通知ルールはまだ登録されていません。</div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock main %}
+
+{% block javascript %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var select = document.getElementById('notification_type_select');
+    var configs = document.querySelectorAll('.notification-config');
+
+    function toggleConfig() {
+        var selected = select.value;
+        for (var i = 0; i < configs.length; i++) {
+            configs[i].style.display = 'none';
+        }
+        var target = document.getElementById(selected + '_config');
+        if (target) {
+            target.style.display = '';
+        }
+    }
+
+    select.addEventListener('change', toggleConfig);
+    toggleConfig();
+});
+</script>
+{% endblock javascript %}

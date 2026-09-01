@@ -1,0 +1,128 @@
+{% extends '@admin/default_frame.twig' %}
+
+{% set menus = ['setting', 'ai_chat_assistant', 'ai_chat_assistant_knowledge'] %}
+
+{% block title %}AI チャットアシスタント{% endblock %}
+{% block sub_title %}ナレッジ管理{% endblock %}
+
+{% form_theme form '@admin/Form/bootstrap_4_horizontal_layout.html.twig' %}
+
+{% block main %}
+    <form name="knowledge_form" role="form" method="post"
+          action="{% if knowledge.id %}{{ url('admin_ai_chat_assistant_knowledge_edit', {'id': knowledge.id}) }}{% else %}{{ url('admin_ai_chat_assistant_knowledge_new') }}{% endif %}">
+        {{ form_widget(form._token) }}
+
+        <div class="c-contentsArea__cols">
+            <div class="c-contentsArea__primaryCol">
+                <div class="c-primaryCol">
+                    <div class="card rounded border-0 mb-4">
+                        <div class="card-header">
+                            <div class="row">
+                                <div class="col-8">
+                                    <span class="card-title">ナレッジ情報</span>
+                                </div>
+                                <div class="col-4 text-end">
+                                    <a data-bs-toggle="collapse" href="#knowledgeInfo" aria-expanded="false" aria-controls="knowledgeInfo">
+                                        <i class="fa fa-angle-up fa-lg"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="collapse show ec-cardCollapse" id="knowledgeInfo">
+                            <div class="card-body">
+                                {% if knowledge.id %}
+                                    <div class="row mb-2">
+                                        <div class="col-3">
+                                            <div class="d-inline-block">
+                                                <span>ID</span>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <p>{{ knowledge.id }}</p>
+                                        </div>
+                                    </div>
+                                {% endif %}
+
+                                <div class="row mb-2">
+                                    <div class="col-3">
+                                        <span>タイトル</span>
+                                        <span class="badge badge-primary ms-1">必須</span>
+                                    </div>
+                                    <div class="col">
+                                        {{ form_widget(form.title) }}
+                                        {{ form_errors(form.title) }}
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2">
+                                    <div class="col-3">
+                                        <span>本文</span>
+                                        <span class="badge badge-primary ms-1">必須</span>
+                                    </div>
+                                    <div class="col">
+                                        {{ form_widget(form.content, {'attr': {'style': 'height: 250px;'}}) }}
+                                        {{ form_errors(form.content) }}
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2">
+                                    <div class="col-3">
+                                        <span>カテゴリ</span>
+                                    </div>
+                                    <div class="col">
+                                        {{ form_widget(form.category) }}
+                                        {{ form_errors(form.category) }}
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2">
+                                    <div class="col-3">
+                                        <span>状態</span>
+                                    </div>
+                                    <div class="col">
+                                        {{ form_widget(form.is_active) }}
+                                        {{ form_errors(form.is_active) }}
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2">
+                                    <div class="col-3">
+                                        <span>表示順</span>
+                                    </div>
+                                    <div class="col">
+                                        {{ form_widget(form.display_order) }}
+                                        {{ form_errors(form.display_order) }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="c-conversionArea">
+            <div class="c-conversionArea__container">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-6">
+                        <div class="c-conversionArea__leftBlockItem">
+                            <a class="c-baseLink" href="{{ url('admin_ai_chat_assistant_knowledge_index') }}">
+                                <i class="fa fa-backward" aria-hidden="true"></i>
+                                <span>ナレッジ一覧</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div id="ex-conversion-action" class="row align-items-center justify-content-end">
+                            <div class="col-auto">
+                                <button class="btn btn-ec-conversion px-5" type="submit">
+                                    {{ knowledge.id ? '更新' : '登録' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+{% endblock %}

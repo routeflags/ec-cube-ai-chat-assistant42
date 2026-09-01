@@ -1,0 +1,371 @@
+{% extends '@admin/default_frame.twig' %}
+
+{% set menus = ['setting', 'ai_chat_assistant', 'ai_chat_assistant_dashboard'] %}
+
+{% block title %}AI チャットアシスタント{% endblock %}
+{% block sub_title %}ダッシュボード{% endblock %}
+
+{% block javascript %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // プロバイダ円グラフ描画用データを準備
+    var providerLabels = [];
+    var providerCounts = [];
+    {% for stat in provider_stats %}
+        providerLabels.push('{{ stat.provider }}');
+        providerCounts.push({{ stat.count }});
+    {% endfor %}
+
+    // 時間帯別データ
+    var hourlyLabels = [];
+    var hourlyCounts = [];
+    {% for item in hourly_distribution %}
+        hourlyLabels.push('{{ item.hour }}:00');
+        hourlyCounts.push({{ item.count }});
+    {% endfor %}
+});
+</script>
+{% endblock javascript %}
+
+{% block main %}
+<div class="c-contentsArea__cols">
+    <div class="c-contentsArea__primaryCol">
+        <div class="c-primaryCol">
+
+            {# ===== KPI カード ===== #}
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card rounded border-0 shadow-sm h-100">
+                        <div class="card-body text-center">
+                            <div class="text-muted small mb-1">総問い合わせ数</div>
+                            <div class="fs-2 fw-bold">{{ kpi_current.total|number_format }}</div>
+                            {% set diff_total = kpi_current.total - kpi_previous.total %}
+                            {% if kpi_previous.total > 0 %}
+                                <small class="{% if diff_total >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    前期比 {{ diff_total >= 0 ? '+' : '' }}{{ diff_total }}
+                                </small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card rounded border-0 shadow-sm h-100">
+                        <div class="card-body text-center">
+                            <div class="text-muted small mb-1">解決率</div>
+                            <div class="fs-2 fw-bold">{{ kpi_current.resolution_rate }}%</div>
+                            {% set diff_rate = kpi_current.resolution_rate - kpi_previous.resolution_rate %}
+                            {% if kpi_previous.total > 0 %}
+                                <small class="{% if diff_rate >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    前期比 {{ diff_rate >= 0 ? '+' : '' }}{{ diff_rate }}pt
+                                </small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card rounded border-0 shadow-sm h-100">
+                        <div class="card-body text-center">
+                            <div class="text-muted small mb-1">エラー率</div>
+                            <div class="fs-2 fw-bold {% if kpi_current.error_rate > 5 %}text-danger{% endif %}">{{ kpi_current.error_rate }}%</div>
+                            {% set diff_err = kpi_current.error_rate - kpi_previous.error_rate %}
+                            {% if kpi_previous.total > 0 %}
+                                <small class="{% if diff_err <= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    前期比 {{ diff_err >= 0 ? '+' : '' }}{{ diff_err }}pt
+                                </small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card rounded border-0 shadow-sm h-100">
+                        <div class="card-body text-center">
+                            <div class="text-muted small mb-1">平均応答時間</div>
+                            <div class="fs-2 fw-bold">{{ kpi_current.avg_response_ms|round }}ms</div>
+                            {% set diff_ms = kpi_current.avg_response_ms - kpi_previous.avg_response_ms %}
+                            {% if kpi_previous.total > 0 %}
+                                <small class="{% if diff_ms <= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    前期比 {{ diff_ms >= 0 ? '+' : '' }}{{ diff_ms|round }}ms
+                                </small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# ===== エラーアラート ===== #}
+            {% if kpi_current.error_rate > 5 %}
+            <div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
+                <i class="fa fa-exclamation-triangle me-2"></i>
+                <div>
+                    エラー率が <strong>{{ kpi_current.error_rate }}%</strong> に達しています。
+                    詳細は<a href="{{ url('admin_ai_chat_assistant_report') }}" class="alert-link">レポート</a>で確認してください。
+                </div>
+            </div>
+            {% endif %}
+
+            {# ===== メール返信依頼アラート ===== #}
+            {% if pending_email_replies > 0 %}
+            <div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
+                <i class="fa fa-envelope me-2"></i>
+                <div>
+                    メール返信依頼が <strong>{{ pending_email_replies }}</strong> 件あります。
+                    <a href="{{ url('admin_ai_chat_assistant_history') ~ '?status=email_pending' }}" class="alert-link">一覧を確認</a>
+                </div>
+            </div>
+            {% endif %}
+
+            {# ===== 統計サマリー（タブ） ===== #}
+            <div class="card rounded border-0 mb-4">
+                <div class="card-header">
+                    <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#tab-providers">プロバイダ別</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#tab-models">モデル別</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#tab-errors">エラー内訳</a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content">
+                        {# プロバイダ別タブ #}
+                        <div class="tab-pane fade show active" id="tab-providers">
+                            {% if provider_stats %}
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>プロバイダ</th>
+                                            <th class="text-end">件数</th>
+                                            <th class="text-end">平均応答時間</th>
+                                            <th class="text-end">構成比</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for stat in provider_stats %}
+                                        <tr>
+                                            <td><span class="badge badge-ec-blue">{{ stat.provider }}</span></td>
+                                            <td class="text-end">{{ stat.count|number_format }}</td>
+                                            <td class="text-end">{{ stat.avg_response_ms|round }}ms</td>
+                                            <td class="text-end">
+                                                {% if kpi_current.total > 0 %}
+                                                    {{ (stat.count / kpi_current.total * 100)|round(1) }}%
+                                                {% else %}0%{% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                                <div class="text-muted">データがありません。</div>
+                            {% endif %}
+                        </div>
+
+                        {# モデル別タブ #}
+                        <div class="tab-pane fade" id="tab-models">
+                            {% if model_stats %}
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>モデル</th>
+                                            <th class="text-end">件数</th>
+                                            <th class="text-end">平均応答時間</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for stat in model_stats %}
+                                        <tr>
+                                            <td>{{ stat.model }}</td>
+                                            <td class="text-end">{{ stat.count|number_format }}</td>
+                                            <td class="text-end">{{ stat.avg_response_ms|round }}ms</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                                <div class="text-muted">データがありません。</div>
+                            {% endif %}
+                        </div>
+
+                        {# エラー内訳タブ #}
+                        <div class="tab-pane fade" id="tab-errors">
+                            {% if error_breakdown %}
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>エラータイプ</th>
+                                            <th class="text-end">件数</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for err in error_breakdown %}
+                                        <tr>
+                                            <td>{{ err.error_type }}</td>
+                                            <td class="text-end">{{ err.count|number_format }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                                <div class="text-muted">エラーデータがありません。</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# ===== 直近の問い合わせ一覧 ===== #}
+            <div class="card rounded border-0 mb-4">
+                <div class="card-header">
+                    <div class="row">
+                        <div class="col-8">
+                            <span class="card-title">直近の問い合わせ</span>
+                        </div>
+                        <div class="col-4 text-end">
+                            <a href="{{ url('admin_ai_chat_assistant_history') }}" class="btn btn-ec-regular btn-sm">
+                                すべて見る
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if recent_logs %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th style="width: 160px;">日時</th>
+                                    <th style="width: 100px;">プロバイダ</th>
+                                    <th>ユーザーメッセージ</th>
+                                    <th style="width: 100px;" class="text-end">応答時間</th>
+                                    <th style="width: 80px;">状態</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in recent_logs %}
+                                <tr>
+                                    <td class="text-nowrap">{{ log.createdAt ? log.createdAt|date('Y-m-d H:i') : '-' }}</td>
+                                    <td><span class="badge badge-ec-blue">{{ log.provider }}</span></td>
+                                    <td class="text-truncate" style="max-width: 400px;" title="{{ log.userMessage }}">
+                                        {{ log.userMessage|length > 80 ? log.userMessage|slice(0, 80) ~ '...' : log.userMessage }}
+                                    </td>
+                                    <td class="text-end">{{ log.responseTimeMs ? log.responseTimeMs ~ 'ms' : '-' }}</td>
+                                    <td>
+                                        {% if log.errorMessage %}
+                                            <span class="badge badge-ec-red">エラー</span>
+                                        {% elseif log.isResolved %}
+                                            <span class="badge badge-ec-green">解決済</span>
+                                        {% else %}
+                                            <span class="badge badge-ec-glay">未解決</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                        <div class="text-muted text-center py-4">チャットログがまだありません。</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# ===== 設定カード ===== #}
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card rounded border-0 h-100">
+                        <div class="card-header">
+                            <span class="card-title">モデル設定</span>
+                        </div>
+                        <div class="card-body">
+                            {% if config %}
+                            <dl class="row mb-0">
+                                <dt class="col-sm-4">プロバイダ</dt>
+                                <dd class="col-sm-8">{{ config.provider }}</dd>
+                                <dt class="col-sm-4">モデル</dt>
+                                <dd class="col-sm-8">{{ config.model }}</dd>
+                                <dt class="col-sm-4">最大トークン</dt>
+                                <dd class="col-sm-8">{{ config.maxTokens|number_format }}</dd>
+                                <dt class="col-sm-4">レート制限</dt>
+                                <dd class="col-sm-8">{{ config.rateLimitPerMinute }}回/分</dd>
+                                <dt class="col-sm-4">状態</dt>
+                                <dd class="col-sm-8">
+                                    {% if config.isEnabled %}
+                                        <span class="badge badge-ec-green">有効</span>
+                                    {% else %}
+                                        <span class="badge badge-ec-glay">無効</span>
+                                    {% endif %}
+                                </dd>
+                            </dl>
+                            {% else %}
+                                <div class="text-muted">設定がまだありません。</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card rounded border-0 h-100">
+                        <div class="card-header">
+                            <span class="card-title">API キー設定</span>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row mb-0">
+                                <dt class="col-sm-4">OpenAI</dt>
+                                <dd class="col-sm-8">
+                                    {% if config and config.apiKeyOpenai %}
+                                        <span class="text-success"><i class="fa fa-check-circle"></i> 設定済み</span>
+                                    {% else %}
+                                        <span class="text-muted"><i class="fa fa-times-circle"></i> 未設定</span>
+                                    {% endif %}
+                                </dd>
+                                <dt class="col-sm-4">Anthropic</dt>
+                                <dd class="col-sm-8">
+                                    {% if config and config.apiKeyAnthropic %}
+                                        <span class="text-success"><i class="fa fa-check-circle"></i> 設定済み</span>
+                                    {% else %}
+                                        <span class="text-muted"><i class="fa fa-times-circle"></i> 未設定</span>
+                                    {% endif %}
+                                </dd>
+                                <dt class="col-sm-4">Gemini</dt>
+                                <dd class="col-sm-8">
+                                    {% if config and config.apiKeyGemini %}
+                                        <span class="text-success"><i class="fa fa-check-circle"></i> 設定済み</span>
+                                    {% else %}
+                                        <span class="text-muted"><i class="fa fa-times-circle"></i> 未設定</span>
+                                    {% endif %}
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# ===== クイックアクション ===== #}
+            <div class="card rounded border-0 mb-4">
+                <div class="card-header">
+                    <span class="card-title">クイックアクション</span>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex gap-2">
+                        <a href="{{ url('admin_ai_chat_assistant_history') }}" class="btn btn-ec-regular">
+                            <i class="fa fa-history me-1"></i> チャット履歴
+                        </a>
+                        <a href="{{ url('admin_ai_chat_assistant_report') }}" class="btn btn-ec-regular">
+                            <i class="fa fa-chart-bar me-1"></i> レポート
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

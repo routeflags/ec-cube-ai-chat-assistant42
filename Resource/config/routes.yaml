@@ -1,0 +1,183 @@
+# Routes for AiChatAssistant42 plugin - manually defined for Symfony 5.4
+
+ai_chat_assistant_api_chat:
+    path: /api/ai-chat-assistant/chat
+    methods: [POST]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Api\ChatApiController::chat
+
+ai_chat_assistant_api_email_reply_request:
+    path: /api/ai-chat-assistant/email-reply-request
+    methods: [POST]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Api\ChatApiController::emailReplyRequest
+
+ai_chat_assistant_api_feedback:
+    path: /api/ai-chat-assistant/feedback
+    methods: [POST]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Api\ChatApiController::feedback
+
+ai_chat_assistant_models_list:
+    path: /api/ai-chat-assistant/models
+    methods: [GET]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Api\ModelApiController::list
+
+admin_ai_chat_assistant_access_index:
+    path: /%eccube_admin_route%/ai-chat-assistant/access
+    methods: [GET]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\AccessRuleController::index
+
+admin_ai_chat_assistant_access_create:
+    path: /%eccube_admin_route%/ai-chat-assistant/access/create
+    methods: [POST]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\AccessRuleController::create
+
+admin_ai_chat_assistant_access_edit:
+    path: /%eccube_admin_route%/ai-chat-assistant/access/{id}/edit
+    methods: [GET, POST]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\AccessRuleController::edit
+
+admin_ai_chat_assistant_access_delete:
+    path: /%eccube_admin_route%/ai-chat-assistant/access/{id}/delete
+    methods: [POST]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\AccessRuleController::delete
+
+admin_ai_chat_assistant_knowledge_index:
+    path: /%eccube_admin_route%/ai-chat-assistant/knowledge
+    methods: [GET]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\KnowledgeController::index
+
+admin_ai_chat_assistant_knowledge_new:
+    path: /%eccube_admin_route%/ai-chat-assistant/knowledge/new
+    methods: [GET, POST]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\KnowledgeController::create
+
+admin_ai_chat_assistant_knowledge_edit:
+    path: /%eccube_admin_route%/ai-chat-assistant/knowledge/{id}/edit
+    methods: [GET, POST]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\KnowledgeController::edit
+    requirements:
+        id: \d+
+
+admin_ai_chat_assistant_knowledge_delete:
+    path: /%eccube_admin_route%/ai-chat-assistant/knowledge/{id}/delete
+    methods: [POST]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\KnowledgeController::delete
+    requirements:
+        id: \d+
+
+admin_ai_chat_assistant_scenario_index:
+    path: /%eccube_admin_route%/ai-chat-assistant/scenario
+    methods: [GET]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\ScenarioController::index
+
+admin_ai_chat_assistant_scenario_new:
+    path: /%eccube_admin_route%/ai-chat-assistant/scenario/new
+    methods: [GET, POST]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\ScenarioController::create
+
+admin_ai_chat_assistant_scenario_edit:
+    path: /%eccube_admin_route%/ai-chat-assistant/scenario/{id}/edit
+    methods: [GET, POST]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\ScenarioController::edit
+    requirements:
+        id: \d+
+
+admin_ai_chat_assistant_scenario_delete:
+    path: /%eccube_admin_route%/ai-chat-assistant/scenario/{id}/delete
+    methods: [POST]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\ScenarioController::delete
+    requirements:
+        id: \d+
+
+admin_ai_chat_assistant_design_index:
+    path: /%eccube_admin_route%/ai-chat-assistant/design
+    methods: [GET]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\DesignController::index
+
+admin_ai_chat_assistant_design_save:
+    path: /%eccube_admin_route%/ai-chat-assistant/design/save
+    methods: [POST]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\DesignController::save
+
+admin_ai_chat_assistant_report:
+    path: /%eccube_admin_route%/ai-chat-assistant/report
+    methods: [GET]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\ReportController::index
+
+admin_ai_chat_assistant_history:
+    path: /%eccube_admin_route%/ai-chat-assistant/history
+    methods: [GET]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\ChatHistoryController::index
+
+admin_ai_chat_assistant_history_show:
+    path: /%eccube_admin_route%/ai-chat-assistant/history/{id}
+    methods: [GET]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\ChatHistoryController::show
+
+admin_ai_chat_assistant_history_delete:
+    path: /%eccube_admin_route%/ai-chat-assistant/history/{id}/delete
+    methods: [POST]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\ChatHistoryController::delete
+    requirements:
+        id: \d+
+
+admin_ai_chat_assistant_notification_index:
+    path: /%eccube_admin_route%/ai-chat-assistant/notification
+    methods: [GET]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\NotificationController::index
+
+admin_ai_chat_assistant_notification_create:
+    path: /%eccube_admin_route%/ai-chat-assistant/notification/create
+    methods: [POST]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\NotificationController::create
+
+admin_ai_chat_assistant_notification_edit:
+    path: /%eccube_admin_route%/ai-chat-assistant/notification/{id}/edit
+    methods: [GET, POST]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\NotificationController::edit
+    requirements:
+        id: \d+
+
+admin_ai_chat_assistant_notification_delete:
+    path: /%eccube_admin_route%/ai-chat-assistant/notification/{id}/delete
+    methods: [POST]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\NotificationController::delete
+    requirements:
+        id: \d+
+
+admin_ai_chat_assistant_dashboard:
+    path: /%eccube_admin_route%/ai-chat-assistant/dashboard
+    methods: [GET]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\DashboardController::index
+
+admin_ai_chat_assistant_settings:
+    path: /%eccube_admin_route%/ai-chat-assistant/settings
+    methods: [GET, POST]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\Admin\DashboardController::settings

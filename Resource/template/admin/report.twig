@@ -1,0 +1,265 @@
+{% extends '@admin/default_frame.twig' %}
+
+{% set menus = ['setting', 'ai_chat_assistant', 'ai_chat_assistant_report'] %}
+
+{% block title %}AI チャットアシスタント{% endblock %}
+{% block sub_title %}レポート{% endblock %}
+
+{% block javascript %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // CSV エクスポート
+    document.getElementById('btn-export-csv').addEventListener('click', function() {
+        exportCsv();
+    });
+
+    function exportCsv() {
+        var rows = [];
+        // ヘッダー
+        rows.push(['プロバイダ', '件数', '平均応答時間(ms)', 'エラー件数', '構成比(%)']);
+
+        var total = 0;
+        {% for stat in provider_stats %}total += {{ stat.count }};{% endfor %}
+
+        {% for stat in provider_stats %}
+        rows.push([
+            '{{ stat.provider }}',
+            {{ stat.count }},
+            {{ stat.avg_response_ms|round }},
+            {{ stat.error_count }},
+            total > 0 ? ({{ stat.count }} / total * 100).toFixed(1) : '0.0'
+        ]);
+        {% endfor %}
+
+        var csvContent = rows.map(function(r) { return r.join(','); }).join('\n');
+        var blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        var link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'ai_chat_assistant_report_{{ "now"|date("Ymd") }}.csv';
+        link.click();
+    }
+});
+</script>
+{% endblock javascript %}
+
+{% block main %}
+<div class="c-contentsArea__cols">
+    <div class="c-contentsArea__primaryCol">
+        <div class="c-primaryCol">
+
+            {# ===== レポートヘッダー ===== #}
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-1">レポート</h2>
+                    <span class="text-muted">
+                        対象期間: {{ period_start|date('Y年m月d日') }} 〜 {{ period_end|date('Y年m月d日') }}
+                    </span>
+                </div>
+                <div>
+                    <button id="btn-export-csv" class="btn btn-ec-regular">
+                        <i class="fa fa-download me-1"></i> CSV エクスポート
+                    </button>
+                </div>
+            </div>
+
+            {# ===== プロバイダ別使用量 ===== #}
+            <div class="card rounded border-0 mb-4">
+                <div class="card-header">
+                    <span class="card-title">プロバイダ別使用量</span>
+                </div>
+                <div class="card-body">
+                    {% if provider_stats %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>プロバイダ</th>
+                                    <th class="text-end">件数</th>
+                                    <th class="text-end">平均応答時間</th>
+                                    <th class="text-end">エラー件数</th>
+                                    <th class="text-end">構成比</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set total_count = 0 %}
+                                {% for s in provider_stats %}{% set total_count = total_count + s.count %}{% endfor %}
+                                {% for stat in provider_stats %}
+                                <tr>
+                                    <td><span class="badge badge-ec-blue">{{ stat.provider }}</span></td>
+                                    <td class="text-end">{{ stat.count|number_format }}</td>
+                                    <td class="text-end">{{ stat.avg_response_ms|round }}ms</td>
+                                    <td class="text-end">
+                                        {% if stat.error_count > 0 %}
+                                            <span class="text-danger">{{ stat.error_count|number_format }}</span>
+                                        {% else %}0{% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        {% if total_count > 0 %}
+                                            {{ (stat.count / total_count * 100)|round(1) }}%
+                                        {% else %}0%{% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="fw-bold">
+                                    <td>合計</td>
+                                    <td class="text-end">{{ total_count|number_format }}</td>
+                                    <td class="text-end">
+                                        {% set total_ms = 0 %}
+                                        {% for s in provider_stats %}{% set total_ms = total_ms + (s.avg_response_ms * s.count) %}{% endfor %}
+                                        {% if total_count > 0 %}
+                                            {{ (total_ms / total_count)|round }}ms
+                                        {% else %}-{% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        {% set total_err = 0 %}
+                                        {% for s in provider_stats %}{% set total_err = total_err + s.error_count %}{% endfor %}
+                                        {{ total_err|number_format }}
+                                    </td>
+                                    <td class="text-end">100%</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    {% else %}
+                        <div class="text-muted text-center py-4">データがありません。</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# ===== モデル別パフォーマンス ===== #}
+            <div class="card rounded border-0 mb-4">
+                <div class="card-header">
+                    <span class="card-title">モデル別パフォーマンス</span>
+                </div>
+                <div class="card-body">
+                    {% if model_stats %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>モデル</th>
+                                    <th>プロバイダ</th>
+                                    <th class="text-end">件数</th>
+                                    <th class="text-end">平均応答時間</th>
+                                    <th class="text-end">平均入力トークン</th>
+                                    <th class="text-end">平均出力トークン</th>
+                                    <th class="text-end">エラー件数</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in model_stats %}
+                                <tr>
+                                    <td>{{ stat.model }}</td>
+                                    <td><span class="badge badge-ec-blue">{{ stat.provider }}</span></td>
+                                    <td class="text-end">{{ stat.count|number_format }}</td>
+                                    <td class="text-end">{{ stat.avg_response_ms|round }}ms</td>
+                                    <td class="text-end">{{ stat.avg_token_input|round|number_format }}</td>
+                                    <td class="text-end">{{ stat.avg_token_output|round|number_format }}</td>
+                                    <td class="text-end">
+                                        {% if stat.error_count > 0 %}
+                                            <span class="text-danger">{{ stat.error_count|number_format }}</span>
+                                        {% else %}0{% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                        <div class="text-muted text-center py-4">データがありません。</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# ===== 時間帯別分布 ===== #}
+            <div class="card rounded border-0 mb-4">
+                <div class="card-header">
+                    <span class="card-title">時間帯別リクエスト分布</span>
+                </div>
+                <div class="card-body">
+                    {% if hourly_distribution %}
+                    {# 最大値を計算してバーの幅を正規化 #}
+                    {% set max_count = 0 %}
+                    {% for item in hourly_distribution %}
+                        {% if item.count > max_count %}
+                            {% set max_count = item.count %}
+                        {% endif %}
+                    {% endfor %}
+
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th style="width: 80px;">時間帯</th>
+                                    <th style="width: 80px;" class="text-end">件数</th>
+                                    <th>分布</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in hourly_distribution %}
+                                <tr>
+                                    <td>{{ item.hour }}:00</td>
+                                    <td class="text-end">{{ item.count|number_format }}</td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-info" role="progressbar"
+                                                 style="width: {{ max_count > 0 ? (item.count / max_count * 100)|round : 0 }}%;"
+                                                 aria-valuenow="{{ item.count }}"
+                                                 aria-valuemin="0"
+                                                 aria-valuemax="{{ max_count }}">
+                                                {% if item.count > 0 %}{{ item.count }}{% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                        <div class="text-muted text-center py-4">データがありません。</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# ===== エラー内訳 ===== #}
+            <div class="card rounded border-0 mb-4">
+                <div class="card-header">
+                    <span class="card-title">エラー内訳</span>
+                </div>
+                <div class="card-body">
+                    {% if error_breakdown %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>エラータイプ</th>
+                                    <th class="text-end">件数</th>
+                                    <th>最新メッセージ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for err in error_breakdown %}
+                                <tr>
+                                    <td><span class="badge badge-ec-red">{{ err.error_type }}</span></td>
+                                    <td class="text-end">{{ err.count|number_format }}</td>
+                                    <td class="text-truncate" style="max-width: 400px;" title="{{ err.latest_message }}">
+                                        {{ err.latest_message|length > 80 ? err.latest_message|slice(0, 80) ~ '...' : err.latest_message }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                        <div class="text-muted text-center py-4">エラーデータがありません。</div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
