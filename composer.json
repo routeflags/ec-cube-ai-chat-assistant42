@@ -7,7 +7,8 @@
     "keywords": ["ec-cube", "ai", "chat", "openai", "anthropic", "gemini", "mcp"],
     "require": {
         "php": ">=8.0",
-        "ec-cube/ec-cube": "^4.2"
+        "ec-cube/ec-cube": "^4.2",
+        "guzzlehttp/guzzle": "^7.0"
     },
     "require-dev": {
         "phpunit/phpunit": "^9.5"

@@ -41,6 +41,9 @@ use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
  */
 class ChatApiController extends AbstractController
 {
+    private const MAX_MESSAGE_LENGTH = 2000;
+    private const MAX_EMAIL_REPLY_PER_HOUR = 10;
+
     public function __construct(
         private AiAgentFactory $aiAgentFactory,
         private ProductRepository $productRepository,
@@ -162,10 +165,68 @@ class ChatApiController extends AbstractController
             ], 400);
         }
 
+        $message = (string) $data['message'];
+        if (mb_strlen($message) > self::MAX_MESSAGE_LENGTH) {
+            return $this->json([
+                'success' => false,
+                'error' => sprintf('message は %d 文字以内で入力してください。', self::MAX_MESSAGE_LENGTH),
+            ], 400);
+        }
+
         return [
-            'message' => (string) $data['message'],
-            'session_id' => !empty($data['session_id']) ? (string) $data['session_id'] : $this->generateSessionId(),
+            'message' => $message,
+            'session_id' => $this->normalizeSessionId($data['session_id'] ?? null),
         ];
+    }
+
+    /**
+     * session_id を正規化する（レート制限回避の防止）。
+     *
+     * クライアント生成の session_id は UUID v4 形式（36文字、ハイフン含む）のみ許容する。
+     * 空または不正な形式の場合は 400 を返さず、サーバー側で新規 UUID を自動生成して返す。
+     * これにより Math.random() 等で毎回異なる ID を送る攻撃を抑止しつつ、フロントの互換性を保つ。
+     */
+    private function normalizeSessionId(mixed $raw): string
+    {
+        if (!is_string($raw) || trim($raw) === '') {
+            return $this->generateSessionId();
+        }
+
+        $candidate = trim($raw);
+
+        // UUID v4 形式（例: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx）を許容
+        // 厳密な v4 バリデーション: 8-4-4-4-12 かつ version=4, variant=8/9/a/b
+        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $candidate) === 1) {
+            return strtolower($candidate);
+        }
+
+        // 後方互換: ハイフンなし 32 hex も UUID として扱い、ハイフン付きに正規化して許容
+        if (preg_match('/^[0-9a-f]{32}$/i', $candidate) === 1) {
+            $hex = strtolower($candidate);
+            return sprintf(
+                '%s-%s-%s-%s-%s',
+                substr($hex, 0, 8),
+                substr($hex, 8, 4),
+                substr($hex, 12, 4),
+                substr($hex, 16, 4),
+                substr($hex, 20, 12)
+            );
+        }
+
+        // 汎用 UUID 形式（36文字、hex とハイフンのみ）も許容 — loose check for legacy
+        if (preg_match('/^[0-9a-f\-]{36}$/i', $candidate) === 1 && substr_count($candidate, '-') === 4) {
+            // 位置が正しいか再チェック（8-4-4-4-12）
+            if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $candidate) === 1) {
+                return strtolower($candidate);
+            }
+        }
+
+        // 不正形式 → 警告を残しつつ新規 UUID を発行（Medium: 所有権検証はログのみ）
+        $this->logger->info('Invalid session_id format, generated new UUID', [
+            'provided' => substr($candidate, 0, 32),
+        ]);
+
+        return $this->generateSessionId();
     }
 
     /**
@@ -213,8 +274,60 @@ class ChatApiController extends AbstractController
                 }
             } catch (\Throwable $e) {
                 // カラム未作成の旧環境では IP制限をスキップ（セッション制限のみ有効）
-                $this->logger->warning('IP rate limit skipped: ' . $e->getMessage());
+                $this->logger->warning('IP rate limit skipped: ' . $this->redactedMessage($e->getMessage()));
             }
+        }
+
+        return null;
+    }
+
+    /**
+     * メール返信依頼のレート制限（session + IP、1時間あたり上限）。
+     *
+     * IP カラム欠落時は warning を残し session 制限のみで継続する。
+     * メール爆弾防止のため chat とは独立した 1時間窓でカウントする。
+     */
+    private function enforceEmailReplyRateLimit(Request $request, string $sessionId): ?JsonResponse
+    {
+        $limit = self::MAX_EMAIL_REPLY_PER_HOUR;
+        $since = (new \DateTimeImmutable('-1 hour'))->format('Y-m-d H:i:s');
+        $conn = $this->entityManager->getConnection();
+
+        // session 単位: 同一 session からの email 依頼回数（email_reply_address が設定された行を数える）
+        try {
+            $sessionCount = (int) $conn->fetchOne(
+                'SELECT COUNT(*) FROM plg_ai_chat_assistant_log WHERE session_id = :sid AND created_at > :since AND email_reply_address IS NOT NULL',
+                ['sid' => $sessionId, 'since' => $since]
+            );
+            if ($sessionCount >= $limit) {
+                return $this->json([
+                    'success' => false,
+                    'error' => 'リクエスト数が多すぎます。しばらくお待ちください。',
+                ], 429);
+            }
+        } catch (\Throwable $e) {
+            $this->logger->warning('Email session rate limit check failed: ' . $this->redactedMessage($e->getMessage()));
+        }
+
+        // IP 単位
+        $clientIp = $request->getClientIp() ?? '';
+        if ($clientIp !== '') {
+            try {
+                $ipCount = (int) $conn->fetchOne(
+                    'SELECT COUNT(*) FROM plg_ai_chat_assistant_log WHERE client_ip = :ip AND created_at > :since AND email_reply_address IS NOT NULL',
+                    ['ip' => $clientIp, 'since' => $since]
+                );
+                if ($ipCount >= $limit) {
+                    return $this->json([
+                        'success' => false,
+                        'error' => 'リクエスト数が多すぎます。しばらくお待ちください。',
+                    ], 429);
+                }
+            } catch (\Throwable $e) {
+                $this->logger->warning('Email IP rate limit skipped: ' . $this->redactedMessage($e->getMessage()));
+            }
+        } else {
+            $this->logger->info('Email rate limit: client_ip empty, IP check skipped', ['session_id' => $sessionId]);
         }
 
         return null;
@@ -260,7 +373,9 @@ class ChatApiController extends AbstractController
             ]);
         } catch (\Throwable $e) {
             $responseTimeMs = (int) ((microtime(true) - $startTime) * 1000);
-            $this->logChatError($sessionId, $config, $userMessage, $e->getMessage(), $responseTimeMs);
+            $safeMessage = $this->redactedMessage($e->getMessage());
+            $this->logger->warning('Chat execution failed', ['error' => $safeMessage, 'session_id' => $sessionId]);
+            $this->logChatError($sessionId, $config, $userMessage, $safeMessage, $responseTimeMs);
 
             return $this->json([
                 'success' => false,
@@ -302,6 +417,7 @@ class ChatApiController extends AbstractController
         string $errorMessage,
         int $responseTimeMs
     ): void {
+        $safeErrorMessage = $this->redactedMessage($errorMessage);
         $this->chatLogger->log([
             'session_id' => $sessionId,
             'provider' => $config->getProvider(),
@@ -309,8 +425,29 @@ class ChatApiController extends AbstractController
             'user_message' => $userMessage,
             'assistant_reply' => '',
             'response_time_ms' => $responseTimeMs,
-            'error_message' => $errorMessage,
+            'error_message' => $safeErrorMessage,
         ]);
+    }
+
+    /**
+     * エラーメッセージから機微情報（APIキー等）を除去する。
+     *
+     * URL クエリの key / api_key やヘッダー値が例外メッセージに含まれる場合、
+     * DB（ChatLog.error_message）やログへの漏洩を防ぐため [REDACTED] に置換する。
+     */
+    private function redactedMessage(string $message): string
+    {
+        $redacted = preg_replace('/((?:api[_-]?key|key)\s*=\s*)[^&\s"\']+/i', '$1[REDACTED]', $message);
+        if ($redacted !== null) {
+            $message = $redacted;
+        }
+        $redacted = preg_replace('/(x-goog-api-key\s*[:=]\s*)[^\s"\']+/i', '$1[REDACTED]', $message);
+        if ($redacted !== null) {
+            $message = $redacted;
+        }
+        // Bearer トークン等のヘッダー値も念のため除去
+        $redacted = preg_replace('/(Bearer\s+)[^\s"\']+/i', '$1[REDACTED]', $message);
+        return $redacted !== null ? $redacted : $message;
     }
 
     /**
@@ -327,11 +464,26 @@ class ChatApiController extends AbstractController
     public function emailReplyRequest(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
-        $sessionId = $data['session_id'] ?? '';
+        $rawSessionId = $data['session_id'] ?? '';
         $email = $data['email'] ?? '';
 
-        if (empty($sessionId) || empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        if (empty($rawSessionId) || empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return new JsonResponse(['success' => false, 'error' => 'リクエストが不正です。'], 400);
+        }
+
+        // M1: session_id 形式検証 — 不正形式はログを残しつつ正規化（client が Math.random 等で生成した不正値の無害化）
+        $sessionId = $this->normalizeSessionId($rawSessionId);
+        if ($sessionId !== (string) $rawSessionId) {
+            $this->logger->info('emailReplyRequest: session_id normalized', [
+                'provided' => substr((string) $rawSessionId, 0, 32),
+                'normalized' => $sessionId,
+            ]);
+        }
+
+        // メール爆弾防止: IP + session でレート制限（1時間10回）
+        $rateLimitResponse = $this->enforceEmailReplyRateLimit($request, $sessionId);
+        if ($rateLimitResponse !== null) {
+            return $rateLimitResponse;
         }
 
         // セッションの最新ログにメールアドレスを記録
@@ -407,11 +559,20 @@ class ChatApiController extends AbstractController
             return new JsonResponse(['success' => false, 'error' => 'リクエストが不正です。'], 400);
         }
 
-        $sessionId = trim((string) ($data['session_id'] ?? ''));
+        $rawSessionId = trim((string) ($data['session_id'] ?? ''));
         $feedbackValue = trim((string) ($data['feedback'] ?? ''));
 
-        if ($sessionId === '' || $feedbackValue === '') {
+        if ($rawSessionId === '' || $feedbackValue === '') {
             return new JsonResponse(['success' => false, 'error' => 'リクエストが不正です。'], 400);
+        }
+
+        // M1: session_id 形式検証
+        $sessionId = $this->normalizeSessionId($rawSessionId);
+        if ($sessionId !== $rawSessionId) {
+            $this->logger->info('feedback: session_id normalized', [
+                'provided' => substr($rawSessionId, 0, 32),
+                'normalized' => $sessionId,
+            ]);
         }
 
         if (!in_array($feedbackValue, ['positive', 'negative'], true)) {
@@ -480,6 +641,9 @@ class ChatApiController extends AbstractController
 
     /**
      * 設定とプロバイダに応じた API キーを復号して返す。
+     *
+     * 復号失敗（APP_SECRET 変更等）を検出した場合は警告ログを残し、
+     * 暗号文をそのままプロバイダへ送らないよう null を返す。
      */
     private function resolveApiKey(\Plugin\AiChatAssistant42\Entity\Config $config): ?string
     {
@@ -495,17 +659,42 @@ class ChatApiController extends AbstractController
         }
 
         $plain = $this->apiKeyEncryptor->decrypt($encrypted);
+
+        // M2: 復号失敗の検出 — isEncrypted で暗号文と判定されるのに decrypt 結果が変わらない場合
+        if ($this->apiKeyEncryptor->isEncrypted($encrypted) && $plain === $encrypted) {
+            $this->logger->warning('APIキー復号に失敗しました。APP_SECRET 変更の可能性があります。再登録してください。', [
+                'provider' => $config->getProvider(),
+            ]);
+            // 暗号文をキーとして送信しない
+            return null;
+        }
+
         return $plain !== '' ? $plain : null;
     }
 
     /**
-     * チャットセッション ID を生成する。
+     * チャットセッション ID を生成する（UUID v4）。
      *
      * フロントエンドからのリクエストごとに一意のセッション ID を付与し、
      * 同じ会話のログをグループ化できるようにする。
+     * random_bytes から version/variant ビットを立てて UUID v4 を生成する。
      */
     private function generateSessionId(): string
     {
-        return bin2hex(random_bytes(16));
+        $bytes = random_bytes(16);
+        // version 4
+        $bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x40);
+        // variant 10xx
+        $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80);
+        $hex = bin2hex($bytes);
+
+        return sprintf(
+            '%s-%s-%s-%s-%s',
+            substr($hex, 0, 8),
+            substr($hex, 8, 4),
+            substr($hex, 12, 4),
+            substr($hex, 16, 4),
+            substr($hex, 20, 12)
+        );
     }
 }

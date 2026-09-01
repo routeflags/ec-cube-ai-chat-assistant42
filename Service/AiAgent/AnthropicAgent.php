@@ -18,6 +18,7 @@ namespace Plugin\AiChatAssistant42\Service\AiAgent;
 use Plugin\AiChatAssistant42\Service\AiAgentInterface;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
+use Psr\Log\LoggerInterface;
 
 /**
  * Anthropic Claude API を利用する AI エージェント実装。
@@ -27,25 +28,30 @@ use GuzzleHttp\Exception\GuzzleException;
  */
 class AnthropicAgent implements AiAgentInterface
 {
+    private const MAX_TOOL_ITERATIONS = 10;
+
     private Client $httpClient;
     private string $apiKey;
     private string $model;
     private int $maxTokens;
     private string $apiBase;
     private string $customSystemPrompt;
+    private ?LoggerInterface $logger;
 
     public function __construct(
         string $apiKey,
         string $model = 'claude-sonnet-4-20250514',
         int $maxTokens = 4096,
         string $systemPrompt = '',
-        string $apiBase = 'https://api.anthropic.com/v1'
+        string $apiBase = 'https://api.anthropic.com/v1',
+        ?LoggerInterface $logger = null
     ) {
         $this->apiKey = $apiKey;
         $this->model = $model;
         $this->maxTokens = $maxTokens;
         $this->customSystemPrompt = $systemPrompt;
         $this->apiBase = rtrim($apiBase, '/');
+        $this->logger = $logger;
         $this->httpClient = new Client([
             'base_uri' => $this->apiBase,
             'timeout' => 120,
@@ -66,8 +72,19 @@ class AnthropicAgent implements AiAgentInterface
         $toolsUsed = [];
         $totalInputTokens = 0;
         $totalOutputTokens = 0;
+        $iterations = 0;
+        $lastReply = '';
 
         while (true) {
+            if ($iterations >= self::MAX_TOOL_ITERATIONS) {
+                $this->logger?->warning('Anthropic tool loop reached max iterations, truncating', [
+                    'iterations' => $iterations,
+                    'model' => $this->model,
+                ]);
+                return $this->buildResult($lastReply, $toolsUsed, $totalInputTokens, $totalOutputTokens);
+            }
+            $iterations++;
+
             $payload = $this->buildRequestPayload($messages, $convertedTools);
             $response = $this->sendRequest($payload);
 
@@ -76,11 +93,12 @@ class AnthropicAgent implements AiAgentInterface
 
             $stopReason = $response['stop_reason'] ?? '';
             $contentBlocks = $response['content'] ?? [];
+            $lastReply = $this->extractTextFromContent($contentBlocks);
 
             // ツール呼び出しがなければ最終応答を返す
             if ($stopReason !== 'tool_use') {
                 return $this->buildResult(
-                    $this->extractTextFromContent($contentBlocks),
+                    $lastReply,
                     $toolsUsed,
                     $totalInputTokens,
                     $totalOutputTokens
@@ -100,6 +118,8 @@ class AnthropicAgent implements AiAgentInterface
             $toolResults = $this->processToolUseBlocks($contentBlocks, $toolExecutor, $toolsUsed);
             $messages[] = ['role' => 'user', 'content' => $toolResults];
         }
+
+        return $this->buildResult($lastReply, $toolsUsed, $totalInputTokens, $totalOutputTokens);
     }
 
     /**

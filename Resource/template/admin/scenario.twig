@@ -97,7 +97,7 @@
                                                     </a>
                                                     <form method="post" action="{{ url('admin_ai_chat_assistant_scenario_delete', {'id': entity.id}) }}" class="d-inline"
                                                           onsubmit="return confirm('本当に削除しますか？');">
-                                                        <input type="hidden" name="_token" value="{{ csrf_token(constant('Eccube\\Common\\Constant::TOKEN_NAME')) }}">
+                                                        <input type="hidden" name="_token" value="{{ csrf_token('admin_ai_chat_assistant_scenario_' ~ entity.id) }}">
                                                         <button type="submit" class="btn btn-sm btn-ec-delete">削除</button>
                                                     </form>
                                                 </td>

@@ -28,6 +28,8 @@ use Psr\Log\LoggerInterface;
  */
 class GeminiAgent implements AiAgentInterface
 {
+    private const MAX_TOOL_ITERATIONS = 10;
+
     private Client $httpClient;
     private string $apiKey;
     private string $model;
@@ -72,8 +74,19 @@ class GeminiAgent implements AiAgentInterface
         $toolsUsed = [];
         $totalInputTokens = 0;
         $totalOutputTokens = 0;
+        $iterations = 0;
+        $lastReply = '';
 
         while (true) {
+            if ($iterations >= self::MAX_TOOL_ITERATIONS) {
+                $this->logger?->warning('Gemini tool loop reached max iterations, truncating', [
+                    'iterations' => $iterations,
+                    'model' => $this->model,
+                ]);
+                return $this->buildResult($lastReply, $toolsUsed, $totalInputTokens, $totalOutputTokens);
+            }
+            $iterations++;
+
             $payload = $this->buildRequestPayload($contents, $convertedTools);
             $response = $this->sendRequest($payload);
 
@@ -86,12 +99,13 @@ class GeminiAgent implements AiAgentInterface
             $this->accumulateTokenUsage($response, $totalInputTokens, $totalOutputTokens);
 
             $contentParts = $candidate['content']['parts'] ?? [];
+            $lastReply = $this->extractTextFromParts($contentParts);
             $functionCalls = $this->extractFunctionCalls($contentParts);
 
             // ツール呼び出しがなければ最終応答を返す
             if ($this->isTerminalResponse($candidate, $functionCalls)) {
                 return $this->buildResult(
-                    $this->extractTextFromParts($contentParts),
+                    $lastReply,
                     $toolsUsed,
                     $totalInputTokens,
                     $totalOutputTokens
@@ -117,7 +131,7 @@ class GeminiAgent implements AiAgentInterface
             $contents[] = ['role' => 'user', 'parts' => $functionResponseParts];
         }
 
-        return $this->buildResult('', $toolsUsed, $totalInputTokens, $totalOutputTokens);
+        return $this->buildResult($lastReply, $toolsUsed, $totalInputTokens, $totalOutputTokens);
     }
 
     /**
@@ -394,15 +408,29 @@ class GeminiAgent implements AiAgentInterface
      *
      * @throws \RuntimeException API 呼び出しが失敗した場合
      */
+    /**
+     * API キー等の機微情報をメッセージから除去する。
+     */
+    private function redactSensitive(string $message): string
+    {
+        $redacted = preg_replace('/((?:api[_-]?key|key)\s*=\s*)[^&\s"\']+/i', '$1[REDACTED]', $message);
+        if ($redacted !== null) {
+            $message = $redacted;
+        }
+        $redacted = preg_replace('/(x-goog-api-key\s*[:=]\s*)[^\s"\']+/i', '$1[REDACTED]', $message);
+        return $redacted !== null ? $redacted : $message;
+    }
+
     private function sendRequest(array $payload): array
     {
         try {
             $modelPath = rawurlencode($this->model);
             $response = $this->httpClient->post(
-                $this->apiBase . "/models/{$modelPath}:generateContent?key={$this->apiKey}",
+                $this->apiBase . "/models/{$modelPath}:generateContent",
                 [
                     'headers' => [
                         'Content-Type' => 'application/json',
+                        'x-goog-api-key' => $this->apiKey,
                     ],
                     'json' => $payload,
                 ]
@@ -417,8 +445,10 @@ class GeminiAgent implements AiAgentInterface
 
             return $decoded;
         } catch (GuzzleException $e) {
+            $safeMessage = $this->redactSensitive($e->getMessage());
+            $this->logger?->warning('Gemini API request failed', ['error' => $safeMessage]);
             throw new \RuntimeException(
-                sprintf('Gemini API request failed: %s', $e->getMessage()),
+                sprintf('Gemini API request failed: %s', $safeMessage),
                 0,
                 $e
             );

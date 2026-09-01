@@ -19,6 +19,7 @@ use Plugin\AiChatAssistant42\Service\AiAgentInterface;
 use Plugin\AiChatAssistant42\Service\AiModelRegistry;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
+use Psr\Log\LoggerInterface;
 
 /**
  * OpenAI API を利用する AI エージェント実装。
@@ -28,6 +29,8 @@ use GuzzleHttp\Exception\GuzzleException;
  */
 class OpenAiAgent implements AiAgentInterface
 {
+    private const MAX_TOOL_ITERATIONS = 10;
+
     private Client $httpClient;
     private string $apiKey;
     private string $model;
@@ -39,6 +42,7 @@ class OpenAiAgent implements AiAgentInterface
     private ?AiModelRegistry $modelRegistry;
     /** @var bool|null Capability cache for this model */
     private ?bool $cachedSupportsReasoningWithTools = null;
+    private ?LoggerInterface $logger;
 
     public function __construct(
         string $apiKey,
@@ -47,7 +51,8 @@ class OpenAiAgent implements AiAgentInterface
         string $systemPrompt = '',
         string $apiBase = 'https://api.openai.com/v1',
         ?string $reasoningEffort = null,
-        ?AiModelRegistry $modelRegistry = null
+        ?AiModelRegistry $modelRegistry = null,
+        ?LoggerInterface $logger = null
     ) {
         $this->apiKey = $apiKey;
         $this->model = $model;
@@ -56,6 +61,7 @@ class OpenAiAgent implements AiAgentInterface
         $this->apiBase = rtrim($apiBase, '/');
         $this->reasoningEffort = $reasoningEffort;
         $this->modelRegistry = $modelRegistry;
+        $this->logger = $logger;
         $this->httpClient = new Client([
             'base_uri' => $this->apiBase,
             'timeout' => 120,
@@ -94,8 +100,19 @@ class OpenAiAgent implements AiAgentInterface
         $toolsUsed = [];
         $totalInputTokens = 0;
         $totalOutputTokens = 0;
+        $iterations = 0;
+        $lastReply = '';
 
         while (true) {
+            if ($iterations >= self::MAX_TOOL_ITERATIONS) {
+                $this->logger?->warning('OpenAI tool loop reached max iterations, truncating', [
+                    'iterations' => $iterations,
+                    'model' => $this->model,
+                ]);
+                return $this->buildResult($lastReply, $toolsUsed, $totalInputTokens, $totalOutputTokens);
+            }
+            $iterations++;
+
             $payload = $this->buildRequestPayload($messages, $convertedTools);
             $response = $this->sendRequest($payload);
 
@@ -108,12 +125,13 @@ class OpenAiAgent implements AiAgentInterface
             $this->accumulateTokenUsage($response, $totalInputTokens, $totalOutputTokens);
 
             $message = $choice['message'] ?? [];
+            $lastReply = $message['content'] ?? $lastReply;
             $finishReason = $choice['finish_reason'] ?? '';
 
             // ツール呼び出しがなければ最終応答を返す
             if ($finishReason !== 'tool_calls' || empty($message['tool_calls'])) {
                 return $this->buildResult(
-                    $message['content'] ?? '',
+                    $lastReply,
                     $toolsUsed,
                     $totalInputTokens,
                     $totalOutputTokens
@@ -130,7 +148,7 @@ class OpenAiAgent implements AiAgentInterface
             }
         }
 
-        return $this->buildResult('', $toolsUsed, $totalInputTokens, $totalOutputTokens);
+        return $this->buildResult($lastReply, $toolsUsed, $totalInputTokens, $totalOutputTokens);
     }
 
     /**

@@ -1,6 +1,6 @@
 # AI チャットアシスタント for EC-CUBE 4.2
 
-![AIチャットアシスタント for EC-CUBE 4.2 - ヒーローイメージ](Documents/images/readme-hero.png)
+![AIチャットアシスタント for EC-CUBE 4.2 - ヒーローイメージ](Resource/docs/readme-hero.png)
 
 EC-CUBEの商品情報をもとに、AIが購入者からの質問に回答するチャットアシスタントプラグインです。
 
@@ -93,12 +93,30 @@ EC-CUBEの商品情報を利用して、購入者からの商品に関する質�
 
 ### 1. インストール
 
+#### A. Composer からインストール（Packagist 公開後）
+
 ```bash
 composer require routeflags/ec-cube-ai-chat-assistant42
 
 php bin/console eccube:plugin:install --code=AiChatAssistant42
 php bin/console eccube:plugin:enable --code=AiChatAssistant42
 ```
+
+#### B. tar.gz からインストール（推奨: GitHub Release 配布）
+
+```bash
+# 1. AiChatAssistant42-1.0.0.tar.gz を EC-CUBE 本体の app/Plugin/ に展開
+tar -xzf AiChatAssistant42-1.0.0.tar.gz -C /path/to/ec-cube/app/Plugin/
+
+# 2. プラグインをインストール
+php bin/console eccube:plugin:install --code=AiChatAssistant42
+
+# 3. 管理画面で有効化（またはコマンドで有効化）
+php bin/console eccube:plugin:enable --code=AiChatAssistant42
+# 管理画面: コンテンツ管理 > プラグイン > AiChatAssistant42 > 有効化
+```
+
+> tar.gz は `bin/package.sh` で生成します。`vendor/` は含まないため、展開後に EC-CUBE が依存を解決します。
 
 ### 2. APIキーを設定
 

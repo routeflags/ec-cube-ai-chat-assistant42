@@ -80,8 +80,15 @@
     if (console.groupEnd) console.groupEnd();
   }
 
-  /** Random session ID (8-hex groups) */
+  /** Random session ID (UUID v4) — prefers crypto.randomUUID() when available */
   function generateSessionId() {
+    // Prefer cryptographically strong UUID if available (modern browsers)
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      try {
+        return crypto.randomUUID();
+      } catch (e) { /* fallback below */ }
+    }
+    // Fallback: Math.random based UUID v4 (legacy)
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
       var r = (Math.random() * 16) | 0;
       return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);

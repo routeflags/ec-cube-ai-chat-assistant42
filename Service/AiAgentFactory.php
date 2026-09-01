@@ -18,6 +18,7 @@ namespace Plugin\AiChatAssistant42\Service;
 use Plugin\AiChatAssistant42\Service\AiAgent\AnthropicAgent;
 use Plugin\AiChatAssistant42\Service\AiAgent\GeminiAgent;
 use Plugin\AiChatAssistant42\Service\AiAgent\OpenAiAgent;
+use Psr\Log\LoggerInterface;
 
 /**
  * AI エージェントのファクトリ。
@@ -28,6 +29,10 @@ use Plugin\AiChatAssistant42\Service\AiAgent\OpenAiAgent;
  */
 class AiAgentFactory
 {
+    public function __construct(private ?LoggerInterface $logger = null)
+    {
+    }
+
     /**
      * 指定プロバイダの AI エージェントを生成する。
      *
@@ -46,9 +51,9 @@ class AiAgentFactory
         string $systemPrompt = ''
     ): AiAgentInterface {
         return match ($provider) {
-            'openai' => new OpenAiAgent($apiKey, $model, $maxTokens, $systemPrompt),
-            'anthropic' => new AnthropicAgent($apiKey, $model, $maxTokens, $systemPrompt),
-            'gemini' => new GeminiAgent($apiKey, $model, $maxTokens, $systemPrompt),
+            'openai' => new OpenAiAgent($apiKey, $model, $maxTokens, $systemPrompt, 'https://api.openai.com/v1', null, null, $this->logger),
+            'anthropic' => new AnthropicAgent($apiKey, $model, $maxTokens, $systemPrompt, 'https://api.anthropic.com/v1', $this->logger),
+            'gemini' => new GeminiAgent($apiKey, $model, $maxTokens, $systemPrompt, 'https://generativelanguage.googleapis.com/v1beta', $this->logger),
             default => throw new \InvalidArgumentException(
                 sprintf('Unknown AI provider: %s', $provider)
             ),

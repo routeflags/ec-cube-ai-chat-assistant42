@@ -15,6 +15,8 @@ declare(strict_types=1);
 
 namespace Plugin\AiChatAssistant42\Service;
 
+use Psr\Log\LoggerInterface;
+
 /**
  * API キーの暗号化・復号を担当するサービス.
  *
@@ -28,11 +30,13 @@ class ApiKeyEncryptor
     private const TAG_LENGTH = 16;
 
     private string $key;
+    private ?LoggerInterface $logger;
 
-    public function __construct(string $appSecret)
+    public function __construct(string $appSecret, ?LoggerInterface $logger = null)
     {
         // APP_SECRET から 32byte の鍵を導出（SHA-256）
         $this->key = hash('sha256', $appSecret, true);
+        $this->logger = $logger;
     }
 
     /**
@@ -82,7 +86,12 @@ class ApiKeyEncryptor
 
         $decoded = base64_decode($encrypted, true);
         if ($decoded === false || strlen($decoded) < self::NONCE_LENGTH + self::TAG_LENGTH + 1) {
-            // 復号失敗時は平文として扱う（後方互換）
+            // 復号失敗時は平文として扱う（後方互換） — ただし isEncrypted() が true の場合は警告
+            if ($this->isEncrypted($encrypted)) {
+                $this->logger?->warning('APIキー復号に失敗しました（base64 デコード失敗または長さ不足）。APP_SECRET 変更の可能性があります。再登録してください。', [
+                    'encrypted_prefix' => substr($encrypted, 0, 8) . '...',
+                ]);
+            }
             return $encrypted;
         }
 
@@ -100,7 +109,11 @@ class ApiKeyEncryptor
         );
 
         if ($plain === false) {
-            // APP_SECRET 変更等で復号失敗した場合は平文として扱う（ログは呼び出し側で）
+            // APP_SECRET 変更等で復号失敗した場合は警告を出しつつ平文として扱う（後方互換）
+            // 呼び出し側（ChatApiController::resolveApiKey）でも検出して null を返す
+            $this->logger?->warning('APIキー復号に失敗しました。APP_SECRET 変更の可能性があります。再登録してください。', [
+                'encrypted_prefix' => substr($encrypted, 0, 8) . '...',
+            ]);
             return $encrypted;
         }
 

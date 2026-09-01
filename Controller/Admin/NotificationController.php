@@ -18,6 +18,7 @@ namespace Plugin\AiChatAssistant42\Controller\Admin;
 use Eccube\Controller\AbstractController;
 use Plugin\AiChatAssistant42\Entity\Notification;
 use Plugin\AiChatAssistant42\Repository\NotificationRepository;
+use Plugin\AiChatAssistant42\Service\ApiKeyEncryptor;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -41,6 +42,7 @@ class NotificationController extends AbstractController
 
     public function __construct(
         private NotificationRepository $notificationRepository,
+        private ?ApiKeyEncryptor $apiKeyEncryptor = null,
     ) {
     }
 
@@ -158,13 +160,25 @@ class NotificationController extends AbstractController
             ],
             'webhook' => [
                 'url' => $request->request->get('webhook_url', ''),
-                'headers' => $request->request->get('webhook_headers', ''),
+                'headers' => $this->encryptIfNeeded($request->request->get('webhook_headers', '')),
             ],
             'line' => [
-                'channel_access_token' => $request->request->get('line_channel_access_token', ''),
+                'channel_access_token' => $this->encryptIfNeeded($request->request->get('line_channel_access_token', '')),
                 'user_id' => $request->request->get('line_user_id', ''),
             ],
             default => [],
         };
+    }
+
+    private function encryptIfNeeded(string $value): string
+    {
+        if ($value === '' || $this->apiKeyEncryptor === null) {
+            return $value;
+        }
+        if ($this->apiKeyEncryptor->isEncrypted($value)) {
+            return $value;
+        }
+
+        return $this->apiKeyEncryptor->encrypt($value);
     }
 }

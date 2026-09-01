@@ -34,6 +34,7 @@ class NotificationService
         private NotificationRepository $notificationRepository,
         private LoggerInterface $logger,
         private ?MailerInterface $mailer = null,
+        private ?ApiKeyEncryptor $apiKeyEncryptor = null,
     ) {
     }
 
@@ -129,6 +130,8 @@ class NotificationService
                 'json' => $payload,
                 'timeout' => 10,
                 'connect_timeout' => 5,
+                // M3: リダイレクトを追従しない — SSRF 経由のリダイレクト悪用を防止
+                'allow_redirects' => false,
             ]);
 
             $this->logger->info('Webhook 通知を送信しました', [
@@ -245,7 +248,7 @@ class NotificationService
      */
     private function sendLine(string $event, array $config, array $context): void
     {
-        $channelAccessToken = $config['channel_access_token'] ?? '';
+        $channelAccessToken = $this->decryptIfNeeded($config['channel_access_token'] ?? '');
         $targetUserId = $config['user_id'] ?? '';
 
         if ($channelAccessToken === '' || $targetUserId === '') {
@@ -299,11 +302,31 @@ class NotificationService
         }
     }
 
+    private function decryptIfNeeded(string $value): string
+    {
+        if ($value === '' || $this->apiKeyEncryptor === null) {
+            return $value;
+        }
+        if (!$this->apiKeyEncryptor->isEncrypted($value)) {
+            return $value;
+        }
+        $decrypted = $this->apiKeyEncryptor->decrypt($value);
+        if ($decrypted === $value) {
+            $this->logger->warning('通知トークンの復号に失敗しました。APP_SECRET が変更された可能性があります。', [
+                'encrypted_prefix' => substr($value, 0, 8) . '...',
+            ]);
+        }
+
+        return $decrypted;
+    }
+
     /**
      * Webhook URL の安全性を検証する。
      *
      * - https のみ許可
      * - プライベートIP / ローカルホスト / link-local を禁止
+     * - ブラケット付き IPv6（例: [::1]）を正しく検出
+     * - 10/16進表記の迂回を拒否（filter_var + 明示的な 16進チェック）
      */
     private function isValidWebhookUrl(string $url): bool
     {
@@ -317,18 +340,63 @@ class NotificationService
             return false;
         }
 
-        $host = strtolower($parsed['host']);
+        // M3: ブラケットを除去（例: https://[::1]/hook → ::1） — parse_url によってはブラケット付きで返る
+        $rawHost = $parsed['host'];
+        $host = strtolower(trim($rawHost, '[]'));
 
-        // ローカルホスト禁止
-        if (in_array($host, ['localhost', '127.0.0.1', '::1', '0.0.0.0'], true)) {
+        // 明らかな 16進/10進の迂回表記を事前に拒否
+        // 例: 0x7f.0x0.0x0.0x1 や 2130706433（10進）は filter_var で弾かれるが明示的にログを残す
+        if (preg_match('/^0x[0-9a-f]+/i', $host) === 1 || preg_match('/^[0-9]+$/', $host) === 1) {
+            // 純粋な 10進 IP（2130706433 等）は SSRF 迂回の可能性があるため拒否
+            // ただし数字ドメイン（例: 123example.com）はホスト名なので、ドットなしの純数字のみ拒否
+            if (filter_var($host, FILTER_VALIDATE_IP) === false) {
+                // ドットなしの純数字は IP として解釈できないが、迂回狙いの可能性が高いため拒否
+                // 10進表記でドット区切り（2130706433 形式）はここで拒否、0x 形式も拒否
+                // ドットを含む 10進/16進は後段の filter_var で処理
+                if (preg_match('/^0x/i', $host) === 1) {
+                    return false;
+                }
+                // 純数字ホストは許可しない（filter_var で IP として無効だが意図的な迂回とみなす）
+                // ただしホスト名が純数字の正当なケースは極めて稀なため安全側に倒す
+                if (ctype_digit($host)) {
+                    return false;
+                }
+            }
+        }
+
+        // 16進文字列を含むホスト（例: 0x7f.0.0.1）を拒否
+        if (strpos($host, '0x') !== false || strpos($host, '0X') !== false) {
             return false;
         }
 
-        // プライベートIP / link-local の禁止
-        $ip = gethostbyname($host);
-        if ($ip !== $host) {
+        // ローカルホスト禁止（ブラケット除去後の正規化済み host で判定）
+        if (in_array($host, ['localhost', '127.0.0.1', '::1', '0.0.0.0', '::', '::ffff:127.0.0.1'], true)) {
+            return false;
+        }
+
+        // host 自体が IP リテラルの場合、直接プライベートレンジを検証
+        if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
+            if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+                return false;
+            }
+            // IP リテラル自体がプライベートでなければ許可（DNS 解決不要）
+            return true;
+        }
+
+        // プライベートIP / link-local の禁止 — DNS 解決後の IP を検証
+        // gethostbyname は IPv4 のみ解決するため、失敗時はホスト名のまま返る
+        $resolvedIp = gethostbyname($host);
+        if ($resolvedIp !== $host) {
             // ホスト名が解決できた場合、IP 範囲をチェック
-            if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+            if (filter_var($resolvedIp, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+                return false;
+            }
+            // 16進/10進の迂回で解決された IP も再検証（例: 0x7f.0.0.1 → 127.0.0.1）
+            // 解決後の IP がプライベートなら上記で既に弾かれる
+        } else {
+            // DNS 解決できなかったホスト名は一旦許可 — ただし 10/16進のドット区切りを事前に拒否済み
+            // 追加で host に 0x や純数字ドット区切りが含まれていないか再チェック
+            if (preg_match('/(?:^|\.)0x[0-9a-f]+/i', $host) === 1) {
                 return false;
             }
         }

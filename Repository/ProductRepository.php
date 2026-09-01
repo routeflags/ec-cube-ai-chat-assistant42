@@ -204,7 +204,7 @@ class ProductRepository extends AbstractRepository
             ->groupBy('p.id', 'pc.price02', 'ps.stock', 'pc.stock_unlimited', 'p.description_list', 'p.update_date')
             ->orderBy('p.update_date', 'DESC')
             ->addOrderBy('p.id', 'DESC')
-            ->setMaxResults(max(0, $limit))
+            ->setMaxResults(min(max(0, $limit), 100))
             ->setFirstResult(max(0, $offset));
 
         if ($keyword !== '') {
@@ -379,7 +379,7 @@ class ProductRepository extends AbstractRepository
             ->groupBy('p.id', 'pc.price02', 'ps.stock', 'pc.stock_unlimited', 'p.description_list')
             ->orderBy('p.update_date', 'DESC')
             ->addOrderBy('p.id', 'DESC')
-            ->setMaxResults(max(0, $limit))
+            ->setMaxResults(min(max(0, $limit), 100))
             ->setFirstResult(max(0, $offset));
 
         $products = $qb->executeQuery()->fetchAllAssociative();
@@ -440,7 +440,7 @@ class ProductRepository extends AbstractRepository
             ->groupBy('p.id', 'pc.price02', 'ps.stock', 'pc.stock_unlimited', 'p.description_list')
             ->orderBy('p.update_date', 'DESC')
             ->addOrderBy('p.id', 'DESC')
-            ->setMaxResults(max(0, $limit))
+            ->setMaxResults(min(max(0, $limit), 100))
             ->setFirstResult(max(0, $offset));
 
         $products = $qb->executeQuery()->fetchAllAssociative();
