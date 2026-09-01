@@ -19,6 +19,10 @@ services:
 
     Plugin\AiChatAssistant42\Service\AiAgentFactory: ~
 
+    Plugin\AiChatAssistant42\Service\ApiKeyEncryptor:
+        arguments:
+            - '%kernel.secret%'
+
     Plugin\AiChatAssistant42\Service\AiModelRegistry:
         arguments:
             - '%kernel.project_dir%/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json'

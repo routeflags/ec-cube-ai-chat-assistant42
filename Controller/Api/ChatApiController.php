@@ -24,6 +24,7 @@ use Plugin\AiChatAssistant42\Repository\ProductRepository;
 use Plugin\AiChatAssistant42\Service\AiAgentFactory;
 use Plugin\AiChatAssistant42\Service\AiModelRegistry;
 use Plugin\AiChatAssistant42\Service\ChatFlowService;
+use Plugin\AiChatAssistant42\Service\ApiKeyEncryptor;
 use Plugin\AiChatAssistant42\Service\ChatLogger;
 use Plugin\AiChatAssistant42\Service\EmailReplyService;
 use Plugin\AiChatAssistant42\Service\NotificationService;
@@ -50,6 +51,7 @@ class ChatApiController extends AbstractController
         private ChatFlowService $chatFlowService,
         private EmailReplyService $emailReplyService,
         private NotificationService $notificationService,
+        private ApiKeyEncryptor $apiKeyEncryptor,
         private LoggerInterface $logger,
     ) {
         $this->entityManager = $entityManager;
@@ -462,16 +464,23 @@ class ChatApiController extends AbstractController
     }
 
     /**
-     * 設定とプロバイダに応じた API キーを返す。
+     * 設定とプロバイダに応じた API キーを復号して返す。
      */
     private function resolveApiKey(\Plugin\AiChatAssistant42\Entity\Config $config): ?string
     {
-        return match ($config->getProvider()) {
+        $encrypted = match ($config->getProvider()) {
             'openai' => $config->getApiKeyOpenai(),
             'anthropic' => $config->getApiKeyAnthropic(),
             'gemini' => $config->getApiKeyGemini(),
             default => null,
         };
+
+        if ($encrypted === null || $encrypted === '') {
+            return null;
+        }
+
+        $plain = $this->apiKeyEncryptor->decrypt($encrypted);
+        return $plain !== '' ? $plain : null;
     }
 
     /**

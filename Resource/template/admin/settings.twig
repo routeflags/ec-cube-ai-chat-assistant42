@@ -83,24 +83,24 @@
             <label for="api_key_openai">OpenAI API Key</label>
             <input type="password" name="api_key_openai" id="api_key_openai" class="form-control"
                    value=""
-                   placeholder="{{ config and config.getApiKeyOpenai() ? config.getApiKeyOpenai()|slice(0,7) ~ '...' ~ config.getApiKeyOpenai()|slice(-4) : 'sk-...' }}">
-            {% if config and config.getApiKeyOpenai() %}<small class="text-muted">設定済み。新しいキーを入力しない限り変更されません。</small>{% endif %}
+                   placeholder="{{ maskedKeys.openai ? maskedKeys.openai : 'sk-...' }}">
+            {% if maskedKeys.openai %}<small class="text-muted">設定済み ({{ maskedKeys.openai }})。新しいキーを入力しない限り変更されません。</small>{% endif %}
           </div>
 
           <div class="form-group">
             <label for="api_key_anthropic">Anthropic API Key</label>
             <input type="password" name="api_key_anthropic" id="api_key_anthropic" class="form-control"
                    value=""
-                   placeholder="{{ config and config.getApiKeyAnthropic() ? config.getApiKeyAnthropic()|slice(0,7) ~ '...' ~ config.getApiKeyAnthropic()|slice(-4) : 'sk-ant-...' }}">
-            {% if config and config.getApiKeyAnthropic() %}<small class="text-muted">設定済み。新しいキーを入力しない限り変更されません。</small>{% endif %}
+                   placeholder="{{ maskedKeys.anthropic ? maskedKeys.anthropic : 'sk-ant-...' }}">
+            {% if maskedKeys.anthropic %}<small class="text-muted">設定済み ({{ maskedKeys.anthropic }})。新しいキーを入力しない限り変更されません。</small>{% endif %}
           </div>
 
           <div class="form-group">
             <label for="api_key_gemini">Google Gemini API Key</label>
             <input type="password" name="api_key_gemini" id="api_key_gemini" class="form-control"
                    value=""
-                   placeholder="{{ config and config.getApiKeyGemini() ? config.getApiKeyGemini()|slice(0,7) ~ '...' ~ config.getApiKeyGemini()|slice(-4) : 'AIza...' }}">
-            {% if config and config.getApiKeyGemini() %}<small class="text-muted">設定済み。新しいキーを入力しない限り変更されません。</small>{% endif %}
+                   placeholder="{{ maskedKeys.gemini ? maskedKeys.gemini : 'AIza...' }}">
+            {% if maskedKeys.gemini %}<small class="text-muted">設定済み ({{ maskedKeys.gemini }})。新しいキーを入力しない限り変更されません。</small>{% endif %}
           </div>
         </div>
       </div>

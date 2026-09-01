@@ -20,6 +20,7 @@ use Eccube\Controller\AbstractController;
 use Plugin\AiChatAssistant42\Entity\ChatLog;
 use Plugin\AiChatAssistant42\Entity\Config;
 use Plugin\AiChatAssistant42\Service\AiModelRegistry;
+use Plugin\AiChatAssistant42\Service\ApiKeyEncryptor;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -46,6 +47,7 @@ class DashboardController extends AbstractController
 
     public function __construct(
         private ?AiModelRegistry $aiModelRegistry = null,
+        private ?ApiKeyEncryptor $apiKeyEncryptor = null,
     ) {
     }
 
@@ -304,11 +306,19 @@ class DashboardController extends AbstractController
             }
         }
 
+        // APIキーのマスク表示は復号後の平文をマスクする（暗号化対応 + 平文後方互換）
+        $maskedKeys = [
+            'openai' => $this->getMaskedApiKey($config->getApiKeyOpenai()),
+            'anthropic' => $this->getMaskedApiKey($config->getApiKeyAnthropic()),
+            'gemini' => $this->getMaskedApiKey($config->getApiKeyGemini()),
+        ];
+
         return $this->render('@AiChatAssistant42/admin/settings.twig', [
             'menus' => ['setting', 'ai_chat_assistant', 'ai_chat_assistant_settings'],
             'config' => $config,
             'modelsByProvider' => $modelsByProvider,
             'allModelIds' => $allModelIds,
+            'maskedKeys' => $maskedKeys,
         ]);
     }
 
@@ -555,24 +565,33 @@ class DashboardController extends AbstractController
     }
 
     /**
-     * API キーをリクエストから反映する（空文字は上書きしない）。
+     * API キーをリクエストから反映する（空文字は上書きしない、保存時に暗号化）。
      */
     private function applyApiKeysFromRequest(Request $request, Config $config): void
     {
         $openai = (string) $request->request->get('api_key_openai', '');
         if ($openai !== '') {
-            $config->setApiKeyOpenai($openai);
+            $config->setApiKeyOpenai($this->encryptApiKey($openai));
         }
 
         $anthropic = (string) $request->request->get('api_key_anthropic', '');
         if ($anthropic !== '') {
-            $config->setApiKeyAnthropic($anthropic);
+            $config->setApiKeyAnthropic($this->encryptApiKey($anthropic));
         }
 
         $gemini = (string) $request->request->get('api_key_gemini', '');
         if ($gemini !== '') {
-            $config->setApiKeyGemini($gemini);
+            $config->setApiKeyGemini($this->encryptApiKey($gemini));
         }
+    }
+
+    private function encryptApiKey(string $plain): string
+    {
+        if ($this->apiKeyEncryptor === null) {
+            return $plain;
+        }
+
+        return $this->apiKeyEncryptor->encrypt($plain);
     }
 
     /**
@@ -683,5 +702,27 @@ class DashboardController extends AbstractController
         }
 
         return $ids;
+    }
+
+    /**
+     * 暗号化された API キーを復号してマスク表示用に整形する.
+     */
+    private function getMaskedApiKey(?string $encrypted): string
+    {
+        if ($encrypted === null || $encrypted === '') {
+            return '';
+        }
+
+        $plain = $this->apiKeyEncryptor?->decrypt($encrypted) ?? $encrypted;
+        if ($plain === '') {
+            $plain = $encrypted;
+        }
+
+        $len = strlen($plain);
+        if ($len <= 4) {
+            return str_repeat('*', $len);
+        }
+
+        return substr($plain, 0, 7) . '...' . substr($plain, -4);
     }
 }

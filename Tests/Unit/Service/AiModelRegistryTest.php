@@ -268,8 +268,8 @@ class AiModelRegistryTest extends TestCase
         $allModels = $this->registry->getAllModels();
 
         $this->assertIsArray($allModels);
-        // openai 5 + anthropic 3 + gemini 3 = 11
-        $this->assertCount(11, $allModels);
+        // openai 5 + anthropic 3 + gemini 4 = 12
+        $this->assertCount(12, $allModels);
     }
 
     public function testGetAllModelsIncludesProviderKeyForEachModel(): void
