@@ -87,8 +87,14 @@ class AnthropicAgent implements AiAgentInterface
                 );
             }
 
-            // アシスタントメッセージを履歴に追加
-            $messages[] = ['role' => 'assistant', 'content' => $contentBlocks];
+            // アシスタントメッセージを履歴に追加（tool_use.input が [] の場合は {} に正規化）
+            $normalizedBlocks = array_map(function (array $block): array {
+                if (($block['type'] ?? '') === 'tool_use' && isset($block['input']) && $block['input'] === []) {
+                    $block['input'] = new \stdClass();
+                }
+                return $block;
+            }, $contentBlocks);
+            $messages[] = ['role' => 'assistant', 'content' => $normalizedBlocks];
 
             // ツール呼び出しを実行し、結果を履歴に追加
             $toolResults = $this->processToolUseBlocks($contentBlocks, $toolExecutor, $toolsUsed);
@@ -213,13 +219,17 @@ class AnthropicAgent implements AiAgentInterface
     {
         $converted = [];
         foreach ($mcpTools as $tool) {
+            $schema = $tool['inputSchema'] ?? $tool['input_schema'] ?? $tool['parameters'] ?? [
+                'type' => 'object',
+                'properties' => new \stdClass(),
+            ];
+            if (isset($schema['properties']) && $schema['properties'] === []) {
+                $schema['properties'] = new \stdClass();
+            }
             $converted[] = [
                 'name' => $tool['name'],
                 'description' => $tool['description'] ?? '',
-                'input_schema' => $tool['inputSchema'] ?? $tool['parameters'] ?? [
-                    'type' => 'object',
-                    'properties' => new \stdClass(),
-                ],
+                'input_schema' => $schema,
             ];
         }
         return $converted;

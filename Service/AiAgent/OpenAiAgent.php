@@ -225,15 +225,20 @@ class OpenAiAgent implements AiAgentInterface
     {
         $converted = [];
         foreach ($mcpTools as $tool) {
+            $schema = $tool['inputSchema'] ?? $tool['input_schema'] ?? $tool['parameters'] ?? [
+                'type' => 'object',
+                'properties' => new \stdClass(),
+            ];
+            // 空配列 [] は JSON で [] になるため、空オブジェクト {} に変換
+            if (isset($schema['properties']) && $schema['properties'] === []) {
+                $schema['properties'] = new \stdClass();
+            }
             $converted[] = [
                 'type' => 'function',
                 'function' => [
                     'name' => $tool['name'],
                     'description' => $tool['description'] ?? '',
-                    'parameters' => $tool['inputSchema'] ?? $tool['parameters'] ?? [
-                        'type' => 'object',
-                        'properties' => new \stdClass(),
-                    ],
+                    'parameters' => $schema,
                 ],
             ];
         }

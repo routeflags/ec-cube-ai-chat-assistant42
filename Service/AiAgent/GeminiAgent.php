@@ -92,8 +92,14 @@ class GeminiAgent implements AiAgentInterface
                 );
             }
 
-            // アシスタントの応答を履歴に追加
-            $contents[] = ['role' => 'model', 'parts' => $contentParts];
+            // アシスタントの応答を履歴に追加（args が [] の場合は {} に正規化）
+            $normalizedParts = array_map(function (array $part): array {
+                if (isset($part['functionCall']['args']) && $part['functionCall']['args'] === []) {
+                    $part['functionCall']['args'] = new \stdClass();
+                }
+                return $part;
+            }, $contentParts);
+            $contents[] = ['role' => 'model', 'parts' => $normalizedParts];
 
             // ツール呼び出しを実行し、結果を履歴に追加
             $functionResponseParts = $this->processFunctionCalls($functionCalls, $toolExecutor, $toolsUsed);
@@ -233,13 +239,17 @@ class GeminiAgent implements AiAgentInterface
     {
         $converted = [];
         foreach ($mcpTools as $tool) {
+            $schema = $tool['inputSchema'] ?? $tool['input_schema'] ?? $tool['parameters'] ?? [
+                'type' => 'OBJECT',
+                'properties' => new \stdClass(),
+            ];
+            if (isset($schema['properties']) && $schema['properties'] === []) {
+                $schema['properties'] = new \stdClass();
+            }
             $converted[] = [
                 'name' => $tool['name'],
                 'description' => $tool['description'] ?? '',
-                'parameters' => $tool['inputSchema'] ?? $tool['parameters'] ?? [
-                    'type' => 'OBJECT',
-                    'properties' => new \stdClass(),
-                ],
+                'parameters' => $schema,
             ];
         }
         return $converted;
@@ -288,9 +298,19 @@ class GeminiAgent implements AiAgentInterface
         $calls = [];
         foreach ($contentParts as $part) {
             if (isset($part['functionCall'])) {
+                $args = $part['functionCall']['args'] ?? [];
+                // 空配列 [] は JSON で [] になるが、Gemini API は object を期待するため {} に正規化
+                if (is_array($args) && $args === []) {
+                    $args = new \stdClass();
+                    $args = (array) $args;
+                }
+                // 連想配列でない場合も正規化
+                if (!is_array($args)) {
+                    $args = [];
+                }
                 $calls[] = [
                     'name' => $part['functionCall']['name'] ?? '',
-                    'args' => $part['functionCall']['args'] ?? [],
+                    'args' => $args,
                 ];
             }
         }
