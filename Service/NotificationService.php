@@ -45,7 +45,15 @@ class NotificationService
      */
     public function checkAndSend(string $event, array $context = []): void
     {
-        $notifications = $this->notificationRepository->findByEvent($event);
+        try {
+            $notifications = $this->notificationRepository->findByEvent($event);
+        } catch (\Throwable $e) {
+            $this->logger->error('通知ルールの取得に失敗しました', [
+                'event' => $event,
+                'error' => $e->getMessage(),
+            ]);
+            return;
+        }
 
         foreach ($notifications as $notification) {
             $config = $notification->getConfigJson() ?? [];
