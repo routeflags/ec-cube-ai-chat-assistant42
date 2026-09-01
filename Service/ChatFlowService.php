@@ -15,11 +15,8 @@ use Psr\Log\LoggerInterface;
  */
 class ChatFlowService
 {
-    private const HELP_CONTEXT_MAX = 2000;
-    private const GUIDE_NEWS_CONTEXT_MAX = 2000;
     private const KNOWLEDGE_CONTEXT_MAX = 4000;
     private const SNIPPET_MAX = 500;
-    private const EXCERPT_MAX = 200;
 
     public function __construct(
         private EntityManagerInterface $entityManager,
@@ -240,184 +237,25 @@ class ChatFlowService
     }
 
     /**
-     * ヘルプ（静的ページ）5件を要約してコンテキスト化する。
+     * 後方互換: ヘルプは汎用化により廃止。DB のナレッジのみを利用する。
+     * カスタムヘルプ（app/template/default/Help/*.twig）は参照しない。
      *
-     * dtb_page から help_guide, help_about, help_agreement, help_tradelaw, help_privacy
-     * を取得し、各 content（twig）をプレーンテキスト化して 500文字に切り詰め、
-     * 合計 2000文字で制限したコンテキストを返す。
-     * help_guide（よくある質問: /help_guide）は
-     * ユーザーの疑問解決に直結するため最優先で先頭に配置し、2000文字制限で
-     * 切り詰められる場合でも確実に含まれるようにする。
-     * DB例外時は空文字を返し、チャット全体を停止させない。
+     * @deprecated
      */
     public function buildHelpContext(): string
     {
-        try {
-            $conn = $this->entityManager->getConnection();
-            // help_guide（よくある質問）は最優先 — 2000文字制限で切り詰められても確実に含まれるよう先頭に配置
-            $helpUrls = ['help_guide', 'help_about', 'help_agreement', 'help_tradelaw', 'help_privacy'];
-
-            $placeholders = implode(',', array_fill(0, count($helpUrls), '?'));
-            $rows = $conn->executeQuery(
-                'SELECT url, page_name, file_name FROM dtb_page WHERE url IN (' . $placeholders . ')',
-                $helpUrls
-            )->fetchAllAssociative();
-
-            if (empty($rows)) {
-                return '';
-            }
-
-            $rowMap = [];
-            foreach ($rows as $row) {
-                $rowMap[$row['url']] = $row;
-            }
-
-            $context = "\n\n## ヘルプ（静的ページ）\n";
-            $maxTotal = self::HELP_CONTEXT_MAX;
-            $currentLength = 0;
-
-            foreach ($helpUrls as $url) {
-                if (!isset($rowMap[$url])) {
-                    continue;
-                }
-
-                $text = $this->resolveHelpText($rowMap[$url]['file_name'] ?? null);
-                if ($text === '') {
-                    $text = $rowMap[$url]['page_name'] ?? $url;
-                }
-
-                // help_guide は FAQ（よくある質問）が後半にあり先頭500文字では欠落するため、
-                // 「よくある質問」以降から抽出して FAQ が確実に含まれるようにする。
-                // 例: 「カンナビノイドの二日酔いを抑える方法はありますか？」は 1777文字目付近にあるため
-                // 先頭500では届かず、FAQ起点の500で初めて含まれる。
-                if ($url === 'help_guide') {
-                    $faqPos = mb_strpos($text, 'よくある質問');
-                    if ($faqPos !== false) {
-                        // FAQセクションから800文字を優先的に抽出し、SNIPPET_MAX内で確実に FAQ が入るようにする
-                        $faqText = mb_substr($text, $faqPos, 800);
-                        // FAQセクションが存在すれば優先（短くてもFAQ起点を優先し、ヘッダー大量重複よりFAQを露出）
-                        if (mb_strlen(trim($faqText)) > 10) {
-                            $text = $faqText;
-                        }
-                    }
-                }
-
-                $snippet = mb_substr($text, 0, self::SNIPPET_MAX);
-                $entry = "- {$url}: {$snippet}\n";
-                if ($currentLength + mb_strlen($entry) > $maxTotal) {
-                    break;
-                }
-                $context .= $entry;
-                $currentLength += mb_strlen($entry);
-            }
-
-            if ($currentLength === 0) {
-                return '';
-            }
-
-            return $context;
-        } catch (\Throwable $e) {
-            $this->logger?->warning('buildHelpContext failed: ' . $e->getMessage());
-            return '';
-        }
+        return '';
     }
 
     /**
-     * 直近のニュースを要約してコンテキスト化する。
+     * 後方互換: ニュース/ガイドは汎用化により廃止。DB のナレッジのみを利用する。
+     * dtb_news への依存を除去し、常に空文字を返す。
      *
-     * buildKnowledgeContext と同様に合計 2000文字で制限し、
-     * ツール呼び出しなしでも概要を回答できるようにする。
-     * EasyArticle 依存は完全削除済みのため dtb_news のみを参照する。DB例外時は空文字を返す。
+     * @deprecated
      */
     public function buildGuideNewsContext(): string
     {
-        try {
-            $conn = $this->entityManager->getConnection();
-
-            $newsList = $conn->fetchAllAssociative(
-                'SELECT title, description FROM dtb_news ORDER BY publish_date DESC LIMIT 5'
-            );
-
-            if (empty($newsList)) {
-                return '';
-            }
-
-            $context = "\n\n## ニュース\n";
-            $maxTotal = self::GUIDE_NEWS_CONTEXT_MAX;
-            $currentLength = 0;
-
-            foreach ($newsList as $news) {
-                $title = $news['title'] ?? '';
-                $excerpt = $this->plainTextExcerpt($news['description'] ?? '', self::EXCERPT_MAX);
-                $snippetSource = $excerpt !== '' ? "{$title}: {$excerpt}" : $title;
-                $snippet = mb_substr($snippetSource, 0, self::SNIPPET_MAX);
-                $entry = "- [ニュース] {$snippet}\n";
-                if ($currentLength + mb_strlen($entry) > $maxTotal) {
-                    break;
-                }
-                $context .= $entry;
-                $currentLength += mb_strlen($entry);
-            }
-
-            if ($currentLength === 0) {
-                return '';
-            }
-
-            return $context;
-        } catch (\Throwable $e) {
-            $this->logger?->warning('buildGuideNewsContext failed: ' . $e->getMessage());
-            return '';
-        }
-    }
-
-    /**
-     * HTML/テキストの抜粋をプレーンテキスト化して切り出す。
-     * 共通ヘルパー TwigPlainTextExtractor に委譲する。
-     */
-    private function plainTextExcerpt(?string $html, int $limit): string
-    {
-        return $this->textExtractor->excerpt($html, $limit);
-    }
-
-    /**
-     * ヘルプ twig ファイルからプレーンテキストを抽出する。
-     */
-    private function resolveHelpText(?string $fileName): string
-    {
-        if ($fileName === null || $fileName === '') {
-            return '';
-        }
-
-        $projectDir = dirname(__DIR__, 4);
-        $candidates = [
-            $projectDir . '/app/template/default/' . $fileName . '.twig',
-            $projectDir . '/src/Eccube/Resource/template/default/' . $fileName . '.twig',
-        ];
-
-        $filePath = null;
-        foreach ($candidates as $candidate) {
-            if (is_file($candidate)) {
-                $filePath = $candidate;
-                break;
-            }
-        }
-
-        if ($filePath === null) {
-            return '';
-        }
-
-        $raw = (string) file_get_contents($filePath);
-
-        return $this->textExtractor->extract($raw);
-    }
-
-    /**
-     * Twig/HTML 文字列をプレーンテキスト化する。
-     * 後方互換のため残置し、共通ヘルパーに委譲する。
-     */
-    private function twigToPlainText(string $html): string
-    {
-        return $this->textExtractor->extract($html);
+        return '';
     }
 
     /**
@@ -436,41 +274,37 @@ class ChatFlowService
 
         // 汎用化: ショップのベースURLを ShopContextService から取得（特定ドメイン固定を避ける）
         $shopBaseUrl = $this->shopContextService?->getBaseUrl() ?? '';
-        $helpGuideUrl = $this->shopContextService?->getHelpGuideUrl() ?? '/help_guide';
-        $helpGuideFaqUrl = $this->shopContextService?->getHelpGuideFaqUrl() ?? '/help_guide#faq';
         $shopBaseLabel = $shopBaseUrl !== '' ? $shopBaseUrl : '当ショップ';
         // 外部サイト参照禁止ルール（管理者設定に関わらず常に適用）- 汎用プラグイン向けにドメイン固定を除去
+        // データソースは DB のナレッジ（plg_ai_chat_assistant_knowledge）と商品DB（ツール経由）のみ。ヘルプ/ニュース/記事は参照しない
         $basePrompt .= "\n\n## 重要なルール\n"
             . "- 外部サイト（ウェブサイト・URL）へのリンクや参照は一切含めないでください。\n"
             . "- 回答は提供される商品情報とナレッジベースのみを根拠にしてください。\n"
             . "- 外部の情報源を引用しないでください。\n"
             . "- 当ショップ（{$shopBaseLabel}）のページを案内する際は、必ず絶対URLで出力してください。相対パスや https://www.example.com は使用しないでください。\n"
             . "- 商品を推薦する際は、商品名を [商品名]({$shopBaseLabel}/products/detail/{id}) の形式でリンク化し、3-5件を箇条書きで提示してください。\n"
-            . "- リンクはクリック可能な markdown 形式で出力し、ユーザーがスムーズに商品ページへ遷移できるようにしてください。\n"
-            . "- よくある質問（{$helpGuideFaqUrl}）の内容を最優先で参照してください。配送・支払い・返品・ポイント・FAQ に関する質問は、まず {$helpGuideUrl} の記載を根拠に回答し、該当情報がない場合のみ他のヘルプページを参照してください。\n";
+            . "- リンクはクリック可能な markdown 形式で出力し、ユーザーがスムーズに商品ページへ遷移できるようにしてください。\n";
 
         $knowledgeContext = $this->buildKnowledgeContext();
-        $helpContext = $this->buildHelpContext();
-        $guideNewsContext = $this->buildGuideNewsContext();
         $responseMode = $config->getResponseMode();
 
-        // knowledge + help + guideNews を結合して注入
-        $combinedContext = $knowledgeContext . $helpContext . $guideNewsContext;
+        // 汎用化: ナレッジのみを注入（ヘルプ/ニュース/記事は参照しない）
+        $combinedContext = $knowledgeContext;
 
         if ($combinedContext !== '') {
             if ($responseMode === 'knowledge_only') {
-                // 厳格モード: ナレッジ/ヘルプにない場合は回答しない
-                $combinedContext .= "\n\n上記のナレッジベース・ヘルプ・ガイド/ニュースのみを根拠に回答してください。"
+                // 厳格モード: ナレッジにない場合は回答しない
+                $combinedContext .= "\n\n上記のナレッジベースのみを根拠に回答してください。"
                     . "該当する情報がない場合は「申し訳ございません。該当する情報がございません。"
                     . "メールにてお問い合わせください。」と回答してください。";
             } else {
                 // ハイブリッド: ナレッジを参照しつつ、一般的知識も許可
-                $combinedContext .= "\n\n上記のナレッジベース・ヘルプ・ガイド/ニュースを参照して回答してください。"
+                $combinedContext .= "\n\n上記のナレッジベースを参照して回答してください。"
                     . "該当する情報がない場合は、一般的な知識で回答してください。";
             }
         } elseif ($responseMode === 'knowledge_only') {
             // コンテキストが空でも knowledge_only モードなら制限を維持
-            $combinedContext .= "\n\n現在ナレッジ・ヘルプが登録されていません。"
+            $combinedContext .= "\n\n現在ナレッジが登録されていません。"
                 . "申し訳ございません。該当する情報がございません。メールにてお問い合わせください。";
         }
 

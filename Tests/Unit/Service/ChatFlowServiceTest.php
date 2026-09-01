@@ -27,7 +27,7 @@ use Psr\Log\LoggerInterface;
 /**
  * ChatFlowService の単体テスト。
  *
- * buildHelpContext / buildGuideNewsContext / buildKnowledgeContext の
+ * buildKnowledgeContext の（Help/Guideは汎用化により廃止, 常に空）
  * 2000 文字制限と DB 例外時の空文字フォールバックを検証する。
  * ProductManager 判断として help 2000 + guideNews 2000 = 4000 を維持する。
  */
@@ -65,58 +65,19 @@ class ChatFlowServiceTest extends TestCase
 
     public function testBuildHelpContextUnder2000(): void
     {
-        $helpRows = [
-            ['url' => 'help_about', 'page_name' => '当サイトについて', 'file_name' => 'Help/about'],
-            ['url' => 'help_agreement', 'page_name' => 'ご利用規約', 'file_name' => 'Help/agreement'],
-            ['url' => 'help_tradelaw', 'page_name' => '特定商取引法', 'file_name' => 'Help/tradelaw'],
-            ['url' => 'help_privacy', 'page_name' => 'プライバシー', 'file_name' => 'Help/privacy'],
-            ['url' => 'help_guide', 'page_name' => 'ご利用ガイド', 'file_name' => 'Help/guide'],
-        ];
-
-        // 600文字の長文を返す extractor — 5件で 3000文字になるため 2000で切られるはず
-        $extractor = $this->createMock(TwigPlainTextExtractor::class);
-        $extractor->method('extract')->willReturn(str_repeat('あ', 600));
-
         $conn = $this->createMock(Connection::class);
-        $result = $this->createMock(\Doctrine\DBAL\Result::class);
-        $result->method('fetchAllAssociative')->willReturn($helpRows);
-        $conn->method('executeQuery')->willReturn($result);
-
-        $service = new ChatFlowService($this->createEntityManagerWithConnection($conn), $extractor);
+        $service = new ChatFlowService($this->createEntityManagerWithConnection($conn));
         $context = $service->buildHelpContext();
-
-        $this->assertStringContainsString('## ヘルプ', $context);
-        // ヘッダー除いて 2000 文字以内であること
-        $body = str_replace("\n\n## ヘルプ（静的ページ）\n", '', $context);
-        $this->assertLessThanOrEqual(2000, mb_strlen($body), 'help context body must be <= 2000 chars');
-        $this->assertNotEmpty($context);
+        // 汎用化によりヘルプは廃止、常に空
+        $this->assertSame('', $context);
     }
 
     public function testBuildHelpContextEachEntryLimitedTo500(): void
     {
-        $helpRows = [
-            ['url' => 'help_guide', 'page_name' => 'ガイド', 'file_name' => 'Help/guide'],
-        ];
-        $extractor = $this->createMock(TwigPlainTextExtractor::class);
-        $extractor->method('extract')->willReturn(str_repeat('x', 2000));
-
         $conn = $this->createMock(Connection::class);
-        $result = $this->createMock(\Doctrine\DBAL\Result::class);
-        $result->method('fetchAllAssociative')->willReturn($helpRows);
-        $conn->method('executeQuery')->willReturn($result);
-
-        $service = new ChatFlowService($this->createEntityManagerWithConnection($conn), $extractor);
+        $service = new ChatFlowService($this->createEntityManagerWithConnection($conn));
         $context = $service->buildHelpContext();
-
-        // 各エントリは 500 文字に切り詰められるため、全体でも 500+prefix 程度
-        $this->assertLessThanOrEqual(2000, mb_strlen(str_replace("\n\n## ヘルプ（静的ページ）\n", '', $context)));
-        // snippet が 500を超えないことを間接的に確認（エントリ行を抜粋）
-        foreach (explode("\n", $context) as $line) {
-            if (str_starts_with($line, '- help_guide:')) {
-                $snippet = trim(substr($line, strlen('- help_guide:')));
-                $this->assertLessThanOrEqual(500, mb_strlen($snippet));
-            }
-        }
+        $this->assertSame('', $context, '汎用化によりヘルプは常に空');
     }
 
     /**
@@ -152,16 +113,8 @@ class ChatFlowServiceTest extends TestCase
         $service = new ChatFlowService($this->createEntityManagerWithConnection($conn), $extractor);
         $context = $service->buildHelpContext();
 
-        $this->assertStringContainsString('## ヘルプ', $context);
-
-        // help_guide が先頭エントリであること（最優先）
-        $lines = array_values(array_filter(explode("\n", $context), fn ($l) => str_starts_with($l, '- ')));
-        $this->assertNotEmpty($lines, 'ヘルプエントリが存在すること');
-        $this->assertStringStartsWith('- help_guide:', $lines[0], 'help_guide（よくある質問）が先頭（最優先）であること');
-
-        // 2000文字制限を満たすこと
-        $body = str_replace("\n\n## ヘルプ（静的ページ）\n", '', $context);
-        $this->assertLessThanOrEqual(2000, mb_strlen($body));
+        // 汎用化によりヘルプは廃止、常に空
+        $this->assertSame('', $context);
     }
 
     /**
@@ -174,27 +127,10 @@ class ChatFlowServiceTest extends TestCase
             ['url' => 'help_about', 'page_name' => '当サイトについて', 'file_name' => 'Help/about'],
         ];
 
-        $extractor = $this->createMock(TwigPlainTextExtractor::class);
-        // help_guide は 2000文字の長文、about は短い
-        $extractor->method('extract')->willReturnOnConsecutiveCalls(
-            str_repeat('よ', 2000),
-            str_repeat('あ', 100)
-        );
-
         $conn = $this->createMock(Connection::class);
-        $result = $this->createMock(\Doctrine\DBAL\Result::class);
-        $result->method('fetchAllAssociative')->willReturn($helpRows);
-        $conn->method('executeQuery')->willReturn($result);
-
-        $service = new ChatFlowService($this->createEntityManagerWithConnection($conn), $extractor);
+        $service = new ChatFlowService($this->createEntityManagerWithConnection($conn));
         $context = $service->buildHelpContext();
-
-        $lines = array_values(array_filter(explode("\n", $context), fn ($l) => str_starts_with($l, '- ')));
-        $this->assertStringStartsWith('- help_guide:', $lines[0]);
-
-        // help_guide の snippet は 500 に切り詰められていること
-        $snippet = trim(substr($lines[0], strlen('- help_guide:')));
-        $this->assertLessThanOrEqual(500, mb_strlen($snippet));
+        $this->assertSame('', $context);
     }
 
     /**
@@ -230,11 +166,7 @@ class ChatFlowServiceTest extends TestCase
 
         $service = new ChatFlowService($this->createEntityManagerWithConnection($conn), $extractor);
         $context = $service->buildHelpContext();
-
-        $this->assertStringContainsString('help_guide', $context);
-        // 先頭が help_guide であること（FAQ詳細はファイルが存在する場合のみ）
-        $lines = array_values(array_filter(explode("\n", $context), fn ($l) => str_starts_with($l, '- ')));
-        $this->assertStringStartsWith('- help_guide:', $lines[0]);
+        $this->assertSame('', $context, '汎用化によりヘルプは常に空');
     }
 
     /**
@@ -259,9 +191,7 @@ class ChatFlowServiceTest extends TestCase
 
         $service = new ChatFlowService($this->createEntityManagerWithConnection($conn), $extractor);
         $context = $service->buildHelpContext();
-
-        // help_guide が先頭に含まれること
-        $this->assertStringContainsString('help_guide', $context);
+        $this->assertSame('', $context, '汎用化によりヘルプは常に空');
     }
 
     // ================================================================
@@ -288,10 +218,7 @@ class ChatFlowServiceTest extends TestCase
         $extractor = new TwigPlainTextExtractor();
         $service = new ChatFlowService($this->createEntityManagerWithConnection($conn), $extractor);
         $context = $service->buildGuideNewsContext();
-
-        $this->assertStringContainsString('## ニュース', $context);
-        $body = str_replace("\n\n## ニュース\n", '', $context);
-        $this->assertLessThanOrEqual(2000, mb_strlen($body), 'guideNews context body must be <= 2000 chars');
+        $this->assertSame('', $context, '汎用化によりニュースは常に空');
     }
 
     // ================================================================
@@ -351,8 +278,8 @@ class ChatFlowServiceTest extends TestCase
 
         $this->assertStringContainsString('ベースプロンプト', $prompt);
         $this->assertStringContainsString('## ナレッジベース', $prompt);
-        $this->assertStringContainsString('## ヘルプ', $prompt);
-        $this->assertStringContainsString('## ニュース', $prompt);
+        $this->assertStringNotContainsString('## ヘルプ', $prompt);
+        $this->assertStringNotContainsString('## ニュース', $prompt);
     }
 
     public function testBuildSystemPromptKnowledgeOnlyFallbackWhenEmpty(): void
@@ -380,23 +307,17 @@ class ChatFlowServiceTest extends TestCase
     public function testBuildHelpContextReturnsEmptyOnException(): void
     {
         $conn = $this->createMock(Connection::class);
-        $conn->method('executeQuery')->willThrowException(new \RuntimeException('no such table: dtb_page'));
-        $em = $this->createEntityManagerWithConnection($conn);
-        $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects($this->once())->method('warning');
-
-        $service = new ChatFlowService($em, null, $logger);
+        $service = new ChatFlowService($this->createEntityManagerWithConnection($conn));
         $context = $service->buildHelpContext();
-        $this->assertSame('', $context);
+        $this->assertSame('', $context, '汎用化によりヘルプは常に空（例外でも空）');
     }
 
     public function testBuildGuideNewsContextReturnsEmptyOnException(): void
     {
         $conn = $this->createMock(Connection::class);
-        $conn->method('fetchAllAssociative')->willThrowException(new \RuntimeException('no such table: plg_ea_article'));
         $service = new ChatFlowService($this->createEntityManagerWithConnection($conn));
         $context = $service->buildGuideNewsContext();
-        $this->assertSame('', $context);
+        $this->assertSame('', $context, '汎用化によりニュースは常に空');
     }
 
     public function testBuildKnowledgeContextReturnsEmptyOnException(): void
@@ -495,10 +416,9 @@ class ChatFlowServiceTest extends TestCase
         $service = new ChatFlowService($this->createEntityManagerWithConnection($conn), null, null, $this->createShopContextMock());
         $prompt = $service->buildSystemPrompt($config);
 
-        $this->assertStringContainsString('https://www.thch-vape.shop/help_guide', $prompt, 'help_guide URL が含まれること');
-        $this->assertStringContainsString('よくある質問', $prompt);
-        $this->assertStringContainsString('最優先', $prompt);
-        $this->assertStringContainsString('help_guide#faq', $prompt);
+        // 汎用化によりヘルプへの言及は含まない、ナレッジと商品のみ
+        $this->assertStringNotContainsString('help_guide', $prompt);
+        $this->assertStringContainsString('ナレッジベース', $prompt);
     }
 
     /**
@@ -523,9 +443,9 @@ class ChatFlowServiceTest extends TestCase
         $service = new ChatFlowService($this->createEntityManagerWithConnection($conn), null, null, $this->createShopContextMock());
         $prompt = $service->buildSystemPrompt($config);
 
-        // 汎用化後は EasyArticle 依存の記事検索指示は含まず、商品 URL とヘルプ優先を検証
+        // 汎用化後は EasyArticle/ヘルプ依存の指示は含まず、商品 URL とナレッジのみ
         $this->assertStringContainsString('重要なルール', $prompt);
-        $this->assertStringContainsString('https://www.thch-vape.shop/help_guide', $prompt);
+        $this->assertStringNotContainsString('help_guide', $prompt);
         $this->assertStringContainsString('products/detail', $prompt);
     }
 
