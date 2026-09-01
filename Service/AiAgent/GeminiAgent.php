@@ -18,6 +18,7 @@ namespace Plugin\AiChatAssistant42\Service\AiAgent;
 use Plugin\AiChatAssistant42\Service\AiAgentInterface;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
+use Psr\Log\LoggerInterface;
 
 /**
  * Google Gemini API を利用する AI エージェント実装。
@@ -33,19 +34,22 @@ class GeminiAgent implements AiAgentInterface
     private int $maxTokens;
     private string $apiBase;
     private string $customSystemPrompt;
+    private ?LoggerInterface $logger;
 
     public function __construct(
         string $apiKey,
         string $model = 'gemini-2.5-flash',
         int $maxTokens = 4096,
         string $systemPrompt = '',
-        string $apiBase = 'https://generativelanguage.googleapis.com/v1beta'
+        string $apiBase = 'https://generativelanguage.googleapis.com/v1beta',
+        ?LoggerInterface $logger = null
     ) {
         $this->apiKey = $apiKey;
         $this->model = $model;
         $this->maxTokens = $maxTokens;
         $this->customSystemPrompt = $systemPrompt;
         $this->apiBase = rtrim($apiBase, '/');
+        $this->logger = $logger;
         $this->httpClient = new Client([
             'base_uri' => $this->apiBase,
             'timeout' => 120,
@@ -63,6 +67,8 @@ class GeminiAgent implements AiAgentInterface
     ): array {
         $contents = $this->buildInitialContents($message, $history);
         $convertedTools = $this->convertToolsToGeminiFormat($tools);
+        // 検証用の許可ツール名セット（TOOL_DEFINITIONS 準拠）
+        $allowedToolNames = array_flip(array_column($convertedTools, 'name'));
         $toolsUsed = [];
         $totalInputTokens = 0;
         $totalOutputTokens = 0;
@@ -92,7 +98,12 @@ class GeminiAgent implements AiAgentInterface
                 );
             }
 
-            // アシスタントの応答を履歴に追加（args が [] の場合は {} に正規化）
+            // 未知ツールの事前検証（日本語で簡潔に記録し早期 return）
+            $this->validateFunctionCalls($functionCalls, $allowedToolNames);
+
+            // アシスタントの応答を履歴に追加
+            // Google仕様: thoughtSignature は表示用 thought と分離し、検証用として透過的に保持する。
+            // parts 全体（thought, thoughtSignature 含む）を落とさず round-trip する。args が [] の場合は {} に正規化するのみ。
             $normalizedParts = array_map(function (array $part): array {
                 if (isset($part['functionCall']['args']) && $part['functionCall']['args'] === []) {
                     $part['functionCall']['args'] = new \stdClass();
@@ -107,6 +118,28 @@ class GeminiAgent implements AiAgentInterface
         }
 
         return $this->buildResult('', $toolsUsed, $totalInputTokens, $totalOutputTokens);
+    }
+
+    /**
+     * 受信した functionCall の name が TOOL_DEFINITIONS に存在するか検証する。
+     *
+     * 未知ツールの場合は ChatLog.error_message に残るよう日本語で簡潔にログし、例外で早期 return する。
+     *
+     * @param array<int, array{name: string, args: mixed}> $functionCalls
+     * @param array<string, int>                             $allowedToolNames  name => index のフリップ配列
+     *
+     * @throws \RuntimeException 未知ツールが含まれている場合
+     */
+    private function validateFunctionCalls(array $functionCalls, array $allowedToolNames): void
+    {
+        foreach ($functionCalls as $call) {
+            $toolName = $call['name'] ?? '';
+            if ($toolName === '' || !isset($allowedToolNames[$toolName])) {
+                $message = sprintf('未知のツールが呼び出されました: %s', $toolName !== '' ? $toolName : '(空)');
+                $this->logger?->warning($message, ['tool_name' => $toolName]);
+                throw new \RuntimeException($message);
+            }
+        }
     }
 
     /**
@@ -231,6 +264,10 @@ class GeminiAgent implements AiAgentInterface
     /**
      * MCP 形式のツール定義を Gemini functionDeclarations 形式に変換する。
      *
+     * 正規化:
+     * - properties: [] → new stdClass()  ({} でエンコードするため)
+     * - functionDeclaration 二重ラップ解消（Gemini 形式が既にラップされている場合に剥がす）
+     *
      * @param array<int, array{name: string, description: string, inputSchema: array}> $mcpTools
      *
      * @return array<int, array{name: string, description: string, parameters: array}>
@@ -239,10 +276,23 @@ class GeminiAgent implements AiAgentInterface
     {
         $converted = [];
         foreach ($mcpTools as $tool) {
+            // functionDeclaration 二重ラップ解消: 既に Gemini 形式でラップされていたら剥がす
+            if (isset($tool['functionDeclaration']) && is_array($tool['functionDeclaration'])) {
+                $tool = $tool['functionDeclaration'];
+            }
+
             $schema = $tool['inputSchema'] ?? $tool['input_schema'] ?? $tool['parameters'] ?? [
                 'type' => 'OBJECT',
                 'properties' => new \stdClass(),
             ];
+
+            // 入れ子で functionDeclaration を含むケース（例: inputSchema が {functionDeclaration: {parameters: ...}}）も解消
+            if (isset($schema['functionDeclaration']) && is_array($schema['functionDeclaration'])) {
+                $inner = $schema['functionDeclaration'];
+                // parameters があればそれを、なければ inner 自体をスキーマとする
+                $schema = $inner['parameters'] ?? $inner;
+            }
+
             if (isset($schema['properties']) && $schema['properties'] === []) {
                 $schema['properties'] = new \stdClass();
             }
@@ -289,6 +339,10 @@ class GeminiAgent implements AiAgentInterface
     /**
      * content parts から functionCall を抽出する。
      *
+     * 正規化:
+     * - args: [] → {} は model parts の round-trip 時に行う（ここでは内部用に配列のまま保持）
+     * - 非配列 args は [] にフォールバック
+     *
      * @param array<int, array<string, mixed>> $contentParts
      *
      * @return array<int, array{name: string, args: array}>
@@ -299,15 +353,13 @@ class GeminiAgent implements AiAgentInterface
         foreach ($contentParts as $part) {
             if (isset($part['functionCall'])) {
                 $args = $part['functionCall']['args'] ?? [];
-                // 空配列 [] は JSON で [] になるが、Gemini API は object を期待するため {} に正規化
-                if (is_array($args) && $args === []) {
-                    $args = new \stdClass();
-                    $args = (array) $args;
-                }
-                // 連想配列でない場合も正規化
+                // 連想配列でない場合や null の場合は空配列にフォールバック
                 if (!is_array($args)) {
                     $args = [];
                 }
+                // 空配列 [] は内部では [] のまま保持する（Gemini API 送信用に {} へ変換するのは
+                // chat() の normalizedParts 構築時）。ここで stdClass にしても (array) で戻すと
+                // 意味がなくなるため、単純に配列のまま返す。
                 $calls[] = [
                     'name' => $part['functionCall']['name'] ?? '',
                     'args' => $args,
