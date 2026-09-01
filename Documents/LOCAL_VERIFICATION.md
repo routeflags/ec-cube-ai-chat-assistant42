@@ -8,7 +8,7 @@
 ## 0. 前提
 
 - Docker 27.x / Docker Compose v2.31+
-- 本リポジトリ `ec-cube-ai-chat-assistant42` が `.../github.com/routeflags/ec-cube-ai-chat-assistant42` にあること
+- 本リポジトリ `ec-cube-ai-chat-assistant42` がローカルにクローン済みであること（例: `../ec-cube-ai-chat-assistant42`）
 - ポート 8080 / 4430 が空いていること
 
 EC-CUBE 本体は検証用に `/tmp/eccube-verify` にクローンします（既存の `cosme_eccube4` は利用しません）。
@@ -23,8 +23,13 @@ git clone -b 4.2 https://github.com/EC-CUBE/ec-cube.git /tmp/eccube-verify
 cd /tmp/eccube-verify
 
 # 検証用 docker-compose を本プラグインからコピー
-cp /Users/bookair18/OS/home/Codes/github.com/routeflags/ec-cube-ai-chat-assistant42/docker-compose.verify.yml ./docker-compose.verify.yml
-cp /Users/bookair18/OS/home/Codes/github.com/routeflags/ec-cube-ai-chat-assistant42/.env.verify ./.env
+# PLUGIN_DIR は任意のパスに置き換えてください
+PLUGIN_DIR=/path/to/ec-cube-ai-chat-assistant42
+cp $PLUGIN_DIR/docker-compose.verify.yml ./docker-compose.verify.yml
+cp $PLUGIN_DIR/.env.verify ./.env
+# またはプラグインが sibling の場合:
+# cp ../ec-cube-ai-chat-assistant42/docker-compose.verify.yml ./docker-compose.verify.yml
+# cp ../ec-cube-ai-chat-assistant42/.env.verify ./.env
 
 # 起動（sqlite, php:8.1-apache）
 docker compose -f docker-compose.verify.yml up -d --build

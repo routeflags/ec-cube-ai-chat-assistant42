@@ -5,7 +5,10 @@ services:
       - "8080:80"
     volumes:
       - ./:/var/www/html
-      - /Users/bookair18/OS/home/Codes/github.com/routeflags/ec-cube-ai-chat-assistant42:/var/www/html/app/Plugin/AiChatAssistant42:rw
+      # PLUGIN_DIR はホスト側のプラグイン配置パス。デフォルトは EC-CUBE の sibling にある想定
+      # 例: EC-CUBE が /tmp/eccube-verify、プラグインが /tmp/ec-cube-ai-chat-assistant42 の場合
+      #      PLUGIN_DIR=../ec-cube-ai-chat-assistant42 docker compose ... で上書き可能
+      - ${PLUGIN_DIR:-../ec-cube-ai-chat-assistant42}:/var/www/html/app/Plugin/AiChatAssistant42:rw
       - eccube_var:/var/www/html/var
       - eccube_vendor:/var/www/html/vendor
     environment:
