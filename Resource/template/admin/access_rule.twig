@@ -32,7 +32,12 @@
                         <input type="hidden" name="_token" value="{{ csrf_token(constant('Eccube\\Common\\Constant::TOKEN_NAME')) }}" />
 
                         <div class="row mb-3">
-                            <label class="col-sm-3 col-form-label">ルール種別</label>
+                            <label class="col-sm-3 col-form-label">
+                                <div class="d-inline-block">
+                                    <span>ルール種別</span>
+                                    <span class="badge bg-primary ms-1">{{ 'admin.common.required'|trans }}</span>
+                                </div>
+                            </label>
                             <div class="col-sm-9">
                                 <select name="rule_type" class="form-select" id="rule_type_select">
                                     <option value="ip">IP アドレス</option>
@@ -52,7 +57,12 @@
                         </div>
 
                         <div class="row mb-3">
-                            <label class="col-sm-3 col-form-label">ルール値</label>
+                            <label class="col-sm-3 col-form-label">
+                                <div class="d-inline-block">
+                                    <span>ルール値</span>
+                                    <span class="badge bg-primary ms-1">{{ 'admin.common.required'|trans }}</span>
+                                </div>
+                            </label>
                             <div class="col-sm-9">
                                 <input type="text" name="rule_value" class="form-control" required
                                        placeholder="IPアドレスまたはキーワードを入力" />

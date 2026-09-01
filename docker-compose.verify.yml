@@ -9,6 +9,8 @@ services:
       # 例: EC-CUBE が /tmp/eccube-verify、プラグインが /tmp/ec-cube-ai-chat-assistant42 の場合
       #      PLUGIN_DIR=../ec-cube-ai-chat-assistant42 docker compose ... で上書き可能
       - ${PLUGIN_DIR:-../ec-cube-ai-chat-assistant42}:/var/www/html/app/Plugin/AiChatAssistant42:rw
+      # プラグイン単体の vendor は EC-CUBE と競合するため hide（EC-CUBE 側の autoload のみを使用）
+      - plugin_vendor_empty:/var/www/html/app/Plugin/AiChatAssistant42/vendor
       - eccube_var:/var/www/html/var
       - eccube_vendor:/var/www/html/vendor
     environment:
@@ -31,3 +33,4 @@ services:
 volumes:
   eccube_var:
   eccube_vendor:
+  plugin_vendor_empty:

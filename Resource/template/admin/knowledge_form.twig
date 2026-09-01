@@ -45,8 +45,10 @@
 
                                 <div class="row mb-2">
                                     <div class="col-3">
-                                        <span>タイトル</span>
-                                        <span class="badge badge-primary ms-1">必須</span>
+                                        <div class="d-inline-block">
+                                            <span>タイトル</span>
+                                            <span class="badge bg-primary ms-1">{{ 'admin.common.required'|trans }}</span>
+                                        </div>
                                     </div>
                                     <div class="col">
                                         {{ form_widget(form.title) }}
@@ -56,8 +58,10 @@
 
                                 <div class="row mb-2">
                                     <div class="col-3">
-                                        <span>本文</span>
-                                        <span class="badge badge-primary ms-1">必須</span>
+                                        <div class="d-inline-block">
+                                            <span>本文</span>
+                                            <span class="badge bg-primary ms-1">{{ 'admin.common.required'|trans }}</span>
+                                        </div>
                                     </div>
                                     <div class="col">
                                         {{ form_widget(form.content, {'attr': {'style': 'height: 250px;'}}) }}
