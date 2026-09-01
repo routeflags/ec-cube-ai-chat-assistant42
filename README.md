@@ -1,193 +1,464 @@
 # AI チャットアシスタント for EC-CUBE 4.2
 
-EC-CUBE の商品情報に AI チャットで質問できるプラグインです。
+![AIチャットアシスタント for EC-CUBE 4.2 - ヒーローイメージ](Documents/images/readme-hero.png)
 
-## 機能
+EC-CUBEの商品情報をもとに、AIが購入者からの質問に回答するチャットアシスタントプラグインです。
 
-### フロントエンド AI チャット
+「この商品は在庫がありますか？」
+「初心者向けの商品はありますか？」
+「この2つの商品は何が違いますか？」
 
-- 商品名・価格・在庫・カテゴリを自然言語で質問可能
-- OpenAI / Anthropic / Google Gemini の 3 プロバイダに対応
-- モデルは外部 JSON ファイルで定義（プラグイン更新なしでモデル追加可能）
-- レスポンシブデザイン（PC / スマホ対応）
-- メール返信依頼機能（チャットで解決しない場合）
+といった質問に、EC-CUBEの商品情報や登録したナレッジを利用して回答します。
 
-### MCP サーバー
+AIだけでは解決できない問い合わせは、メールでの回答依頼へ引き継ぐこともできます。
 
-- STDIO で商品データを提供
+**商品案内の自動化から、問い合わせ分析・FAQ改善までをEC-CUBEの管理画面から運用できます。**
 
-### 管理画面（9セクション / 24ルート）
+---
 
+## フィロソフィー
 
-| ページ     | URL パス                                          | 機能                               |
-| ------- | ----------------------------------------------- | -------------------------------- |
-| ダッシュボード | `/<admin_route>/ai-chat-assistant/dashboard`    | KPI（総会話数・解決率・エラー率）、プロバイダ別統計      |
-| プラグイン設定 | `/<admin_route>/ai-chat-assistant/settings`     | 有効/無効、プロバイダ、モデル、API キー、システムプロンプト |
-| チャット履歴  | `/<admin_route>/ai-chat-assistant/history`      | 会話ログ一覧・詳細表示                      |
-| 統計・レポート | `/<admin_route>/ai-chat-assistant/report`       | プロバイダ別・モデル別・時間帯別分布、CSV エクスポート    |
-| ナレッジ管理  | `/<admin_route>/ai-chat-assistant/knowledge`    | FAQ / 商品情報の登録・編集・削除              |
-| シナリオ管理  | `/<admin_route>/ai-chat-assistant/scenario`     | キーワードトリガーの自動応答登録                 |
-| アクセスルール | `/<admin_route>/ai-chat-assistant/access`       | IP / 時間帯 / ブロックワード               |
-| デザイン設定  | `/<admin_route>/ai-chat-assistant/design`       | ウィジェット色 / サイズ / 位置 / 表示名         |
-| 通知ルール   | `/<admin_route>/ai-chat-assistant/notification` | メール / Webhook / LINE 通知設定        |
+私たちが大切にしている OSS への向き合い方を、指針としてまとめたコラムです。この指針があるからこそ、日々の OSS 活動や記事の執筆を続けています。社会に積み重なった見直されない仕組みを「技術的負債」と捉え直す考え方に触れていただけるとうれしいです。
 
+- [社会にも、技術的負債がある。| リキッド通販ショップ](https://www.thch-vape.shop/guide/column/git-log--oneline--all--society)
 
-> **注**: `/<admin_route>/` は EC-CUBE の管理画面ルートプレフィックスです（デフォルト: `/admin-dev/`）。
+---
 
-## 必要要件
+## 主な機能
 
-- EC-CUBE 4.2
-- PHP 8.0+
-- Guzzle（EC-CUBE に同梱済み）
+### AIによる商品案内
 
-## インストール
+EC-CUBEの商品情報を利用して、購入者からの商品に関する質問へ自然言語で回答します。
+
+* 商品名
+* 価格
+* 在庫
+* カテゴリ
+* 商品検索
+* 商品比較
+* 複数ターンの会話
+
+同じチャットセッション内では会話履歴を保持するため、
+
+> 「初心者向けの商品を教えて」
+> 「その中で一番安いものは？」
+> 「それの在庫は？」
+
+といった連続した質問にも対応できます。
+
+---
+
+### 3つのAIプロバイダに対応
+
+以下のAIプロバイダを利用できます。
+
+* OpenAI
+* Anthropic
+* Google Gemini
+
+利用するプロバイダ・モデルは管理画面から変更できます。
+
+モデル一覧は外部JSONから更新できるため、プラグイン本体を更新せずに新しいモデルを追加できます。
+
+---
+
+### AI + 定型回答のハイブリッド
+
+すべての問い合わせをAIへ送信する必要はありません。
+
+「返品」「送料」「営業時間」など、回答が決まっている質問にはシナリオ機能を利用できます。
+
+```text
+購入者
+   ↓
+問い合わせ
+   ↓
+シナリオに一致？
+   ├─ YES → 定型回答
+   │
+   └─ NO → AI
+              ↓
+         商品情報 / ナレッジ
+              ↓
+             回答
+```
+
+定型質問ではAI APIを呼び出さないため、応答速度やAPIコストの改善にも利用できます。
+
+---
+
+## 最短セットアップ
+
+基本的なAIチャットを開始するために、すべての機能を設定する必要はありません。
+
+### 1. インストール
 
 ```bash
 composer require routeflags/ec-cube-ai-chat-assistant42
+
 php bin/console eccube:plugin:install --code=AiChatAssistant42
 php bin/console eccube:plugin:enable --code=AiChatAssistant42
 ```
 
-## セットアップ
+### 2. APIキーを設定
 
-1. 管理画面 → 設定 → AI チャットアシスタント → プラグイン設定
-2. API キーを入力（OpenAI / Anthropic / Google Gemini のいずれか）
-3. チャット有効にする
-4. フロントでチャットウィジェットを確認
+EC-CUBE管理画面から、
+
+```text
+設定
+└── AI チャットアシスタント
+    └── プラグイン設定
+```
+
+を開きます。
+
+OpenAI / Anthropic / Google Gemini のいずれかのAPIキーを入力します。
+
+### 3. チャットを有効化
+
+「チャットを有効にする」をONにします。
+
+これでフロントエンドにAIチャットウィジェットが表示されます。
+
+**基本セットアップはこれだけです。**
+
+ナレッジ、シナリオ、通知、アクセス制御などは必要に応じて追加設定できます。
+
+---
+
+## 購入者側の機能
+
+### レスポンシブチャット
+
+PC / スマートフォンに対応したチャットウィジェットを表示します。
+
+表示位置、サイズ、カラー、表示名などは管理画面から変更できます。
+
+### 会話履歴
+
+同じセッション内では過去の会話を参照し、文脈を維持した回答ができます。
+
+### メール回答依頼
+
+AIチャットだけでは解決できなかった場合、購入者はメールでの回答を依頼できます。
+
+```text
+AIチャット
+    ↓
+解決できない
+    ↓
+メール回答を依頼
+    ↓
+店舗スタッフが対応
+```
+
+AIだけで問い合わせ対応を完結させることを前提とせず、人によるサポートへ引き継げる設計です。
+
+---
+
+## 管理画面
+
+AIチャットの設定から運用状況の分析まで、EC-CUBE管理画面から行えます。
+
+| ページ     | 主な機能                        |
+| ------- | --------------------------- |
+| ダッシュボード | 総会話数・解決率・エラー率・平均応答時間        |
+| プラグイン設定 | AIプロバイダ・モデル・APIキー・システムプロンプト |
+| チャット履歴  | 購入者とAIの会話履歴                 |
+| 統計・レポート | プロバイダ別・モデル別・時間帯別分析          |
+| ナレッジ管理  | FAQ・ショップ独自情報                |
+| シナリオ管理  | キーワードによる定型回答                |
+| アクセスルール | IP・時間帯・ブロックワード              |
+| デザイン設定  | 色・サイズ・位置・表示名                |
+| 通知ルール   | メール・Webhook・LINE通知          |
+
+---
+
+## ダッシュボード
+
+AIチャットの運用状況を確認できます。
+
+主なKPI：
+
+* 総会話数
+* 解決率
+* エラー率
+* 平均応答時間
+* プロバイダ別利用状況
+* 時間帯別リクエスト
+* 未対応メール返信
+
+チャットを設置するだけではなく、実際にどの程度利用され、問い合わせが解決しているかを確認できます。
+
+---
+
+## ナレッジ管理
+
+EC-CUBEの商品情報だけでは回答できないショップ独自情報を登録できます。
+
+例えば、
+
+```text
+タイトル:
+返品・交換について
+
+カテゴリ:
+返品・交換
+
+本文:
+商品到着後7日以内、未開封の商品に限り返品できます。
+```
+
+と登録すると、AIが回答時のナレッジとして利用します。
+
+利用例：
+
+* 返品・交換
+* 配送
+* 送料
+* 支払方法
+* 商品の使い方
+* ショップ独自FAQ
+
+有効なナレッジは最大50件までAIのコンテキストへ追加されます。
+
+---
+
+## シナリオ管理
+
+特定の質問に対して、AIを利用せず定型回答できます。
+
+例：
+
+```text
+キーワード:
+返品
+
+マッチ:
+部分一致
+
+回答:
+返品は商品到着後7日以内、未開封の商品に限り受け付けています。
+```
+
+マッチ方式：
+
+| タイプ  | 動作            |
+| ---- | ------------- |
+| 完全一致 | 入力内容が完全に一致    |
+| 部分一致 | 入力内容にキーワードを含む |
+| 正規表現 | 正規表現による判定     |
+
+複数のシナリオが一致した場合は、優先度によって回答を決定します。
+
+---
+
+## チャット履歴・分析
+
+購入者とAIの会話を管理画面から確認できます。
+
+記録される主な情報：
+
+* ユーザー入力
+* AI回答
+* セッション
+* AIプロバイダ
+* AIモデル
+* 応答時間
+* トークン使用量
+* エラー
+* 使用したツール
+* メール回答依頼
+
+実際の質問内容を確認することで、
+
+```text
+購入者の質問
+      ↓
+チャット履歴
+      ↓
+頻出質問を発見
+      ↓
+ナレッジ / シナリオへ追加
+      ↓
+回答品質を改善
+```
+
+という運用ができます。
+
+---
+
+## アクセス制御
+
+AI APIの不正利用や不要なリクエストを抑えるため、アクセスルールを設定できます。
+
+対応ルール：
+
+* IPアドレス
+* 時間帯
+* ブロックワード
+
+また、1分間あたりのリクエスト数を制限するレートリミットにも対応しています。
+
+---
+
+## デザイン設定
+
+チャットウィジェットはショップデザインに合わせて変更できます。
+
+設定可能な項目：
+
+* ウィジェットカラー
+* サイズ
+* 表示位置
+* AIアシスタント表示名
+* 初回メッセージ
+
+---
+
+## 通知
+
+問い合わせ状況に応じて通知を設定できます。
+
+対応：
+
+* メール
+* Webhook
+* LINE
+
+AIだけで処理せず、人による対応が必要な問い合わせを店舗運営へつなげる用途に利用できます。
+
+---
+
+## 必要要件
+
+* EC-CUBE 4.2
+* PHP 8.0+
+* Guzzle（EC-CUBE同梱）
+
+---
+
+## アーキテクチャ
+
+```text
+                    EC-CUBE
+                       │
+              ┌────────┴────────┐
+              │                 │
+          商品データ          ナレッジ
+              │                 │
+              └────────┬────────┘
+                       │
+購入者 ──→ Chat Widget ──→ Chat API
+                       │
+              ┌────────┴────────┐
+              │                 │
+           Scenario            LLM
+              │                 │
+         定型回答       ┌───────┼───────┐
+                        │       │       │
+                     OpenAI Anthropic Gemini
+                        │       │       │
+                        └───────┬───────┘
+                                │
+                              回答
+                                │
+                         Chat History
+                                │
+                         Dashboard / Report
+```
+
+---
 
 ## ディレクトリ構成
 
-```
-app/Plugin/AiChatAssistant42/
+```text
+AiChatAssistant42/
 ├── Controller/
-│   ├── Admin/                     # 管理画面コントローラ（8ファイル）
-│   │   ├── DashboardController.php    # ダッシュボード + 設定
-│   │   ├── ChatHistoryController.php  # チャット履歴
-│   │   ├── ReportController.php       # 統計・レポート
-│   │   ├── KnowledgeController.php    # ナレッジ管理
-│   │   ├── ScenarioController.php     # シナリオ管理
-│   │   ├── AccessRuleController.php   # アクセスルール
-│   │   ├── DesignController.php       # デザイン設定
-│   │   └── NotificationController.php # 通知ルール
-│   └── Api/                       # REST API コントローラ（2ファイル）
-│       ├── ChatApiController.php      # /api/ai-chat-assistant/chat
-│       └── ModelApiController.php     # /api/ai-chat-assistant/models
-├── Entity/                        # Doctrine エンティティ（6ファイル）
-│   ├── Config.php                     # プラグイン設定
-│   ├── ChatLog.php                    # チャットログ
-│   ├── Knowledge.php                  # ナレッジ
-│   ├── Scenario.php                   # シナリオ
-│   ├── AccessRule.php                 # アクセスルール
-│   └── Notification.php               # 通知ルール
-├── Repository/                    # リポジトリ（6ファイル）
-├── Service/                       # サービスクラス
-│   ├── AiAgentInterface.php           # AI エージェントインターフェース
-│   ├── AiAgent/                       # 各プロバイダ実装
-│   │   ├── OpenAiAgent.php
-│   │   ├── AnthropicAgent.php
-│   │   └── GeminiAgent.php
-│   ├── AiAgentFactory.php             # ファクトリ
-│   ├── AiModelRegistry.php            # モデルレジストリ
-│   ├── ChatLogger.php                 # チャットログ記録
-│   ├── LogSyncService.php             # ログ同期
-│   ├── McpServerService.php           # MCP サーバー
-│   ├── NotificationService.php        # 通知送信
-│   └── AccessRuleService.php          # アクセス制御
+│   ├── Admin/
+│   └── Api/
+├── Entity/
+├── Repository/
+├── Service/
+│   ├── AiAgent/
+│   ├── AiAgentFactory.php
+│   ├── AiModelRegistry.php
+│   ├── ChatLogger.php
+│   ├── McpServerService.php
+│   ├── NotificationService.php
+│   └── AccessRuleService.php
 ├── EventListener/
-│   └── ChatWidgetListener.php         # フロントにチャットウィジェット注入
-├── Command/                       # コンソールコマンド（2ファイル）
-├── DoctrineMigrations/            # DB マイグレーション（6ファイル）
+├── Command/
+├── DoctrineMigrations/
 ├── Resource/
 │   ├── config/
-│   │   ├── routes.yaml                # 全ルート定義（28ルート）
-│   │   ├── services.yaml              # DI 定義
-│   │   ├── ai_models.json             # AI モデル定義
-│   │   └── design_settings.json       # デザイン設定デフォルト値
-│   ├── template/admin/                # 管理画面テンプレート（12ファイル）
-│   └── template/default/
-│       └── chat_widget.twig           # フロントチャットウィジェット
-├── Resource/assets/
-│   ├── css/chat-widget.css            # ウィジェット CSS
-│   └── js/chat-widget.js              # ウィジェット JavaScript
-├── Nav.php                        # 管理画面ナビゲーション
+│   ├── template/admin/
+│   ├── template/default/
+│   └── assets/
+├── Nav.php
 ├── composer.json
 ├── eccube-plugin.yaml
-├── CHANGELOG.md
 └── README.md
 ```
 
-## ルート定義
+---
 
-ルーティングはすべて `Resource/config/routes.yaml` で定義されています。
-PHP 8 の `#[Route]` アトリビュートは使用していません（EC-CUBE 4.2 の Symfony 5.4 パターンに準拠）。
+## MCPサーバー
 
-
-| カテゴリ    | ルート名プレフィックス                              | メソッド       |
-| ------- | ---------------------------------------- | ---------- |
-| API     | `ai_chat_assistant_api_*`                | GET / POST |
-| ダッシュボード | `admin_ai_chat_assistant_dashboard`      | GET        |
-| 設定      | `admin_ai_chat_assistant_settings`       | GET, POST  |
-| ナレッジ    | `admin_ai_chat_assistant_knowledge_*`    | GET, POST  |
-| シナリオ    | `admin_ai_chat_assistant_scenario_*`     | GET, POST  |
-| アクセスルール | `admin_ai_chat_assistant_access_*`       | GET, POST  |
-| デザイン    | `admin_ai_chat_assistant_design_*`       | GET, POST  |
-| 通知      | `admin_ai_chat_assistant_notification_*` | GET, POST  |
-| 履歴      | `admin_ai_chat_assistant_history*`       | GET        |
-| レポート    | `admin_ai_chat_assistant_report`         | GET        |
-
-
-## DB テーブル
-
-
-| テーブル名                                | 用途                         |
-| ------------------------------------ | -------------------------- |
-| `plg_ai_chat_assistant_config`       | プラグイン設定（プロバイダ、モデル、API キー等） |
-| `plg_ai_chat_assistant_log`          | チャットログ（メッセージ、応答、タイムスタンプ）   |
-| `plg_ai_chat_assistant_knowledge`    | ナレッジベース（FAQ、商品情報）          |
-| `plg_ai_chat_assistant_scenario`     | 自動応答シナリオ                   |
-| `plg_ai_chat_assistant_access_rule`  | アクセス制御ルール                  |
-| `plg_ai_chat_assistant_notification` | 通知設定                       |
-
-
-## MCP サーバーの利用
+商品データはMCPサーバーとして利用することもできます。
 
 ```bash
-# MCP サーバー起動
 php bin/console app:ai-chat-assistant
+```
 
-# .mcp.json に追加
+`.mcp.json`：
+
+```json
 {
   "mcpServers": {
     "ec-product": {
       "command": "php",
-      "args": ["bin/console", "app:ai-chat-assistant"],
+      "args": [
+        "bin/console",
+        "app:ai-chat-assistant"
+      ],
       "cwd": "/path/to/ec-cube"
     }
   }
 }
 ```
 
-## AI モデルの追加
+---
 
-`app/Plugin/AiChatAssistant42/Resource/config/ai_models.json` を編集するか、
-管理画面からリモート JSON URL を設定して自動更新してください。
+## AIモデルの追加
 
-## 開発メモ
+AIモデル一覧は、
 
-### Twig 2.x 互換性
+```text
+Resource/config/ai_models.json
+```
 
-EC-CUBE 4.2 は Twig 2.15.4 を使用しています:
+で管理されています。
 
-- `|reduce()` アロー関数: 非対応 → `for` ループに変換
-- `|default([])`: 対応
-- `form_token()`: 非対応 → `csrf_token('admin')` を使用
+管理画面からリモートJSON URLを設定することで、プラグイン本体を更新せずモデル情報を更新することもできます。
 
-### DQL 制約
+---
 
-Doctrine DQL では以下がサポートされていません:
+## 詳細ドキュメント
 
-- `ELSE NULL` in CASE: `ELSE 0` に変更
-- `HOUR()` 関数: ネイティブ SQL（`Connection::fetchAllAssociative`）に変換
+より詳しい管理画面の操作方法については、
+
+`ADMIN_MANUAL.md`
+
+を参照してください。
+
+具体的な利用フローや動作例については、
+
+`USE_CASES.md`
+
+を参照してください。
+
+---
 
 ## アンインストール
 
@@ -195,6 +466,9 @@ Doctrine DQL では以下がサポートされていません:
 php bin/console eccube:plugin:uninstall --code=AiChatAssistant42
 ```
 
-## ライセンス
+---
 
-Proprietary License
+## License
+
+GPL-2.0-only License
+
