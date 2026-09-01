@@ -255,7 +255,7 @@ class EmailReplyServiceTest extends TestCase
         $this->service->sendBoth($sessionId, $userEmail);
 
         $this->assertCount(2, $this->sentEmails);
-        $this->assertEquals('no-reply@thch-vape.shop', $this->sentEmails[0]->getFrom()[0]->getAddress());
+        $this->assertEquals('no-reply@example.com', $this->sentEmails[0]->getFrom()[0]->getAddress());
     }
 
     // ================================================================

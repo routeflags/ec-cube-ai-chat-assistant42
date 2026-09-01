@@ -15,88 +15,71 @@ declare(strict_types=1);
 
 namespace Plugin\AiChatAssistant42\Service;
 
-use Plugin\AiChatAssistant42\Entity\Config;
-use Symfony\Component\HttpFoundation\Request;
+use Plugin\AiChatAssistant42\Repository\AccessRuleRepository;
+use Psr\Log\LoggerInterface;
 
 /**
- * チャット API のアクセス制御（rate limit）を判定する。
+ * アクセスルールに基づく入力フィルタリングを担当するサービス。
  *
- * 返却値で制限理由を明確化し、呼び出し側が 429 の原因を区別できるようにする。
+ * ユーザーの入力に対して IP・時間帯・禁止キーワードの
+ * 3種ルールを評価し、チャットへのアクセス可否を判定する。
  */
 class AccessRuleService
 {
-    /**
-     * @param array<string, mixed> $session
-     *
-     * @return array{allowed: bool, reason: null|'session'|'ip', wait_seconds: int}
-     */
-    public function evaluate(array $session, Config $config, ?Request $request = null): array
-    {
-        $rateLimit = max(1, $config->getRateLimitPerMinute());
-        $now = time();
-        $windowStart = $now - 60;
-
-        $messages = $session['chat_messages'] ?? [];
-        $messageCount = is_array($messages) ? count($messages) : 0;
-        if ($messageCount >= 100) {
-            return [
-                'allowed' => false,
-                'reason' => 'session',
-                'wait_seconds' => 60,
-            ];
-        }
-
-        $requestTimestamps = $session['chat_request_timestamps'] ?? [];
-        if (!is_array($requestTimestamps)) {
-            $requestTimestamps = [];
-        }
-
-        $requestTimestamps = array_values(array_filter(
-            $requestTimestamps,
-            static fn ($timestamp): bool => is_int($timestamp) && $timestamp > $windowStart
-        ));
-
-        if (count($requestTimestamps) >= $rateLimit) {
-            return [
-                'allowed' => false,
-                'reason' => 'session',
-                'wait_seconds' => $this->calculateWaitSeconds($requestTimestamps, $windowStart),
-            ];
-        }
-
-        $clientIp = $request?->getClientIp() ?? '';
-        if ($clientIp !== '') {
-            $ipRateLimits = $session['chat_ip_rate_limits'] ?? [];
-            if (!is_array($ipRateLimits)) {
-                $ipRateLimits = [];
-            }
-
-            $ipRateLimits[$clientIp] = array_values(array_filter(
-                $ipRateLimits[$clientIp] ?? [],
-                static fn ($timestamp): bool => is_int($timestamp) && $timestamp > $windowStart
-            ));
-
-            if (count($ipRateLimits[$clientIp]) >= $rateLimit * 2) {
-                return [
-                    'allowed' => false,
-                    'reason' => 'ip',
-                    'wait_seconds' => $this->calculateWaitSeconds($ipRateLimits[$clientIp], $windowStart),
-                ];
-            }
-        }
-
-        return [
-            'allowed' => true,
-            'reason' => null,
-            'wait_seconds' => 0,
-        ];
+    public function __construct(
+        private AccessRuleRepository $accessRuleRepository,
+        private LoggerInterface $logger,
+    ) {
     }
 
-    private function calculateWaitSeconds(array $timestamps, int $windowStart): int
+    /**
+     * 入力値がルールに合致していないか（＝アクセス許可されるか）を判定する。
+     *
+     * すべての有効ルールを評価し、いずれかのルールで deny と判定された場合は false を返す。
+     * throttle の場合はスロットリング処理のトリガーとしてログに記録する。
+     *
+     * @param string $input ユーザー入力文字列
+     * @param string $type  ルール種別 (ip / time / block_keyword)
+     */
+    public function isAllowed(string $input, string $type): bool
     {
-        $oldest = min($timestamps);
-        $waitSeconds = 61 - ($oldest - $windowStart);
+        try {
+            $matchedRules = $this->accessRuleRepository->findMatchingRules($input, $type);
 
-        return max(1, min(60, $waitSeconds));
+            if (empty($matchedRules)) {
+                return true;
+            }
+
+            foreach ($matchedRules as $rule) {
+                if ($rule->getAction() === 'deny') {
+                    $this->logger->info('アクセスルールにより拒否されました', [
+                        'rule_id' => $rule->getId(),
+                        'rule_type' => $rule->getRuleType(),
+                        'rule_value' => $rule->getRuleValue(),
+                        'input' => mb_substr($input, 0, 100),
+                    ]);
+                    return false;
+                }
+
+                if ($rule->getAction() === 'throttle') {
+                    $this->logger->info('アクセススロットリングが適用されました', [
+                        'rule_id' => $rule->getId(),
+                        'rule_type' => $rule->getRuleType(),
+                        'rule_value' => $rule->getRuleValue(),
+                    ]);
+                    // throttle は許可するが、ログに記録して後続の処理で速度制限を適用可能
+                }
+            }
+
+            return true;
+        } catch (\Throwable $e) {
+            // ルール評価に失敗した場合はフェイルセーフで許可する
+            $this->logger->error('アクセスルール評価中にエラーが発生しました', [
+                'error' => $e->getMessage(),
+                'input' => mb_substr($input, 0, 100),
+                'type' => $type,
+            ]);
+            return true;
+        }
     }
 }

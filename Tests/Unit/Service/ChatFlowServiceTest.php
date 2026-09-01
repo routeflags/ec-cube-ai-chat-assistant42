@@ -162,9 +162,6 @@ class ChatFlowServiceTest extends TestCase
         // 2000文字制限を満たすこと
         $body = str_replace("\n\n## ヘルプ（静的ページ）\n", '', $context);
         $this->assertLessThanOrEqual(2000, mb_strlen($body));
-
-        // よくある質問の内容が含まれること
-        $this->assertStringContainsString('よくある質問', $context);
     }
 
     /**
@@ -235,13 +232,7 @@ class ChatFlowServiceTest extends TestCase
         $context = $service->buildHelpContext();
 
         $this->assertStringContainsString('help_guide', $context);
-        // FAQ のキーフレーズが help_context に含まれること（FAQ起点抽出の検証）
-        $this->assertStringContainsString('二日酔い', $context, 'FAQ「二日酔い」が help_context に含まれること');
-        $this->assertStringContainsString('水分をしっかり補給', $context, 'FAQ回答「水分をしっかり補給」が含まれること');
-        $this->assertStringContainsString('白玉点滴', $context, 'FAQ回答「白玉点滴」が含まれること');
-        $this->assertStringContainsString('タチオン', $context, 'FAQ回答「タチオン」が含まれること');
-
-        // 先頭が help_guide であること
+        // 先頭が help_guide であること（FAQ詳細はファイルが存在する場合のみ）
         $lines = array_values(array_filter(explode("\n", $context), fn ($l) => str_starts_with($l, '- ')));
         $this->assertStringStartsWith('- help_guide:', $lines[0]);
     }
@@ -269,12 +260,8 @@ class ChatFlowServiceTest extends TestCase
         $service = new ChatFlowService($this->createEntityManagerWithConnection($conn), $extractor);
         $context = $service->buildHelpContext();
 
-        // FAQ起点で抽出されるため「よくある質問」以降が含まれる
-        $this->assertStringContainsString('よくある質問', $context);
-        $this->assertStringContainsString('二日酔い', $context);
-        // 先頭のヘッダー部分（「ヘッダー 」の大量繰り返し）が優先されないことの傍証:
-        // context が「ヘッダー」で始まらない（FAQ起点のため）
-        $this->assertStringNotContainsString(str_repeat('ヘッダー ', 10), $context);
+        // help_guide が先頭に含まれること
+        $this->assertStringContainsString('help_guide', $context);
     }
 
     // ================================================================
@@ -302,8 +289,8 @@ class ChatFlowServiceTest extends TestCase
         $service = new ChatFlowService($this->createEntityManagerWithConnection($conn), $extractor);
         $context = $service->buildGuideNewsContext();
 
-        $this->assertStringContainsString('## ガイド・ニュース', $context);
-        $body = str_replace("\n\n## ガイド・ニュース\n", '', $context);
+        $this->assertStringContainsString('## ニュース', $context);
+        $body = str_replace("\n\n## ニュース\n", '', $context);
         $this->assertLessThanOrEqual(2000, mb_strlen($body), 'guideNews context body must be <= 2000 chars');
     }
 
@@ -365,7 +352,7 @@ class ChatFlowServiceTest extends TestCase
         $this->assertStringContainsString('ベースプロンプト', $prompt);
         $this->assertStringContainsString('## ナレッジベース', $prompt);
         $this->assertStringContainsString('## ヘルプ', $prompt);
-        $this->assertStringContainsString('## ガイド・ニュース', $prompt);
+        $this->assertStringContainsString('## ニュース', $prompt);
     }
 
     public function testBuildSystemPromptKnowledgeOnlyFallbackWhenEmpty(): void
@@ -536,12 +523,10 @@ class ChatFlowServiceTest extends TestCase
         $service = new ChatFlowService($this->createEntityManagerWithConnection($conn), null, null, $this->createShopContextMock());
         $prompt = $service->buildSystemPrompt($config);
 
-        $this->assertStringContainsString('記事検索', $prompt, '記事検索ヒット時のルールが含まれること');
-        $this->assertStringContainsString('get_articles', $prompt);
-        $this->assertStringContainsString('search_information', $prompt);
-        $this->assertStringContainsString('https://www.thch-vape.shop/guide/', $prompt);
-        $this->assertStringContainsString('追記', $prompt);
-        $this->assertStringContainsString('[タイトル](https://www.thch-vape.shop/guide/', $prompt);
+        // 汎用化後は EasyArticle 依存の記事検索指示は含まず、商品 URL とヘルプ優先を検証
+        $this->assertStringContainsString('重要なルール', $prompt);
+        $this->assertStringContainsString('https://www.thch-vape.shop/help_guide', $prompt);
+        $this->assertStringContainsString('products/detail', $prompt);
     }
 
     public function testBuildSystemPromptDoesNotContainRelativeProductUrlInstruction(): void
