@@ -65,14 +65,6 @@
           "is_default": true
         },
         {
-          "id": "claude-3-opus-20240229",
-          "name": "Claude 3 Opus",
-          "description": "高度な推論を必要とする複雑なタスク向けモデル",
-          "supports_tools": true,
-          "cost_tier": "high",
-          "is_default": false
-        },
-        {
           "id": "claude-haiku-4-5-20251001",
           "name": "Claude Haiku 4.5",
           "description": "高速・低コスト。大量の問い合わせ処理向け",
