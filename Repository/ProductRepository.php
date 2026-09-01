@@ -191,34 +191,36 @@ class ProductRepository extends AbstractRepository
      */
     public function search(string $keyword = '', ?int $categoryId = null, int $limit = 20, int $offset = 0): array
     {
-        $sql = <<<'SQL'
-            SELECT
-                p.id,
-                p.name,
-                pc.price02 AS price,
-                ps.stock,
-                pc.stock_unlimited,
-                p.description_list,
-                p.update_date
-            FROM dtb_product p
-            INNER JOIN dtb_product_class pc ON pc.product_id = p.id
-            LEFT JOIN dtb_product_stock ps ON ps.product_class_id = pc.id
-            LEFT JOIN dtb_product_category pct ON pct.product_id = p.id
-            WHERE p.product_status_id = 1
-              AND pc.visible = 1
-        SQL;
+        // DBAL QueryBuilder に統一。LIMIT/OFFSET は setMaxResults/setFirstResult に任せ、
+        // LIKE はプレースホルダに % を含めて渡すことで DB 差異を吸収する。
+        $qb = $this->connection->createQueryBuilder()
+            ->select('p.id', 'p.name', 'pc.price02 AS price', 'ps.stock', 'pc.stock_unlimited', 'p.description_list', 'p.update_date')
+            ->from('dtb_product', 'p')
+            ->innerJoin('p', 'dtb_product_class', 'pc', 'pc.product_id = p.id')
+            ->leftJoin('p', 'dtb_product_stock', 'ps', 'ps.product_class_id = pc.id')
+            ->leftJoin('p', 'dtb_product_category', 'pct', 'pct.product_id = p.id')
+            ->where('p.product_status_id = 1')
+            ->andWhere('pc.visible = 1')
+            ->groupBy('p.id', 'pc.price02', 'ps.stock', 'pc.stock_unlimited', 'p.description_list', 'p.update_date')
+            ->orderBy('p.update_date', 'DESC')
+            ->addOrderBy('p.id', 'DESC')
+            ->setMaxResults(max(0, $limit))
+            ->setFirstResult(max(0, $offset));
 
-        $params = [];
-        $sql .= $this->buildKeywordCondition($keyword, $params);
-        $sql .= $this->buildCategoryCondition($categoryId, $params);
+        if ($keyword !== '') {
+            $likeKeyword = '%' . $keyword . '%';
+            $qb->andWhere('(p.name LIKE :kw OR p.search_word LIKE :kw_sw OR pc.product_code LIKE :kw_code)')
+                ->setParameter('kw', $likeKeyword)
+                ->setParameter('kw_sw', $likeKeyword)
+                ->setParameter('kw_code', $likeKeyword);
+        }
 
-        $sql .= ' GROUP BY p.id, pc.price02, ps.stock, pc.stock_unlimited, p.description_list, p.update_date';
-        $sql .= ' ORDER BY p.update_date DESC, p.id DESC';
-        $sql .= ' LIMIT ' . (int)$limit . ' OFFSET ' . (int)$offset;
+        if ($categoryId !== null) {
+            $qb->andWhere('pct.category_id = :category_id')
+                ->setParameter('category_id', $categoryId);
+        }
 
-
-        $stmt = $this->connection->executeQuery($sql, $params);
-        $products = $stmt->fetchAllAssociative();
+        $products = $qb->executeQuery()->fetchAllAssociative();
 
         // 画像情報を一括取得して付与
         $productIds = array_column($products, 'id');
@@ -364,32 +366,23 @@ class ProductRepository extends AbstractRepository
      */
     public function getCategoryProducts(int $categoryId, int $limit = 50, int $offset = 0): array
     {
-        $sql = <<<'SQL'
-            SELECT
-                p.id,
-                p.name,
-                pc.price02 AS price,
-                ps.stock,
-                pc.stock_unlimited,
-                p.description_list
-            FROM dtb_product p
-            INNER JOIN dtb_product_class pc ON pc.product_id = p.id
-            LEFT JOIN dtb_product_stock ps ON ps.product_class_id = pc.id
-            INNER JOIN dtb_product_category pct ON pct.product_id = p.id
-            WHERE p.product_status_id = 1
-              AND pc.visible = 1
-              AND pct.category_id = :category_id
-            GROUP BY p.id, pc.price02, ps.stock, pc.stock_unlimited, p.description_list
-            ORDER BY p.update_date DESC, p.id DESC
-        $sql .= ' LIMIT ' . (int)$limit . ' OFFSET ' . (int)$offset;
-        SQL;
+        $qb = $this->connection->createQueryBuilder()
+            ->select('p.id', 'p.name', 'pc.price02 AS price', 'ps.stock', 'pc.stock_unlimited', 'p.description_list')
+            ->from('dtb_product', 'p')
+            ->innerJoin('p', 'dtb_product_class', 'pc', 'pc.product_id = p.id')
+            ->leftJoin('p', 'dtb_product_stock', 'ps', 'ps.product_class_id = pc.id')
+            ->innerJoin('p', 'dtb_product_category', 'pct', 'pct.product_id = p.id')
+            ->where('p.product_status_id = 1')
+            ->andWhere('pc.visible = 1')
+            ->andWhere('pct.category_id = :category_id')
+            ->setParameter('category_id', $categoryId)
+            ->groupBy('p.id', 'pc.price02', 'ps.stock', 'pc.stock_unlimited', 'p.description_list')
+            ->orderBy('p.update_date', 'DESC')
+            ->addOrderBy('p.id', 'DESC')
+            ->setMaxResults(max(0, $limit))
+            ->setFirstResult(max(0, $offset));
 
-        $stmt = $this->connection->executeQuery($sql, [
-            'category_id' => $categoryId,
-            'limit' => $limit,
-            'offset' => $offset,
-        ]);
-        $products = $stmt->fetchAllAssociative();
+        $products = $qb->executeQuery()->fetchAllAssociative();
 
         $productIds = array_column($products, 'id');
         $imagesMap = $this->fetchImagesByProductIds($productIds);
@@ -434,32 +427,23 @@ class ProductRepository extends AbstractRepository
      */
     public function searchByTag(int $tagId, int $limit = 20, int $offset = 0): array
     {
-        $sql = <<<'SQL'
-            SELECT
-                p.id,
-                p.name,
-                pc.price02 AS price,
-                ps.stock,
-                pc.stock_unlimited,
-                p.description_list
-            FROM dtb_product p
-            INNER JOIN dtb_product_class pc ON pc.product_id = p.id
-            LEFT JOIN dtb_product_stock ps ON ps.product_class_id = pc.id
-            INNER JOIN dtb_product_tag pt ON pt.product_id = p.id
-            WHERE p.product_status_id = 1
-              AND pc.visible = 1
-              AND pt.tag_id = :tag_id
-            GROUP BY p.id, pc.price02, ps.stock, pc.stock_unlimited, p.description_list
-            ORDER BY p.update_date DESC, p.id DESC
-        $sql .= ' LIMIT ' . (int)$limit . ' OFFSET ' . (int)$offset;
-        SQL;
+        $qb = $this->connection->createQueryBuilder()
+            ->select('p.id', 'p.name', 'pc.price02 AS price', 'ps.stock', 'pc.stock_unlimited', 'p.description_list')
+            ->from('dtb_product', 'p')
+            ->innerJoin('p', 'dtb_product_class', 'pc', 'pc.product_id = p.id')
+            ->leftJoin('p', 'dtb_product_stock', 'ps', 'ps.product_class_id = pc.id')
+            ->innerJoin('p', 'dtb_product_tag', 'pt', 'pt.product_id = p.id')
+            ->where('p.product_status_id = 1')
+            ->andWhere('pc.visible = 1')
+            ->andWhere('pt.tag_id = :tag_id')
+            ->setParameter('tag_id', $tagId)
+            ->groupBy('p.id', 'pc.price02', 'ps.stock', 'pc.stock_unlimited', 'p.description_list')
+            ->orderBy('p.update_date', 'DESC')
+            ->addOrderBy('p.id', 'DESC')
+            ->setMaxResults(max(0, $limit))
+            ->setFirstResult(max(0, $offset));
 
-        $stmt = $this->connection->executeQuery($sql, [
-            'tag_id' => $tagId,
-            'limit' => $limit,
-            'offset' => $offset,
-        ]);
-        $products = $stmt->fetchAllAssociative();
+        $products = $qb->executeQuery()->fetchAllAssociative();
 
         $productIds = array_column($products, 'id');
         $imagesMap = $this->fetchImagesByProductIds($productIds);
@@ -842,68 +826,6 @@ class ProductRepository extends AbstractRepository
     private function htmlToPlainText(string $html): string
     {
         return $this->textExtractor->extract($html);
-    }
-
-    /**
-     * LIKE 検索用のキーワードをエスケープし、前後に % を付与する。
-     */
-    private function escapeLikeKeyword(string $keyword): string
-    {
-        return '%' . str_replace(['%', '_'], ['\\%', '\\_'], $keyword) . '%';
-    }
-
-    // ================================================================
-    //  SQL ビルダー（search() の条件分岐を分離して CC を削減）
-    // ================================================================
-
-    /**
-     * キーワード検索条件の SQL フラグメントとバインドパラメータを構築する。
-     *
-     * @param string   $keyword  検索キーワード
-     * @param array    $params   バインドパラメータ（参照渡しで追加）
-     *
-     * @return string SQL フラグメント（空文字列なら条件なし）
-     */
-    private function buildKeywordCondition(string $keyword, array &$params): string
-    {
-        if ($keyword === '') {
-            return '';
-        }
-
-        $escapedKeyword = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $keyword) . '%';
-
-        $params['keyword'] = $escapedKeyword;
-        $params['keyword_sw'] = $escapedKeyword;
-        $params['keyword_code'] = $escapedKeyword;
-
-        // SQLite は ESCAPE '\\' を解釈できず、単一文字を要求するため、SQLite では ESCAPE を省略
-        // MySQL のみ ESCAPE '\\' を使用
-        $platform = strtolower($this->connection->getDatabasePlatform()->getName());
-        $isSqlite = str_contains($platform, 'sqlite');
-        if ($isSqlite) {
-            return ' AND (p.name LIKE :keyword OR p.search_word LIKE :keyword_sw OR pc.product_code LIKE :keyword_code)';
-        }
-
-        return " AND (p.name LIKE :keyword ESCAPE '\\\\' OR p.search_word LIKE :keyword_sw ESCAPE '\\\\' OR pc.product_code LIKE :keyword_code ESCAPE '\\\\')";
-    }
-
-    /**
-     * カテゴリフィルターの SQL フラグメントとバインドパラメータを構築する。
-     *
-     * @param int|null $categoryId カテゴリ ID
-     * @param array    $params     バインドパラメータ（参照渡しで追加）
-     *
-     * @return string SQL フラグメント（空文字列なら条件なし）
-     */
-    private function buildCategoryCondition(?int $categoryId, array &$params): string
-    {
-        if ($categoryId === null) {
-            return '';
-        }
-
-        $params['category_id'] = $categoryId;
-
-        return ' AND pct.category_id = :category_id';
     }
 
     // ================================================================

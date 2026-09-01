@@ -82,11 +82,64 @@ class AiModelRegistry
      *
      * @param string $provider プロバイダキー（openai / anthropic / gemini）
      *
-     * @return array<int, array{id: string, name: string, description: string, supports_tools: bool, cost_tier: string, is_default: bool}>
+     * @return array<int, array{id: string, name: string, description: string, supports_tools: bool, supports_reasoning_with_tools?: bool, cost_tier: string, is_default: bool}>
      */
     public function getModels(string $provider): array
     {
         return $this->config['providers'][$provider]['models'] ?? [];
+    }
+
+    /**
+     * 指定プロバイダの単一モデル定義を返す。
+     *
+     * 見つからない場合は null を返す。
+     *
+     * @return array{id: string, name: string, description: string, supports_tools: bool, supports_reasoning_with_tools?: bool, cost_tier: string, is_default: bool}|null
+     */
+    public function getModel(string $provider, string $modelId): ?array
+    {
+        foreach ($this->getModels($provider) as $model) {
+            if ($model['id'] === $modelId) {
+                return $model;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * 指定モデルがツール併用時の reasoning に対応しているか判定する。
+     *
+     * ai_models.json の supports_reasoning_with_tools を参照する。
+     * キーが存在しないモデルは後方互換のため true として扱う（従来モデルは制限なし）。
+     */
+    public function supportsReasoningWithTools(string $provider, string $modelId): bool
+    {
+        $model = $this->getModel($provider, $modelId);
+        if ($model === null) {
+            // 未知のモデルは制限をかけない（デグレ防止）
+            return true;
+        }
+
+        // 明示的に false が設定されている場合のみ false、未設定は true
+        if (!array_key_exists('supports_reasoning_with_tools', $model)) {
+            return true;
+        }
+
+        return (bool) $model['supports_reasoning_with_tools'];
+    }
+
+    /**
+     * 指定モデルがツール呼び出しをサポートしているか判定する。
+     */
+    public function supportsTools(string $provider, string $modelId): bool
+    {
+        $model = $this->getModel($provider, $modelId);
+        if ($model === null) {
+            return false;
+        }
+
+        return (bool) ($model['supports_tools'] ?? false);
     }
 
     /**

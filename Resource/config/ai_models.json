@@ -10,6 +10,7 @@
           "name": "GPT-5.6",
           "description": "最新のフラッグシップモデル。複雑な問い合わせや高度なツール利用に最適",
           "supports_tools": true,
+          "supports_reasoning_with_tools": false,
           "cost_tier": "high",
           "is_default": false
         },
@@ -18,6 +19,7 @@
           "name": "GPT-5.6 Terra",
           "description": "性能とコストのバランスに優れたモデル",
           "supports_tools": true,
+          "supports_reasoning_with_tools": false,
           "cost_tier": "medium",
           "is_default": false
         },
@@ -26,6 +28,7 @@
           "name": "GPT-5.6 Luna",
           "description": "高速・低コスト。大量の商品問い合わせ処理に適したモデル",
           "supports_tools": true,
+          "supports_reasoning_with_tools": false,
           "cost_tier": "low",
           "is_default": false
         },
@@ -34,6 +37,7 @@
           "name": "GPT-4o",
           "description": "最も賢いモデル。複雑な質問に最適",
           "supports_tools": true,
+          "supports_reasoning_with_tools": true,
           "cost_tier": "high",
           "is_default": true
         },
@@ -42,6 +46,7 @@
           "name": "GPT-4o mini",
           "description": "高速・低コスト。簡単な質問に最適",
           "supports_tools": true,
+          "supports_reasoning_with_tools": true,
           "cost_tier": "low",
           "is_default": false
         }

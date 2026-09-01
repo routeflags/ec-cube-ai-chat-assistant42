@@ -16,6 +16,7 @@ declare(strict_types=1);
 namespace Plugin\AiChatAssistant42\Service\AiAgent;
 
 use Plugin\AiChatAssistant42\Service\AiAgentInterface;
+use Plugin\AiChatAssistant42\Service\AiModelRegistry;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 
@@ -33,23 +34,50 @@ class OpenAiAgent implements AiAgentInterface
     private int $maxTokens;
     private string $apiBase;
     private string $customSystemPrompt;
+    /** @var string|null reasoning effort (e.g. "low" / "medium" / "high") */
+    private ?string $reasoningEffort;
+    private ?AiModelRegistry $modelRegistry;
+    /** @var bool|null Capability cache for this model */
+    private ?bool $cachedSupportsReasoningWithTools = null;
 
     public function __construct(
         string $apiKey,
         string $model = 'gpt-4o',
         int $maxTokens = 4096,
         string $systemPrompt = '',
-        string $apiBase = 'https://api.openai.com/v1'
+        string $apiBase = 'https://api.openai.com/v1',
+        ?string $reasoningEffort = null,
+        ?AiModelRegistry $modelRegistry = null
     ) {
         $this->apiKey = $apiKey;
         $this->model = $model;
         $this->maxTokens = $maxTokens;
         $this->customSystemPrompt = $systemPrompt;
         $this->apiBase = rtrim($apiBase, '/');
+        $this->reasoningEffort = $reasoningEffort;
+        $this->modelRegistry = $modelRegistry;
         $this->httpClient = new Client([
             'base_uri' => $this->apiBase,
             'timeout' => 120,
         ]);
+    }
+
+    /**
+     * reasoning effort を設定する（実行時に動的に変更可能）。
+     */
+    public function setReasoningEffort(?string $reasoningEffort): void
+    {
+        $this->reasoningEffort = $reasoningEffort;
+        // キャッシュはモデル依存なのでクリア不要だが、念のため維持
+    }
+
+    /**
+     * モデルレジストリを差し替える（テストや DI 用）。
+     */
+    public function setModelRegistry(?AiModelRegistry $registry): void
+    {
+        $this->modelRegistry = $registry;
+        $this->cachedSupportsReasoningWithTools = null;
     }
 
     /**
@@ -248,6 +276,9 @@ class OpenAiAgent implements AiAgentInterface
     /**
      * OpenAI API リクエストペイロードを構築する。
      *
+     * Capability Matrix を参照し、ツール併用時に reasoning が非対応のモデルでは
+     * reasoning_effort / reasoningEffort を付与しない（400 エラー回避）。
+     *
      * @param array<int, array{role: string, content?: string, tool_calls?: array, tool_call_id?: string}> $messages
      * @param array<int, array{type: string, function: array}> $tools
      *
@@ -267,12 +298,100 @@ class OpenAiAgent implements AiAgentInterface
             $payload['max_tokens'] = $this->maxTokens;
         }
 
+        // reasoning effort が設定されていれば付与（後段の capability チェックで必要に応じ除去）
+        if ($this->reasoningEffort !== null && $this->reasoningEffort !== '') {
+            $payload['reasoning_effort'] = $this->reasoningEffort;
+        }
+
         if (!empty($tools)) {
             $payload['tools'] = $tools;
             $payload['tool_choice'] = 'auto';
         }
 
+        // Capability Matrix: tools 非空かつ reasoning 非対応モデルでは reasoning 系キーを除去
+        if (!empty($tools) && !$this->supportsReasoningWithTools()) {
+            unset($payload['reasoning_effort'], $payload['reasoningEffort']);
+        }
+
         return $payload;
+    }
+
+    /**
+     * 当該モデルがツール併用時に reasoning をサポートしているか判定する。
+     *
+     * AiModelRegistry が注入されていればそれを優先し、未注入の場合は
+     * ai_models.json を直接読み込むフォールバックで判定する。
+     * 未知モデルやキー欠損時は true（後方互換）を返す。
+     */
+    private function supportsReasoningWithTools(): bool
+    {
+        if ($this->cachedSupportsReasoningWithTools !== null) {
+            return $this->cachedSupportsReasoningWithTools;
+        }
+
+        // 1. Registry 経由（DI されている場合）
+        if ($this->modelRegistry !== null) {
+            $result = $this->modelRegistry->supportsReasoningWithTools('openai', $this->model);
+            $this->cachedSupportsReasoningWithTools = $result;
+            return $result;
+        }
+
+        // 2. フォールバック: ai_models.json を直接参照
+        $result = $this->resolveCapabilityFromJson();
+        $this->cachedSupportsReasoningWithTools = $result;
+        return $result;
+    }
+
+    /**
+     * ai_models.json から supports_reasoning_with_tools を解決するフォールバック。
+     *
+     * ファイルが見つからない、JSON が壊れている、モデルが未定義の場合は true を返す。
+     */
+    private function resolveCapabilityFromJson(): bool
+    {
+        // プラグイン単体 / EC-CUBE 本体 (app/Plugin/...) の両配置に対応するため上位を走査
+        $candidates = [
+            dirname(__DIR__, 2) . '/Resource/config/ai_models.json',
+            dirname(__DIR__, 3) . '/Resource/config/ai_models.json',
+            dirname(__DIR__, 4) . '/Resource/config/ai_models.json',
+            dirname(__DIR__, 5) . '/Resource/config/ai_models.json',
+            dirname(__DIR__, 6) . '/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json',
+            __DIR__ . '/../../Resource/config/ai_models.json',
+        ];
+
+        $configPath = null;
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate)) {
+                $configPath = $candidate;
+                break;
+            }
+        }
+
+        if ($configPath === null) {
+            return true;
+        }
+
+        $raw = @file_get_contents($configPath);
+        if ($raw === false) {
+            return true;
+        }
+
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded) || !isset($decoded['providers']['openai']['models'])) {
+            return true;
+        }
+
+        foreach ($decoded['providers']['openai']['models'] as $model) {
+            if (($model['id'] ?? null) === $this->model) {
+                if (!array_key_exists('supports_reasoning_with_tools', $model)) {
+                    return true;
+                }
+                return (bool) $model['supports_reasoning_with_tools'];
+            }
+        }
+
+        // 未知モデルは制限なし
+        return true;
     }
 
     /**
