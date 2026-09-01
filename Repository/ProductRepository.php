@@ -120,42 +120,6 @@ class ProductRepository extends AbstractRepository
                 'required' => ['tag_id'],
             ],
         ],
-        [
-            'type' => 'function',
-            'name' => 'get_news',
-            'description' => '最新のお知らせ・ニュースを取得します。',
-            'input_schema' => [
-                'type' => 'object',
-                'properties' => [
-                    'limit' => ['type' => 'integer', 'description' => '取得件数上限（デフォルト: 10）', 'default' => 10],
-                ],
-            ],
-        ],
-        [
-            'type' => 'function',
-            'name' => 'search_help',
-            'description' => '静的ページ（ヘルプ）をキーワードで検索します。ご利用ガイド（help_guide: よくある質問・配送・支払い・返品・ポイントを含む）を最優先で参照し、次いで特定商取引法・プライバシーポリシー・ご利用規約・当サイトについて が対象です。配送・FAQ に関する質問は search_help で help_guide を優先的に検索してください。',
-            'input_schema' => [
-                'type' => 'object',
-                'properties' => [
-                    'keyword' => ['type' => 'string', 'description' => '検索キーワード（例: よくある質問、配送、支払い）'],
-                    'limit' => ['type' => 'integer', 'description' => '取得件数上限（デフォルト: 10）', 'default' => 10],
-                ],
-                'required' => ['keyword'],
-            ],
-        ],
-        [
-            'type' => 'function',
-            'name' => 'get_help_detail',
-            'description' => '静的ページヘルプの詳細を取得します。url で指定したページの内容を返します。よくある質問は help_guide（ヘルプガイド内のよくある質問セクション、配送・支払い・返品を含む）を最優先で取得してください。',
-            'input_schema' => [
-                'type' => 'object',
-                'properties' => [
-                    'url' => ['type' => 'string', 'description' => 'ページ URL（例: help_guide（最優先: よくある質問）, help_tradelaw, help_about, help_privacy, help_agreement）'],
-                ],
-                'required' => ['url'],
-            ],
-        ],
     ];
 
     /**
@@ -172,9 +136,6 @@ class ProductRepository extends AbstractRepository
         'get_category_products' => 'executeGetCategoryProducts',
         'get_tags' => 'executeGetTags',
         'search_by_tag' => 'executeSearchByTag',
-        'get_news' => 'executeGetNews',
-        'search_help' => 'executeSearchHelp',
-        'get_help_detail' => 'executeGetHelpDetail',
     ];
 
     private EntityManagerInterface $entityManager;
@@ -621,35 +582,27 @@ class ProductRepository extends AbstractRepository
     }
 
     /**
-     * get_news ツールを実行する。
+     * @deprecated News は汎用化により廃止（データソースはナレッジと商品のみ）。
      */
     private function executeGetNews(array $args): array
     {
-        return $this->getNews((int) ($args['limit'] ?? 10));
+        return [];
     }
 
     /**
-     * search_help ツールを実行する。
+     * @deprecated Help は汎用化により廃止。
      */
     private function executeSearchHelp(array $args): array
     {
-        return $this->searchHelp(
-            $args['keyword'] ?? '',
-            (int) ($args['limit'] ?? 10)
-        );
+        return [];
     }
 
     /**
-     * get_help_detail ツールを実行する。
+     * @deprecated Help は汎用化により廃止。
      */
     private function executeGetHelpDetail(array $args): array
     {
-        $detail = $this->getHelpDetail((string) ($args['url'] ?? ''));
-        if ($detail === null) {
-            return ['error' => 'Help page not found'];
-        }
-
-        return $detail;
+        return ['error' => 'Help page not found (deprecated)'];
     }
 
     // ================================================================
@@ -659,74 +612,25 @@ class ProductRepository extends AbstractRepository
     /**
      * 最新のお知らせを取得する。
      *
-     * @return array<int, array{id: int, title: string, description: string|null, publish_date: string|null}>
+     * @deprecated News は汎用化により廃止（データソースはナレッジと商品のみ）。
      */
     public function getNews(int $limit = 10): array
     {
-        $limit = max(1, min(50, $limit));
-
-        return $this->connection->executeQuery(
-            'SELECT id, title, description, publish_date FROM dtb_news'
-            . ' ORDER BY publish_date DESC LIMIT ' . $limit
-        )->fetchAllAssociative();
+        return [];
     }
 
     // getArticles は EasyArticle 依存のため完全削除済み（汎用プラグイン化）。
     // 旧 plg_ea_article テーブルが存在しても参照しない。
 
     /**
-     * 静的ページ（ヘルプ）をキーワードで検索する。
-     *
-     * dtb_page の page_name / url / description / keyword / meta_tags から LIKE 検索する。
-     * content カラムは存在しないため、ファイル内容ではなく DB カラムを対象にする。
-     * help_guide（よくある質問: /help_guide#faq）は
-     * ユーザーの疑問解決に直結するため、ORDER BY CASE で最優先にソートする。
-     *
-     * @return array<int, array{id: int, page_name: string|null, url: string, meta_robots: string|null}>
+     * @deprecated Help は汎用化により廃止（データソースはナレッジと商品のみ）。
      */
     public function searchHelp(string $keyword = '', int $limit = 10): array
     {
-        $limit = max(1, min(50, $limit));
-
-        // help_guide（よくある質問）は最優先で先頭にソート
-        $priorityOrder = "CASE WHEN url = 'help_guide' THEN 0 ELSE 1 END, id ASC";
-
-        if ($keyword === '') {
-            return $this->connection->executeQuery(
-                'SELECT id, page_name, url, meta_robots FROM dtb_page'
-                . ' ORDER BY ' . $priorityOrder . ' LIMIT ' . $limit
-            )->fetchAllAssociative();
-        }
-
-        $escaped = $this->escapeLikeKeyword($keyword);
-        $columns = ['page_name', 'url', 'description', 'keyword', 'meta_tags'];
-        $conditions = implode(' OR ', array_map(
-            static fn (string $col): string => $col . ' LIKE :kw ESCAPE \'\\\'',
-            $columns
-        ));
-
-        $results = $this->connection->executeQuery(
-            'SELECT id, page_name, url, meta_robots FROM dtb_page'
-            . ' WHERE ' . $conditions
-            . ' ORDER BY ' . $priorityOrder . ' LIMIT ' . $limit,
-            ['kw' => $escaped]
-        )->fetchAllAssociative();
-
-        // dtb_page の DBカラム（page_name/url/description等）には FAQ 本文が含まれないため、
-        // 「二日酔い」「カンナビノイド」等の FAQ 固有キーワードは DB検索ではヒットしない。
-        // 例: 「カンナビノイドの二日酔いを抑える方法はありますか？」は help_guide.twig の
-        // FAQ本文にのみ存在し、DBカラムには含まれないため、ファイル内容でも検索して
-        // help_guide を補完する。
-        if (!$this->isHelpGuideInResults($results) && $this->doesHelpGuideContainKeyword($keyword)) {
-            $helpGuideRow = $this->fetchHelpGuideRow();
-            if ($helpGuideRow !== null) {
-                array_unshift($results, $helpGuideRow);
-                $results = array_slice($results, 0, $limit);
-            }
-        }
-
-        return $results;
+        return [];
     }
+
+
 
     /**
      * 検索結果に help_guide が含まれているか判定する。
