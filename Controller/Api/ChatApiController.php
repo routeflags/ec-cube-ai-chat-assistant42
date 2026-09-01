@@ -457,6 +457,21 @@ class ChatApiController extends AbstractController
             return new JsonResponse(['success' => false, 'error' => 'フィードバックの保存中にエラーが発生しました。'], 500);
         }
 
+        // 低評価（negative）はメール依頼の有無に関わらず、全チャネル（email/webhook/line）で通知
+        if ($feedbackValue === 'negative') {
+            try {
+                $this->notificationService->checkAndSend('low_satisfaction', [
+                    'session_id' => $sessionId,
+                    'feedback' => $feedbackValue,
+                ]);
+            } catch (\Throwable $e) {
+                $this->logger->warning('低満足度通知の送信に失敗しました', [
+                    'session_id' => $sessionId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         return new JsonResponse([
             'success' => true,
             'message' => 'フィードバックありがとうございます。',
