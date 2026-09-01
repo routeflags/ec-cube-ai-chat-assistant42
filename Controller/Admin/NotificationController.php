@@ -38,6 +38,7 @@ class NotificationController extends AbstractController
         'error_threshold' => 'エラー件数閾値超過',
         'unresolved' => '未解決セッション残留',
         'low_satisfaction' => '低満足度レポート',
+        'email_reply_request' => 'メール返信依頼',
     ];
 
     public function __construct(

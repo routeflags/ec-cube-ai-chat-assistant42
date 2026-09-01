@@ -25,7 +25,12 @@
                     <form method="post" action="{{ url('admin_ai_chat_assistant_notification_create') }}">
                         <input type="hidden" name="_token" value="{{ csrf_token(constant('Eccube\\Common\\Constant::TOKEN_NAME')) }}" />
                         <div class="row mb-3">
-                            <label class="col-sm-3 col-form-label">通知チャネル</label>
+                            <label class="col-sm-3 col-form-label">
+                                <div class="d-inline-block">
+                                    <span>通知チャネル</span>
+                                    <span class="badge bg-primary ms-1">{{ 'admin.common.required'|trans }}</span>
+                                </div>
+                            </label>
                             <div class="col-sm-9">
                                 <select name="notification_type" class="form-select" id="notification_type_select">
                                     {% for type in notification_types %}
@@ -38,7 +43,12 @@
                         </div>
 
                         <div class="row mb-3">
-                            <label class="col-sm-3 col-form-label">トリガーイベント</label>
+                            <label class="col-sm-3 col-form-label">
+                                <div class="d-inline-block">
+                                    <span>トリガーイベント</span>
+                                    <span class="badge bg-primary ms-1">{{ 'admin.common.required'|trans }}</span>
+                                </div>
+                            </label>
                             <div class="col-sm-9">
                                 <select name="trigger_event" class="form-select">
                                     {% for key, label in trigger_events %}
@@ -52,9 +62,14 @@
                         {# メール設定 #}
                         <div id="email_config" class="notification-config">
                             <div class="row mb-3">
-                                <label class="col-sm-3 col-form-label">送信先メール</label>
+                                <label class="col-sm-3 col-form-label">
+                                    <div class="d-inline-block">
+                                        <span>送信先メール</span>
+                                        <span class="badge bg-primary ms-1">{{ 'admin.common.required'|trans }}</span>
+                                    </div>
+                                </label>
                                 <div class="col-sm-9">
-                                    <input type="email" name="email_to" class="form-control" placeholder="admin@example.com" />
+                                    <input type="email" name="email_to" class="form-control" placeholder="admin@example.com" required />
                                 </div>
                             </div>
                             <div class="row mb-3">
@@ -68,9 +83,14 @@
                         {# Webhook 設定 #}
                         <div id="webhook_config" class="notification-config" style="display: none;">
                             <div class="row mb-3">
-                                <label class="col-sm-3 col-form-label">Webhook URL</label>
+                                <label class="col-sm-3 col-form-label">
+                                    <div class="d-inline-block">
+                                        <span>Webhook URL</span>
+                                        <span class="badge bg-primary ms-1">{{ 'admin.common.required'|trans }}</span>
+                                    </div>
+                                </label>
                                 <div class="col-sm-9">
-                                    <input type="url" name="webhook_url" class="form-control" placeholder="https://hooks.example.com/notify" />
+                                    <input type="url" name="webhook_url" class="form-control" placeholder="https://hooks.example.com/notify" required />
                                 </div>
                             </div>
                             <div class="row mb-3">
@@ -85,15 +105,25 @@
                         {# LINE 設定 #}
                         <div id="line_config" class="notification-config" style="display: none;">
                             <div class="row mb-3">
-                                <label class="col-sm-3 col-form-label">Channel Access Token</label>
+                                <label class="col-sm-3 col-form-label">
+                                    <div class="d-inline-block">
+                                        <span>チャンネルシークレット</span>
+                                        <span class="badge bg-primary ms-1">{{ 'admin.common.required'|trans }}</span>
+                                    </div>
+                                </label>
                                 <div class="col-sm-9">
-                                    <input type="text" name="line_channel_access_token" class="form-control" />
+                                    <input type="text" name="line_channel_access_token" class="form-control" required />
                                 </div>
                             </div>
                             <div class="row mb-3">
-                                <label class="col-sm-3 col-form-label">ユーザー ID</label>
+                                <label class="col-sm-3 col-form-label">
+                                    <div class="d-inline-block">
+                                        <span>ユーザー ID</span>
+                                        <span class="badge bg-primary ms-1">{{ 'admin.common.required'|trans }}</span>
+                                    </div>
+                                </label>
                                 <div class="col-sm-9">
-                                    <input type="text" name="line_user_id" class="form-control" />
+                                    <input type="text" name="line_user_id" class="form-control" required />
                                 </div>
                             </div>
                         </div>

@@ -253,7 +253,14 @@ class NotificationService
             return;
         }
 
-        $message = $config['message'] ?? sprintf('AI Chat Assistant: %s イベントが発生しました。', $event);
+        $eventLabels = [
+            'error_threshold' => 'エラー件数閾値超過',
+            'unresolved' => '未解決セッション残留',
+            'low_satisfaction' => '低満足度レポート',
+            'email_reply_request' => 'メール返信依頼',
+        ];
+        $eventLabel = $eventLabels[$event] ?? $event;
+        $message = $config['message'] ?? sprintf('【AIチャットアシスタント】%sが発生しました。', $eventLabel);
 
         try {
             $client = new HttpClient();
