@@ -117,13 +117,21 @@ class ReportController extends AbstractController
     private function fetchHourlyDistribution(\DateTimeImmutable $start, \DateTimeImmutable $end): array
     {
         $conn = $this->entityManager->getConnection();
-        $sql = '
-            SELECT HOUR(log.created_at) AS hour, COUNT(log.id) AS count
+        $platform = strtolower($conn->getDatabasePlatform()->getName());
+        if (str_contains($platform, 'sqlite')) {
+            $hourExpr = "CAST(strftime('%H', log.created_at) AS INTEGER)";
+        } elseif (str_contains($platform, 'pgsql') || str_contains($platform, 'postgres')) {
+            $hourExpr = 'CAST(EXTRACT(HOUR FROM log.created_at) AS INTEGER)';
+        } else {
+            $hourExpr = 'HOUR(log.created_at)';
+        }
+        $sql = "
+            SELECT {$hourExpr} AS hour, COUNT(log.id) AS count
             FROM plg_ai_chat_assistant_log log
             WHERE log.created_at >= :start AND log.created_at < :end
             GROUP BY hour
             ORDER BY hour ASC
-        ';
+        ";
         $raw = $conn->fetchAllAssociative($sql, [
             'start' => $start->format('Y-m-d H:i:s'),
             'end' => $end->format('Y-m-d H:i:s'),

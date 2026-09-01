@@ -334,7 +334,13 @@ AIだけで処理せず、人による対応が必要な問い合わせを店舗
 
 * EC-CUBE 4.2
 * PHP 8.0+
+* データベース
+  * MySQL 5.7+ / 8.0+（本番推奨）
+  * PostgreSQL 12+（EC-CUBE 4.2 準拠）
+  * SQLite 3.x（開発・テスト用）
 * Guzzle（EC-CUBE同梱）
+
+> **対応 DB とバージョン**: 本プラグインの集計クエリ（時間帯別分布など）は MySQL / PostgreSQL / SQLite のいずれでも動作するように分岐しています。MySQL では `HOUR()`、PostgreSQL では `EXTRACT(HOUR FROM ...)`、SQLite では `strftime('%H', ...)` を使用します。ローカル検証は `DATABASE_URL=sqlite:///var/eccube.db` でも `500` にならないことをテストで担保しています。
 
 ---
 

@@ -9,7 +9,25 @@
         "php": ">=8.0",
         "ec-cube/ec-cube": "^4.2"
     },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "Plugin\\AiChatAssistant42\\": "./"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Plugin\\AiChatAssistant42\\Tests\\": "Tests/"
+        }
+    },
     "extra": {
         "code": "AiChatAssistant42"
+    },
+    "config": {
+        "allow-plugins": {
+            "symfony/flex": true
+        }
     }
 }

@@ -237,13 +237,22 @@ class DashboardController extends AbstractController
     {
         $conn = $this->entityManager->getConnection();
 
-        // HOUR() は MySQL 固有。EC-CUBE 4.2 は MySQL 前提のためネイティブSQLで集計
+        // ドライバ判定で分岐: MySQL は HOUR(), SQLite は strftime, PostgreSQL は EXTRACT
+        $platform = strtolower($conn->getDatabasePlatform()->getName());
+        if (str_contains($platform, 'sqlite')) {
+            $hourExpr = "CAST(strftime('%H', created_at) AS INTEGER)";
+        } elseif (str_contains($platform, 'pgsql') || str_contains($platform, 'postgres')) {
+            $hourExpr = 'CAST(EXTRACT(HOUR FROM created_at) AS INTEGER)';
+        } else {
+            $hourExpr = 'HOUR(created_at)';
+        }
+
         $rows = $conn->fetchAllAssociative(
-            'SELECT HOUR(created_at) AS hour, COUNT(*) AS count
+            "SELECT {$hourExpr} AS hour, COUNT(*) AS count
                FROM plg_ai_chat_assistant_log
               WHERE created_at >= :start AND created_at < :end
-           GROUP BY HOUR(created_at)
-           ORDER BY hour ASC',
+           GROUP BY hour
+           ORDER BY hour ASC",
             [
                 'start' => $start->format('Y-m-d H:i:s'),
                 'end' => $end->format('Y-m-d H:i:s'),
@@ -624,7 +633,17 @@ class DashboardController extends AbstractController
             return null;
         }
 
-        return $projectDir . '/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json';
+        $candidates = [
+            $projectDir . '/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json',
+            $projectDir . '/Resource/config/ai_models.json',
+        ];
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return $candidates[0];
     }
 
     /**
