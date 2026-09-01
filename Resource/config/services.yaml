@@ -83,3 +83,4 @@ services:
             - '@Plugin\AiChatAssistant42\Repository\AccessRuleRepository'
 
     Plugin\AiChatAssistant42\Twig\Extension\CacheBustExtension:
+        tags: ['twig.extension']
