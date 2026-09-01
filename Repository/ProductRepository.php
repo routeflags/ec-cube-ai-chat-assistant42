@@ -876,7 +876,13 @@ class ProductRepository extends AbstractRepository
         $params['keyword_sw'] = $escapedKeyword;
         $params['keyword_code'] = $escapedKeyword;
 
-        return ' AND (p.name LIKE :keyword ESCAPE \'\\\\\' OR p.search_word LIKE :keyword_sw ESCAPE \'\\\\\' OR pc.code LIKE :keyword_code ESCAPE \'\\\\\')';
+        // MySQL と SQLite で ESCAPE の扱いが異なるため、DB によって分岐
+        // MySQL: ESCAPE '\\'（2文字）、SQLite: ESCAPE '\'（1文字）
+        $platform = strtolower($this->connection->getDatabasePlatform()->getName());
+        $isSqlite = str_contains($platform, 'sqlite');
+        $escape = $isSqlite ? "'\\'" : "'\\\\'";
+
+        return " AND (p.name LIKE :keyword ESCAPE {$escape} OR p.search_word LIKE :keyword_sw ESCAPE {$escape} OR pc.product_code LIKE :keyword_code ESCAPE {$escape})";
     }
 
     /**

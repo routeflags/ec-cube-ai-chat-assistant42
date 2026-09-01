@@ -227,20 +227,18 @@ class GeminiAgent implements AiAgentInterface
      *
      * @param array<int, array{name: string, description: string, inputSchema: array}> $mcpTools
      *
-     * @return array<int, array{functionDeclaration: array{name: string, description: string, parameters: array}}>
+     * @return array<int, array{name: string, description: string, parameters: array}>
      */
     private function convertToolsToGeminiFormat(array $mcpTools): array
     {
         $converted = [];
         foreach ($mcpTools as $tool) {
             $converted[] = [
-                'functionDeclaration' => [
-                    'name' => $tool['name'],
-                    'description' => $tool['description'] ?? '',
-                    'parameters' => $tool['inputSchema'] ?? $tool['parameters'] ?? [
-                        'type' => 'OBJECT',
-                        'properties' => new \stdClass(),
-                    ],
+                'name' => $tool['name'],
+                'description' => $tool['description'] ?? '',
+                'parameters' => $tool['inputSchema'] ?? $tool['parameters'] ?? [
+                    'type' => 'OBJECT',
+                    'properties' => new \stdClass(),
                 ],
             ];
         }
@@ -251,7 +249,7 @@ class GeminiAgent implements AiAgentInterface
      * Gemini API リクエストペイロードを構築する。
      *
      * @param array<int, array{role: string, parts: array}> $contents
-     * @param array<int, array{functionDeclaration: array}> $tools
+     * @param array<int, array{name: string, description: string, parameters: array}> $tools
      *
      * @return array<string, mixed>
      */

@@ -82,12 +82,28 @@
       "api_base": "https://generativelanguage.googleapis.com/v1beta",
       "models": [
         {
-          "id": "gemini-3.7-flash",
-          "name": "Gemini 3.7 Flash",
-          "description": "最新の高性能Flashモデル。エージェントや複雑な処理にも対応",
+          "id": "gemini-3.6-flash",
+          "name": "Gemini 3.6 Flash",
+          "description": "最新の安定版Flash。最大100万トークン対応、ツール利用に最適（推奨）",
           "supports_tools": true,
           "cost_tier": "medium",
           "is_default": true
+        },
+        {
+          "id": "gemini-3-flash-preview",
+          "name": "Gemini 3 Flash Preview",
+          "description": "3系Flashプレビュー。エージェントや複雑な処理にも対応",
+          "supports_tools": true,
+          "cost_tier": "medium",
+          "is_default": false
+        },
+        {
+          "id": "gemini-2.5-flash",
+          "name": "Gemini 2.5 Flash",
+          "description": "旧安定版（新規ユーザーは利用不可、互換性維持のみ）",
+          "supports_tools": true,
+          "cost_tier": "medium",
+          "is_default": false
         },
         {
           "id": "gemini-3.5-flash-lite",
@@ -95,14 +111,6 @@
           "description": "高速・低コスト。大量の問い合わせ処理に最適",
           "supports_tools": true,
           "cost_tier": "low",
-          "is_default": false
-        },
-        {
-          "id": "gemini-3.1-pro-preview",
-          "name": "Gemini 3.1 Pro",
-          "description": "高度な推論と複雑なタスク向けのProモデル（Preview）",
-          "supports_tools": true,
-          "cost_tier": "high",
           "is_default": false
         }
       ]
