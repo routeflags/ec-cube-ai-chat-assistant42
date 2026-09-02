@@ -1,6 +1,6 @@
 # AI チャットアシスタント for EC-CUBE 4.2
 
-![AIチャットアシスタント for EC-CUBE 4.2 - ヒーローイメージ](Resource/docs/readme-hero.png)
+![AIチャットアシスタント for EC-CUBE 4.2 - ヒーローイメージ](Resource/images/readme-hero.png)
 
 EC-CUBEの商品情報をもとに、AIが購入者からの質問に回答するチャットアシスタントプラグインです。
 
