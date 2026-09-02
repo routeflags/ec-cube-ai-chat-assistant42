@@ -73,12 +73,19 @@
         </div>
       </div>
 
-      {# API キー設定 #}
+      {# API キー設定（§2-3 外部提供データの明示・事前了承: D-23〜D-26） #}
       <div class="card mb-4">
         <div class="card-header">
           <span class="card-title">API キー設定</span>
         </div>
         <div class="card-body">
+          <div class="alert alert-info" role="alert">
+            <strong>外部送信に関する事前確認:</strong><br>
+            本プラグインは、設定したプロバイダ（OpenAI / Anthropic / Google Gemini）の API へ、チャット入力・商品情報・ナレッジ・会話履歴のうち必要なもののみを送信します。<br>
+            顧客の氏名・住所・電話番号等の個人情報は送信対象外です。送信に同意の上で APIキーを登録してください。<br>
+            顧客向けには、プライバシーポリシーに <em>「チャット内容を外部AIへ送信すること」</em> を追記することを推奨します。<br>
+            <small class="text-muted">通信先: <code>api.openai.com</code> / <code>api.anthropic.com</code> / <code>generativelanguage.googleapis.com</code> / <code>routeflags.com/dist/ec_chat/</code>（モデル/デザイン同期）</small>
+          </div>
           <div class="form-group">
             <label for="api_key_openai">OpenAI API Key</label>
             <input type="password" name="api_key_openai" id="api_key_openai" class="form-control"

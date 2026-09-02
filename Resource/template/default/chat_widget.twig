@@ -109,7 +109,7 @@
     </div>
   </div>
 
-  {# ── License modal (R-B3/R-B5: |raw 禁止・split方式で安全にリンク化) ── #}
+  {# ── License modal (I-22対応: |raw 全廃・管理者入力は sanitizeLicenseHtml() でホワイトリスト後に |e で出力) ── #}
   <div id="chat-license-modal" class="chat-license-modal" role="dialog" aria-modal="true" aria-labelledby="chat-license-title" aria-describedby="chat-license-desc" style="display:none;">
     <div class="chat-license-modal__content">
       <div class="chat-license-modal__header">
@@ -117,7 +117,7 @@
         <h3 id="chat-license-title" class="chat-license-modal__title">{{ chat_license_title|default('ソフトウェアライセンスについて')|e }}</h3>
         <button type="button" class="chat-license-modal__close" id="chat-license-close-x" aria-label="ライセンス情報を閉じる">&times;</button>
       </div>
-      <p id="chat-license-desc" class="chat-license-modal__lead">{{ chat_license_lead|default('AiChatAssistant42（チャットソフトウェア）の著作権は <a href="https://blog.routeflags.com/%e5%88%a9%e7%94%a8%e8%a6%8f%e7%b4%84/" target="_blank" rel="noopener">ROUTE FLAGS Co., Ltd.</a> に帰属し、GNU General Public License v2 (GPL-2.0-only) に基づき提供されています.')|raw }}</p>
+      <p id="chat-license-desc" class="chat-license-modal__lead">{{ chat_license_lead|default('AiChatAssistant42（チャットソフトウェア）の著作権は ROUTE FLAGS Co., Ltd. に帰属し、GNU General Public License v2 (GPL-2.0-only) に基づき提供されています.')|e|nl2br }} <a href="https://blog.routeflags.com/%e5%88%a9%e7%94%a8%e8%a6%8f%e7%b4%84/" target="_blank" rel="noopener">ROUTE FLAGS Co., Ltd.</a></p>
       <div class="chat-license-modal__items">
         <div class="chat-license-modal__item">
           <h4 class="chat-license-modal__item-heading">{{ chat_license_item1_heading|default('著作権')|e }}</h4>
@@ -125,7 +125,7 @@
         </div>
         <div class="chat-license-modal__item">
           <h4 class="chat-license-modal__item-heading">{{ chat_license_item2_heading|default('ライセンス (GPL-2.0-only)')|e }}</h4>
-          <p class="chat-license-modal__item-body">{{ chat_license_item2_body|default('本ソフトウェアのソースコードは GPL-2.0-only で提供されています。複製・改変・再配布する際は GPL-2.0 の条件（著作権表示とライセンス条文の保持、改変時の変更明示、ソースコードの提供等）を遵守してください.')|raw }}</p>
+          <p class="chat-license-modal__item-body">{{ chat_license_item2_body|default('本ソフトウェアのソースコードは GPL-2.0-only で提供されています。複製・改変・再配布する際は GPL-2.0 の条件（著作権表示とライセンス条文の保持、改変時の変更明示、ソースコードの提供等）を遵守してください.')|e|nl2br }}</p>
         </div>
         <div class="chat-license-modal__item">
           <h4 class="chat-license-modal__item-heading">{{ chat_license_item3_heading|default('オープンソースソフトウェアの利用')|e }}</h4>

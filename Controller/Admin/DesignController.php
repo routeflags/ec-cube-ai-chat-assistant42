@@ -46,7 +46,7 @@ class DesignController extends AbstractController
         'assistant_display_name' => '商品アドバイザー',
         'license_footer_label' => 'ライセンスについて',
         'license_title' => 'ソフトウェアライセンスについて',
-        'license_lead' => 'AiChatAssistant42（チャットソフトウェア）の著作権は <a href="https://blog.routeflags.com/%e5%88%a9%e7%94%a8%e8%a6%8f%e7%b4%84/" target="_blank" rel="noopener">ROUTE FLAGS Co., Ltd.</a> に帰属し、GNU General Public License v2 (GPL-2.0-only) に基づき提供されています。',
+        'license_lead' => 'AiChatAssistant42（チャットソフトウェア）の著作権は ROUTE FLAGS Co., Ltd. に帰属し、GNU General Public License v2 (GPL-2.0-only) に基づき提供されています。',
         'license_item1_heading' => '著作権',
         'license_item1_body' => '© 2024-2026 ROUTE FLAGS Co., Ltd. All Rights Reserved.',
         'license_item2_heading' => 'ライセンス (GPL-2.0-only)',
@@ -111,9 +111,9 @@ class DesignController extends AbstractController
             return $this->redirectToRoute('admin_ai_chat_assistant_design_index');
         }
 
-        // ライセンス設定UIは削除したため、license_* は既存値を保持（リモート同期が正本）
+        // I-15/I-22: 入力バリデーション + ライセンスHTMLサニタイズ（ガイドライン §2-2）
         $existing = $this->loadDesignSettings();
-        $designSettings = [
+        $rawInput = [
             'widget_color' => $request->request->get('widget_color', $existing['widget_color'] ?? self::DEFAULTS['widget_color']),
             'widget_size' => $request->request->get('widget_size', $existing['widget_size'] ?? self::DEFAULTS['widget_size']),
             'position' => $request->request->get('position', $existing['position'] ?? self::DEFAULTS['position']),
@@ -129,6 +129,22 @@ class DesignController extends AbstractController
             'license_item3_heading' => $request->request->get('license_item3_heading', $existing['license_item3_heading'] ?? self::DEFAULTS['license_item3_heading']),
             'license_item3_body' => $request->request->get('license_item3_body', $existing['license_item3_body'] ?? self::DEFAULTS['license_item3_body']),
         ];
+
+        // バリデーション
+        $validation = \Plugin\AiChatAssistant42\Service\DesignSettingsSyncService::validateInput($rawInput);
+        // 追加: widget 固有の検証（色・サイズ・位置）
+        $extraErrors = $this->validateWidgetSettings($rawInput);
+        $allErrors = array_merge($validation['errors'], $extraErrors);
+        if (!empty($allErrors)) {
+            foreach ($allErrors as $msg) {
+                $this->addError($msg, 'admin');
+            }
+
+            return $this->redirectToRoute('admin_ai_chat_assistant_design_index');
+        }
+
+        // ライセンス系はサニタイズ（HTMLタグは除去しプレーンに — I-22）
+        $designSettings = $this->sanitizeLicenseFields($validation['sanitized']);
 
         $this->saveDesignSettings($designSettings);
 
@@ -168,7 +184,59 @@ class DesignController extends AbstractController
     }
 
     /**
-     * デザイン設定を JSON ファイルに保存する。
+     * widget 固有フィールドを追加検証する（I-15）。
+     *
+     * @param array<string,mixed> $input
+     * @return string[]
+     */
+    private function validateWidgetSettings(array $input): array
+    {
+        $errors = [];
+        if (isset($input['widget_color']) && !preg_match('/^#[0-9a-fA-F]{6}$/', (string) $input['widget_color'])) {
+            $errors[] = 'ウィジェットカラーは #RRGGBB 形式で入力してください。';
+        }
+        if (isset($input['widget_size']) && !in_array($input['widget_size'], ['small', 'medium', 'large'], true)) {
+            $errors[] = 'ウィジェットサイズは small / medium / large のいずれかで指定してください。';
+        }
+        if (isset($input['position']) && !in_array($input['position'], ['bottom-right', 'bottom-left'], true)) {
+            $errors[] = '表示位置は bottom-right / bottom-left のいずれかで指定してください。';
+        }
+        if (isset($input['greeting_message']) && mb_strlen((string) $input['greeting_message']) > 500) {
+            $errors[] = '挨拶メッセージは500文字以内で入力してください。';
+        }
+        if (isset($input['assistant_display_name']) && mb_strlen((string) $input['assistant_display_name']) > 64) {
+            $errors[] = 'アシスタント表示名は64文字以内で入力してください。';
+        }
+
+        return $errors;
+    }
+
+    /**
+     * ライセンス系フィールドから HTML を除去してプレーンにする（I-22: |raw 全廃のため）。
+     *
+     * @param array<string,string> $sanitized
+     * @return array<string,string>
+     */
+    private function sanitizeLicenseFields(array $sanitized): array
+    {
+        $licenseKeys = [
+            'license_footer_label', 'license_title', 'license_lead',
+            'license_item1_heading', 'license_item1_body',
+            'license_item2_heading', 'license_item2_body',
+            'license_item3_heading', 'license_item3_body',
+        ];
+        foreach ($licenseKeys as $k) {
+            if (isset($sanitized[$k])) {
+                // HTMLタグを除去（リンク等のHTMLはテンプレート側で固定HTMLとして付与）
+                $sanitized[$k] = trim(strip_tags($sanitized[$k]));
+            }
+        }
+
+        return $sanitized;
+    }
+
+    /**
+     * デザイン設定を JSON ファイルに保存する.
      *
      * @param array<string, string> $settings 設定配列
      */

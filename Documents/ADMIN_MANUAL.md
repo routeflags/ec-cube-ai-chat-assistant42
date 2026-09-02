@@ -101,9 +101,29 @@ AI チャットの基本設定を行います。
 | Google Gemini | Google Gemini API Key | `AIza...` |
 
 **注意事項**:
-- API キーは `type="password"` で入力し、保存後に値は再表示されません
+- API キーは `type="password"` で入力し、保存後に値は再表示されません（`sk-****...abcd` のマスク表示）
 - キーを変更したい場合は新しいキーを入力してください。空欄にすると既存のキーが維持されます
+- 保存時に `AES-256-GCM`（`APP_SECRET` 由来）で暗号化して DB に保存します。`APP_SECRET` 変更時は再登録が必要です
 - システムプロンプトは空の場合、デフォルトのプロンプトが使用されます
+
+### 外部送信に関する事前確認（セキュリティガイドライン §2-3 準拠）
+
+> **重要:** 本プラグインは、チャット入力・商品情報・ナレッジ・会話履歴のうち必要なもののみを、設定した外部AIプロバイダ（`api.openai.com` / `api.anthropic.com` / `generativelanguage.googleapis.com`）へ送信します。
+> 顧客の氏名・住所・電話番号等の個人情報は送信対象外です。送信に同意の上で APIキーを登録してください。
+> 顧客向けプライバシーポリシーに「チャット内容を外部AIサービスへ送信すること」を追記することを推奨します。設定画面にも同内容の注意表示を行っています。
+
+#### 通信先一覧
+
+| 用途 | 通信先 | プロトコル | 備考 |
+|------|--------|-----------|------|
+| AI応答生成 | `api.openai.com` / `api.anthropic.com` / `generativelanguage.googleapis.com` | HTTPS (TLS 1.2+) | 選択したプロバイダのみ。ペイロードは `messages` + `tools` の最小限 |
+| モデル定義同期 | `routeflags.com/dist/ec_chat/ai_models.json` | HTTPS | 1日1回、ETag/Last-Modified による条件付き取得。失敗時は同梱 `Resource/config/ai_models.json` にフォールバック |
+| デザイン同期 | `routeflags.com/dist/ec_chat/design_settings.json` | HTTPS | 同上。`license_*` のみリモート正本、`widget_*` はローカル保持 |
+
+#### ログ
+
+- 外部通信は `monolog`（`var/log/*.log`）に `日時・リクエスト元・IP` を含めて記録します（ガイドライン §2-3 ログ徹底）
+- 失敗時は `warning` / 成功時は `info` レベルで `[AiChatAssistant42]` プレフィクス付きで記録
 
 ### システムプロンプトの書き方例
 
@@ -370,13 +390,43 @@ A: ブラウザのキャッシュをクリアしてから、フロントペー�
 
 ---
 
-## 付録: データベーステーブル一覧
+## 付録A: データベーステーブル一覧
 
-| テーブル名 | 用途 |
-|-----------|------|
-| `plg_ai_chat_assistant_config` | プラグイン設定（プロバイダ、モデル、API キー等） |
-| `plg_ai_chat_assistant_log` | チャットログ（メッセージ、応答、タイムスタンプ） |
-| `plg_ai_chat_assistant_knowledge` | ナレッジベース（FAQ、商品情報） |
-| `plg_ai_chat_assistant_scenario` | 自動応答シナリオ |
-| `plg_ai_chat_assistant_access_rule` | アクセス制限ルール |
-| `plg_ai_chat_assistant_notification` | 通知設定 |
+| テーブル名 | 用途 | 個人情報 |
+|-----------|------|----------|
+| `plg_ai_chat_assistant_config` | プラグイン設定（プロバイダ、モデル、API キー等。APIキーはAES-256-GCMで暗号化） | なし |
+| `plg_ai_chat_assistant_log` | チャットログ（メッセージ、応答、タイムスタンプ、session_id, client_ip, email_reply_address） | `email_reply_address` のみ |
+| `plg_ai_chat_assistant_knowledge` | ナレッジベース（FAQ、商品情報） | なし |
+| `plg_ai_chat_assistant_scenario` | 自動応答シナリオ | なし |
+| `plg_ai_chat_assistant_access_rule` | アクセス制限ルール | なし |
+| `plg_ai_chat_assistant_notification` | 通知設定（webhook URL, LINE token 等は暗号化） | なし |
+| `plg_ai_chat_assistant_feedback` | ユーザーフィードバック（解決/未解決） | なし |
+
+### 個人情報の保持ポリシー（I-30 対応）
+
+- `plg_ai_chat_assistant_log.email_reply_address` にメールアドレスを保存します（メール返信依頼機能のため）。
+- **保持期間:** 返信対応後 **30日** を目安に削除することを推奨します。
+- **削除方法:** 管理画面 `チャット履歴` の削除、または `bin/console doctrine:query:dql "DELETE FROM Plugin\AiChatAssistant42\Entity\ChatLog l WHERE l.email_replied_at < :d" --set-d="2026-08-03"` 等で一括削除できます。
+- ログ出力時はメールアドレスをマスク（`a***@example.com`）して記録し、平文は出力しません。
+- 上記以外の個人情報（氏名・住所・電話番号等）は本プラグインのDBに保存しません（ガイドライン §2-3 個人情報の保持制限 準拠）。
+
+## 付録B: 公開/管理者/その他の航路分類とアクセス規制（ガイドライン §2-1 準拠）
+
+| 航路 | パス | 分類 | アクセス規制 |
+|------|------|------|--------------|
+| チャットAPI | `POST /api/ai-chat-assistant/chat` | 公開 | レート制限（デフォルト30回/分、session/IP分離 429 session/ip）、アクセスルール（IP/time/keyword）、入力長 2000文字制限 |
+| メール返信依頼 | `POST /api/ai-chat-assistant/email-reply-request` | 公開 | 同上（1時間10回）、`email_reply_address` 保存 |
+| フィードバック | `POST /api/ai-chat-assistant/feedback` | 公開 | セッション検証 |
+| モデル一覧 | `GET /api/ai-chat-assistant/models` | 公開 | 認証不要（公開情報のみ） |
+| ダッシュボード等 | `/%eccube_admin_route%/ai-chat-assistant/*` | 管理者 | `isTokenValid`（CSRF）+ `isCsrfTokenValid`（*_token 個別ID）、管理者認証必須 |
+| モデル/デザイン同期 | `routeflags.com/dist/ec_chat/*` | その他（サーバ間） | HTTPS限定（`scheme==='https'` 検証）、`verify:true`、`allow_redirects` は https のみ/Webhookは禁止、`NO_PRIV_RANGE|NO_RES_RANGE` でSSRF防止 |
+
+## 付録C: 公開側に複製されるファイル一覧（ガイドライン §2-1 ファイル構成）
+
+| 元パス（プラグイン） | 公開側パス（`assets:install` 後） | 用途 | 備考 |
+|----------------------|-----------------------------------|------|------|
+| `Resource/assets/js/chat-widget.js` | `html/template/default/assets/...` または `public/...` 配下 | フロントチャットウィジェット JS | 必要最小限の複製 |
+| `Resource/assets/css/chat-widget.css` | 同上 `css/chat-widget.css` | ウィジェット用 CSS | 同上 |
+| （その他） | — | — | `app/PluginData/AiChatAssistant42/*.json` は公開側に置かず非公開領域に保存 |
+
+> 上記以外は `app/Plugin/AiChatAssistant42/` 配下に展開され、公開ディレクトリには複製されません（ガイドライン「むやみに公開側にファイルを設置せず」準拠）。

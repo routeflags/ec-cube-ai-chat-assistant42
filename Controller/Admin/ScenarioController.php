@@ -25,6 +25,7 @@ use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * 自動応答シナリオ管理コントローラ。
@@ -75,6 +76,10 @@ class ScenarioController extends AbstractController
             ->add('trigger_keyword', TextType::class, [
                 'attr' => ['maxlength' => 128],
                 'required' => true,
+                'constraints' => [
+                    new Assert\NotBlank(['message' => 'キーワードを入力してください。']),
+                    new Assert\Length(['max' => 128, 'maxMessage' => 'キーワードは128文字以内で入力してください。']),
+                ],
             ])
             ->add('trigger_type', ChoiceType::class, [
                 'choices' => [
@@ -85,6 +90,10 @@ class ScenarioController extends AbstractController
             ])
             ->add('response_text', TextareaType::class, [
                 'required' => true,
+                'constraints' => [
+                    new Assert\NotBlank(['message' => '応答テキストを入力してください。']),
+                    new Assert\Length(['max' => 2000, 'maxMessage' => '応答テキストは2000文字以内で入力してください。']),
+                ],
             ])
             ->add('response_type', ChoiceType::class, [
                 'choices' => [
@@ -95,6 +104,9 @@ class ScenarioController extends AbstractController
             ])
             ->add('priority', IntegerType::class, [
                 'required' => false,
+                'constraints' => [
+                    new Assert\Range(['min' => 0, 'max' => 99999, 'notInRangeMessage' => '優先度は0〜99999で入力してください。']),
+                ],
             ])
             ->add('is_active', ChoiceType::class, [
                 'choices' => ['有効' => 1, '無効' => 0],
@@ -139,6 +151,10 @@ class ScenarioController extends AbstractController
             ->add('trigger_keyword', TextType::class, [
                 'attr' => ['maxlength' => 128],
                 'required' => true,
+                'constraints' => [
+                    new Assert\NotBlank(['message' => 'キーワードを入力してください。']),
+                    new Assert\Length(['max' => 128, 'maxMessage' => 'キーワードは128文字以内で入力してください。']),
+                ],
             ])
             ->add('trigger_type', ChoiceType::class, [
                 'choices' => [
@@ -149,6 +165,10 @@ class ScenarioController extends AbstractController
             ])
             ->add('response_text', TextareaType::class, [
                 'required' => true,
+                'constraints' => [
+                    new Assert\NotBlank(['message' => '応答テキストを入力してください。']),
+                    new Assert\Length(['max' => 2000, 'maxMessage' => '応答テキストは2000文字以内で入力してください。']),
+                ],
             ])
             ->add('response_type', ChoiceType::class, [
                 'choices' => [
@@ -159,6 +179,9 @@ class ScenarioController extends AbstractController
             ])
             ->add('priority', IntegerType::class, [
                 'required' => false,
+                'constraints' => [
+                    new Assert\Range(['min' => 0, 'max' => 99999, 'notInRangeMessage' => '優先度は0〜99999で入力してください。']),
+                ],
             ])
             ->add('is_active', ChoiceType::class, [
                 'choices' => ['有効' => 1, '無効' => 0],
