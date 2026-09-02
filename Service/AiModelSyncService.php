@@ -38,7 +38,20 @@ class AiModelSyncService extends AbstractPluginDataSyncService
 
     protected function getRemoteUrl(): string
     {
-        return $_ENV['AI_MODELS_SYNC_URL'] ?? self::REMOTE_URL;
+        $envUrl = $_ENV['AI_MODELS_SYNC_URL'] ?? null;
+        if ($envUrl !== null && $envUrl !== '') {
+            $parsed = parse_url($envUrl);
+            $scheme = $parsed['scheme'] ?? null;
+            if ($scheme !== 'https') {
+                $this->logger->warning('AI_MODELS_SYNC_URL must be https, fallback to default', ['url' => $envUrl]);
+
+                return self::REMOTE_URL;
+            }
+
+            return $envUrl;
+        }
+
+        return self::REMOTE_URL;
     }
 
     protected function getDataPath(): string
@@ -181,11 +194,12 @@ class AiModelSyncService extends AbstractPluginDataSyncService
             }
         }
 
-        // version は任意だが、あれば文字列であること
+        // version は任意。型不正でも providers が正しければ許容する（仕様: version不正は許容）
+        // 不正な version は warning を残しつつ無視し、providers 検証を優先する
         if (isset($remoteData['version']) && !is_string($remoteData['version'])) {
-            $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => 'Invalid version type']);
-
-            return null;
+            $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => 'Invalid version type, ignored']);
+            // 型不正な version は除去して後続の persist で問題が起きないようにする
+            unset($remoteData['version']);
         }
 
         return $remoteData;

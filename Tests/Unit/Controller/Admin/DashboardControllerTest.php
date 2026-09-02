@@ -401,4 +401,75 @@ class DashboardControllerTest extends TestCase
 
         $this->assertEquals('***', $config->getMaskedApiKey('openai'));
     }
+
+    // ================================================================
+    //  Dashboard index — AiModelSyncService 連携（MJ02 6c）
+    // ================================================================
+
+    public function testIndexCallsTrySyncIfStaleOnce(): void
+    {
+        $syncService = $this->createMock(\Plugin\AiChatAssistant42\Service\AiModelSyncService::class);
+        $syncService->expects($this->once())->method('trySyncIfStale')->willReturn(true);
+
+        $chatLogRepo = $this->createStubChatLogRepository();
+        $this->configRepository->method('findOneBy')->willReturn(null);
+
+        $controllerMock = $this->buildDashboardControllerMock($chatLogRepo, $syncService, null);
+        $this->injectSyncService($controllerMock, $syncService);
+
+        $response = $controllerMock->index();
+
+        $this->assertEquals(200, $response->getStatusCode());
+    }
+
+    public function testIndexSwallowsSyncExceptionAndStillRenders(): void
+    {
+        $syncService = $this->createMock(\Plugin\AiChatAssistant42\Service\AiModelSyncService::class);
+        $syncService->expects($this->once())->method('trySyncIfStale')->willThrowException(new \RuntimeException('network down'));
+
+        $chatLogRepo = $this->createStubChatLogRepository();
+        $this->configRepository->method('findOneBy')->willReturn(null);
+
+        $logger = $this->createMock(\Psr\Log\LoggerInterface::class);
+        $logger->expects($this->once())->method('warning')->with('AI model sync failed, keeping local', $this->anything());
+
+        $controllerMock = $this->buildDashboardControllerMock($chatLogRepo, $syncService, $logger);
+
+        $response = $controllerMock->index();
+
+        $this->assertEquals(200, $response->getStatusCode());
+    }
+
+    private function createStubChatLogRepository(): \Plugin\AiChatAssistant42\Repository\ChatLogRepository
+    {
+        $repo = $this->createMock(\Plugin\AiChatAssistant42\Repository\ChatLogRepository::class);
+        $repo->method('fetchKpi')->willReturn(['total' => 0, 'resolved' => 0, 'errors' => 0, 'avg_response_ms' => 0, 'resolution_rate' => 0, 'error_rate' => 0]);
+        $repo->method('fetchRecentLogs')->willReturn([]);
+        $repo->method('fetchProviderStats')->willReturn([]);
+        $repo->method('fetchModelStats')->willReturn([]);
+        $repo->method('fetchErrorBreakdown')->willReturn([]);
+        $repo->method('countPendingEmailReplies')->willReturn(0);
+        $repo->method('fetchHourlyDistribution')->willReturn([]);
+
+        return $repo;
+    }
+
+    private function buildDashboardControllerMock($chatLogRepo, $syncService, $logger): DashboardController
+    {
+        $mock = $this->getMockBuilder(DashboardController::class)
+            ->setConstructorArgs([null, null, $chatLogRepo, $syncService, $logger])
+            ->onlyMethods(['render'])
+            ->getMock();
+        $mock->setEntityManager($this->entityManager);
+        $mock->method('render')->willReturn(new Response('ok'));
+
+        return $mock;
+    }
+
+    private function injectSyncService(DashboardController $controller, $syncService): void
+    {
+        $ref = new \ReflectionProperty(DashboardController::class, 'syncService');
+        $ref->setAccessible(true);
+        $ref->setValue($controller, $syncService);
+    }
 }

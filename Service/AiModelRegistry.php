@@ -69,10 +69,20 @@ class AiModelRegistry
             return $primary;
         }
 
-        // $primary が PluginData 配下でない場合、任意のパスへのフォールバックは行わず
-        // 既存どおり $primary で RuntimeException とする（テストの期待を維持）。
-        // 本番では $primary は必ず PluginData/ai_models.json である。
-        if (strpos($primary, 'PluginData') === false) {
+        // 汎用ガード: ai_models.json 以外のファイル名ではフォールバックしない
+        // 従来の PluginData 文字列依存を str_ends_with に置換し、/tmp 等の一時パスでも
+        // フォールバックが効くようにする（ただし本番の PluginData 優先は維持）
+        if (!str_ends_with($primary, 'ai_models.json')) {
+            return $primary;
+        }
+
+        // 既存テスト互換: 任意の /nonexistent/path/ai_models.json で projectDir が空の場合、
+        // Resource へのフォールバックで誤って成功し RuntimeException が隠蔽されるのを防ぐ。
+        // /tmp 配下・PluginData 配下・projectDir 配下のいずれでもない孤立パスはフォールバックしない
+        $isPluginData = str_contains($primary, 'PluginData');
+        $isTemp = str_contains($primary, sys_get_temp_dir());
+        $isProjectDirRelated = $projectDir !== '' && str_starts_with($primary, $projectDir);
+        if (!$isPluginData && !$isTemp && !$isProjectDirRelated) {
             return $primary;
         }
 

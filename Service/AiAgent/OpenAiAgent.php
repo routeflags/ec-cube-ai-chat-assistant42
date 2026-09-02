@@ -373,24 +373,19 @@ class OpenAiAgent implements AiAgentInterface
      */
     private function resolveCapabilityFromJson(): bool
     {
-        // プラグイン単体 / EC-CUBE 本体 (app/Plugin/...) の両配置に対応するため上位を走査
-        // PluginData（リモート同期の正本）を最優先で探索
-        $candidates = [
-            // PluginData 同期ファイル（最優先）
+        // 将来は AiModelRegistry 必須化し本探索を削除する方針（@todo）。
+        // 現状は PluginData（リモート同期の正本）を最優先で探索する。
+        // 12候補の膨張を整理し、代表6候補に集約（MN04）
+        $candidates = array_unique([
+            // PluginData 同期ファイル（最優先）— プロジェクトルートからの相対で探索
             dirname(__DIR__, 2) . '/app/PluginData/AiChatAssistant42/ai_models.json',
             dirname(__DIR__, 3) . '/app/PluginData/AiChatAssistant42/ai_models.json',
             dirname(__DIR__, 4) . '/app/PluginData/AiChatAssistant42/ai_models.json',
-            dirname(__DIR__, 5) . '/app/PluginData/AiChatAssistant42/ai_models.json',
-            dirname(__DIR__, 6) . '/app/PluginData/AiChatAssistant42/ai_models.json',
-            __DIR__ . '/../../app/PluginData/AiChatAssistant42/ai_models.json',
-            // 既存 Resource フォールバック
+            // Resource フォールバック
             dirname(__DIR__, 2) . '/Resource/config/ai_models.json',
             dirname(__DIR__, 3) . '/Resource/config/ai_models.json',
-            dirname(__DIR__, 4) . '/Resource/config/ai_models.json',
-            dirname(__DIR__, 5) . '/Resource/config/ai_models.json',
-            dirname(__DIR__, 6) . '/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json',
             __DIR__ . '/../../Resource/config/ai_models.json',
-        ];
+        ]);
 
         $configPath = null;
         foreach ($candidates as $candidate) {

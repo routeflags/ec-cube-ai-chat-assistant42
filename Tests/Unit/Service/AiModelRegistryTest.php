@@ -335,4 +335,86 @@ class AiModelRegistryTest extends TestCase
             @unlink($tempFile);
         }
     }
+
+    // ================================================================
+    //  フォールバック（MJ03）
+    // ================================================================
+
+    public function testResolveConfigPathPrefersPluginDataOverResource(): void
+    {
+        $tmpBase = sys_get_temp_dir() . '/.ai_model_registry_test_' . uniqid('', true);
+        $pluginDataPath = $tmpBase . '/app/PluginData/AiChatAssistant42/ai_models.json';
+        $resourcePath = $tmpBase . '/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json';
+
+        // PluginData に 11モデル、Resource に 10モデルを用意
+        $basePayload = json_decode(file_get_contents(dirname(__DIR__, 3) . '/Resource/config/ai_models.json'), true);
+        $this->assertIsArray($basePayload);
+
+        $payload11 = $basePayload;
+        $payload11['providers']['openai']['models'][] = [
+            'id' => 'gpt-test-extra',
+            'name' => 'GPT Test Extra',
+            'description' => 'extra for priority test',
+            'supports_tools' => true,
+            'cost_tier' => 'low',
+            'is_default' => false,
+        ];
+
+        mkdir(dirname($pluginDataPath), 0775, true);
+        mkdir(dirname($resourcePath), 0775, true);
+        file_put_contents($pluginDataPath, json_encode($payload11, JSON_UNESCAPED_UNICODE));
+        file_put_contents($resourcePath, json_encode($basePayload, JSON_UNESCAPED_UNICODE));
+
+        try {
+            // primary が PluginData の場合、Resource より優先されること
+            $registry = new AiModelRegistry($pluginDataPath, $tmpBase);
+            $this->assertCount(11, $registry->getAllModels(), 'PluginData 11 models should be preferred');
+            $this->assertNotNull($registry->getModel('openai', 'gpt-test-extra'));
+        } finally {
+            $this->removeDir($tmpBase);
+        }
+    }
+
+    public function testResolveConfigPathFallsBackToResourceWhenPluginDataMissing(): void
+    {
+        $tmpBase = sys_get_temp_dir() . '/.ai_model_registry_test_' . uniqid('', true);
+        $pluginDataPath = $tmpBase . '/app/PluginData/AiChatAssistant42/ai_models.json';
+        $resourcePath = $tmpBase . '/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json';
+
+        $basePayload = json_decode(file_get_contents(dirname(__DIR__, 3) . '/Resource/config/ai_models.json'), true);
+        $this->assertIsArray($basePayload);
+
+        // Resource のみ作成、PluginData は作成しない（欠落を再現）
+        mkdir(dirname($resourcePath), 0775, true);
+        file_put_contents($resourcePath, json_encode($basePayload, JSON_UNESCAPED_UNICODE));
+
+        try {
+            // 一時ディレクトリの ai_models.json（PluginData想定パス）が存在しない場合でも
+            // projectDir 配下の Resource にフォールバックすることを検証（MJ03 の汎用ガード）
+            $registry = new AiModelRegistry($pluginDataPath, $tmpBase);
+            $this->assertCount(10, $registry->getAllModels(), 'Should fallback to Resource 10 models');
+            $this->assertNull($registry->getModel('openai', 'gpt-test-extra'));
+        } finally {
+            $this->removeDir($tmpBase);
+        }
+    }
+
+    private function removeDir(string $dir): void
+    {
+        if (!is_dir($dir)) {
+            return;
+        }
+        $items = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST
+        );
+        foreach ($items as $item) {
+            if ($item->isDir()) {
+                @rmdir($item->getPathname());
+            } else {
+                @unlink($item->getPathname());
+            }
+        }
+        @rmdir($dir);
+    }
 }

@@ -585,7 +585,7 @@ class DashboardController extends AbstractController
             }
         }
 
-        return $candidates[0];
+        return null;
     }
 
     /**

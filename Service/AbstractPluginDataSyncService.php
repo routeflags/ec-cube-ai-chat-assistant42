@@ -208,7 +208,8 @@ abstract class AbstractPluginDataSyncService
         if (!is_dir($dir)) {
             mkdir($dir, 0775, true);
         }
-        $tmpPath = $path . '.tmp.' . bin2hex(random_bytes(4));
+        // random_bytes(8) + pid で衝突耐性を高める（MN02）
+        $tmpPath = $path . '.tmp.' . bin2hex(random_bytes(8)) . '.' . getmypid();
         file_put_contents($tmpPath, $content, LOCK_EX);
         rename($tmpPath, $path);
     }
