@@ -17,6 +17,7 @@ namespace Plugin\AiChatAssistant42\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Plugin\AiChatAssistant42\Entity\ChatLog;
+use Plugin\AiChatAssistant42\Repository\ChatLogRepository;
 
 /**
  * AI チャットのやり取りを DB に記録するサービス。
@@ -30,7 +31,19 @@ class ChatLogger
     public function __construct(
         private EntityManagerInterface $entityManager,
         private ?\Symfony\Component\HttpFoundation\RequestStack $requestStack = null,
+        private ?ChatLogRepository $chatLogRepository = null,
     ) {
+    }
+
+    private function getChatLogRepository(): ChatLogRepository
+    {
+        if ($this->chatLogRepository !== null) {
+            return $this->chatLogRepository;
+        }
+        /** @var ChatLogRepository $repo */
+        $repo = $this->entityManager->getRepository(ChatLog::class);
+
+        return $repo;
     }
 
     /**
@@ -94,20 +107,6 @@ class ChatLogger
      */
     public function fetchSessionHistory(string $sessionId, int $limit = 20): array
     {
-        $conn = $this->entityManager->getConnection();
-        $rows = $conn->fetchAllAssociative(
-            'SELECT user_message, assistant_reply FROM plg_ai_chat_assistant_log'
-            . ' WHERE session_id = :session_id AND error_message IS NULL'
-            . ' ORDER BY id DESC LIMIT ' . (int) $limit,
-            ['session_id' => $sessionId]
-        );
-
-        $history = [];
-        foreach (array_reverse($rows) as $row) {
-            $history[] = ['role' => 'user', 'content' => $row['user_message']];
-            $history[] = ['role' => 'assistant', 'content' => $row['assistant_reply']];
-        }
-
-        return $history;
+        return $this->getChatLogRepository()->fetchSessionHistory($sessionId, $limit);
     }
 }

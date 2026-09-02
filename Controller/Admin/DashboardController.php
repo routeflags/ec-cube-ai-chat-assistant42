@@ -19,6 +19,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Eccube\Controller\AbstractController;
 use Plugin\AiChatAssistant42\Entity\ChatLog;
 use Plugin\AiChatAssistant42\Entity\Config;
+use Plugin\AiChatAssistant42\Repository\ChatLogRepository;
 use Plugin\AiChatAssistant42\Service\AiModelRegistry;
 use Plugin\AiChatAssistant42\Service\ApiKeyEncryptor;
 use Symfony\Component\HttpFoundation\Request;
@@ -48,7 +49,23 @@ class DashboardController extends AbstractController
     public function __construct(
         private ?AiModelRegistry $aiModelRegistry = null,
         private ?ApiKeyEncryptor $apiKeyEncryptor = null,
+        private ?ChatLogRepository $chatLogRepository = null,
     ) {
+    }
+
+    /**
+     * @return ChatLogRepository
+     */
+    private function getChatLogRepository()
+    {
+        if ($this->chatLogRepository !== null) {
+            return $this->chatLogRepository;
+        }
+        // AbstractController 経由の EntityManager から取得（テスト時のフォールバック）
+        /** @var ChatLogRepository $repo */
+        $repo = $this->entityManager->getRepository(ChatLog::class);
+
+        return $repo;
     }
 
     /**
@@ -218,63 +235,21 @@ class DashboardController extends AbstractController
      */
     private function fetchPendingEmailReplies(): int
     {
-        $conn = $this->entityManager->getConnection();
-
-        return (int) $conn->fetchOne(
-            'SELECT COUNT(*) FROM plg_ai_chat_assistant_log
-              WHERE email_reply_address IS NOT NULL
-                AND email_replied_at IS NULL'
-        );
+        return $this->getChatLogRepository()->countPendingEmailReplies();
     }
 
     /**
      * 時間帯別分布（0-23時）を取得する。
      *
-     * DQLでは HOUR() が使えないためネイティブSQLで集計し、0件の時間帯は 0 で補完して 24件を返す。
-     * フロントの Chart.js 用に [{hour:0,count:0}, ..., {hour:23,count:n}] 形式で返す。
+     * DB プラットフォーム分岐を含む集計ロジックは
+     * ChatLogRepository::fetchHourlyDistribution に委譲し、
+     * コントローラは表示責務に専念する。
      *
      * @return array<int, array{hour: int, count: int}>
      */
     private function fetchHourlyDistribution(\DateTimeImmutable $start, \DateTimeImmutable $end): array
     {
-        $conn = $this->entityManager->getConnection();
-
-        // ドライバ判定で分岐: MySQL は HOUR(), SQLite は strftime, PostgreSQL は EXTRACT
-        $platform = strtolower($conn->getDatabasePlatform()->getName());
-        if (str_contains($platform, 'sqlite')) {
-            $hourExpr = "CAST(strftime('%H', created_at) AS INTEGER)";
-        } elseif (str_contains($platform, 'pgsql') || str_contains($platform, 'postgres')) {
-            $hourExpr = 'CAST(EXTRACT(HOUR FROM created_at) AS INTEGER)';
-        } else {
-            $hourExpr = 'HOUR(created_at)';
-        }
-
-        $rows = $conn->fetchAllAssociative(
-            "SELECT {$hourExpr} AS hour, COUNT(*) AS count
-               FROM plg_ai_chat_assistant_log
-              WHERE created_at >= :start AND created_at < :end
-           GROUP BY hour
-           ORDER BY hour ASC",
-            [
-                'start' => $start->format('Y-m-d H:i:s'),
-                'end' => $end->format('Y-m-d H:i:s'),
-            ]
-        );
-
-        $map = array_fill(0, 24, 0);
-        foreach ($rows as $row) {
-            $h = (int) $row['hour'];
-            if ($h >= 0 && $h < 24) {
-                $map[$h] = (int) $row['count'];
-            }
-        }
-
-        $out = [];
-        foreach ($map as $hour => $count) {
-            $out[] = ['hour' => $hour, 'count' => $count];
-        }
-
-        return $out;
+        return $this->getChatLogRepository()->fetchHourlyDistribution($start, $end);
     }
 
     /**

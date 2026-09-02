@@ -20,13 +20,16 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use Plugin\AiChatAssistant42\Controller\Api\ChatApiController;
 use Plugin\AiChatAssistant42\Entity\Feedback;
+use Plugin\AiChatAssistant42\Repository\ChatLogRepository;
 use Plugin\AiChatAssistant42\Repository\ConfigRepository;
 use Plugin\AiChatAssistant42\Repository\ProductRepository;
 use Plugin\AiChatAssistant42\Service\AiAgentFactory;
 use Plugin\AiChatAssistant42\Service\AiModelRegistry;
+use Plugin\AiChatAssistant42\Service\ApiKeyEncryptor;
 use Plugin\AiChatAssistant42\Service\ChatFlowService;
 use Plugin\AiChatAssistant42\Service\ChatLogger;
 use Plugin\AiChatAssistant42\Service\EmailReplyService;
+use Plugin\AiChatAssistant42\Service\NotificationService;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -51,6 +54,8 @@ class FeedbackApiTest extends TestCase
         $aiModelRegistry = $this->createMock(AiModelRegistry::class);
         $chatFlowService = $this->createMock(ChatFlowService::class);
         $emailReplyService = $this->createMock(EmailReplyService::class);
+        $notificationService = $this->createMock(NotificationService::class);
+        $apiKeyEncryptor = $this->createMock(ApiKeyEncryptor::class);
         $logger = $logger ?? $this->createMock(LoggerInterface::class);
 
         return new ChatApiController(
@@ -62,6 +67,8 @@ class FeedbackApiTest extends TestCase
             $em,
             $chatFlowService,
             $emailReplyService,
+            $notificationService,
+            $apiKeyEncryptor,
             $logger
         );
     }
@@ -79,11 +86,34 @@ class FeedbackApiTest extends TestCase
         string $expectedSid = '',
         bool $throwOnUpdate = false
     ): EntityManagerInterface {
-        $repo = $this->createMock(EntityRepository::class);
-        $repo->method('findOneBy')->willReturn($existingFeedback);
+        $feedbackRepo = $this->createMock(EntityRepository::class);
+        $feedbackRepo->method('findOneBy')->willReturn($existingFeedback);
 
-        $em = $this->createMock(EntityManagerInterface::class);
-        $em->method('getRepository')->with(Feedback::class)->willReturn($repo);
+        $chatLogRepo = $this->createMock(ChatLogRepository::class);
+        if ($throwOnUpdate) {
+            $chatLogRepo->method('markResolvedBySession')->willThrowException(new \RuntimeException('DB update failed'));
+        } elseif ($expectUpdate) {
+            // session_id は normalizeSessionId で UUID に正規化されるため、具体値ではなく UUID 形式を検証
+            $chatLogRepo->expects($this->once())
+                ->method('markResolvedBySession')
+                ->with($this->matchesRegularExpression('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/'))
+                ->willReturn(1);
+        } else {
+            $chatLogRepo->expects($this->never())->method('markResolvedBySession');
+        }
+
+        $em = $this->getMockBuilder(EntityManagerInterface::class)
+            ->addMethods(['wrapInTransaction'])
+            ->getMockForAbstractClass();
+        $em->method('getRepository')->willReturnCallback(function (string $class) use ($feedbackRepo, $chatLogRepo) {
+            if ($class === Feedback::class) {
+                return $feedbackRepo;
+            }
+            if ($class === \Plugin\AiChatAssistant42\Entity\ChatLog::class) {
+                return $chatLogRepo;
+            }
+            return $feedbackRepo;
+        });
 
         if ($throwUniqueOnFlush) {
             $uniqueEx = $this->createMock(\Doctrine\DBAL\Exception\UniqueConstraintViolationException::class);
@@ -98,23 +128,6 @@ class FeedbackApiTest extends TestCase
         $em->method('wrapInTransaction')->willReturnCallback(function (callable $func) {
             return $func();
         });
-
-        // Connection mock for is_resolved update
-        $conn = $this->createMock(Connection::class);
-        if ($throwOnUpdate) {
-            $conn->method('executeStatement')->willThrowException(new \RuntimeException('DB update failed'));
-        } elseif ($expectUpdate) {
-            $conn->expects($this->once())
-                ->method('executeStatement')
-                ->with(
-                    $this->stringContains('UPDATE plg_ai_chat_assistant_log'),
-                    $this->equalTo(['sid' => $expectedSid])
-                )
-                ->willReturn(1);
-        } else {
-            $conn->expects($this->never())->method('executeStatement');
-        }
-        $em->method('getConnection')->willReturn($conn);
 
         return $em;
     }

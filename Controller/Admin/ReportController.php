@@ -18,6 +18,7 @@ namespace Plugin\AiChatAssistant42\Controller\Admin;
 use Doctrine\ORM\EntityManagerInterface;
 use Eccube\Controller\AbstractController;
 use Plugin\AiChatAssistant42\Entity\ChatLog;
+use Plugin\AiChatAssistant42\Repository\ChatLogRepository;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -29,7 +30,22 @@ use Symfony\Component\HttpFoundation\Response;
 class ReportController extends AbstractController
 {
     public function __construct(
+        private ?ChatLogRepository $chatLogRepository = null,
     ) {
+    }
+
+    /**
+     * @return ChatLogRepository
+     */
+    private function getChatLogRepository()
+    {
+        if ($this->chatLogRepository !== null) {
+            return $this->chatLogRepository;
+        }
+        /** @var ChatLogRepository $repo */
+        $repo = $this->entityManager->getRepository(ChatLog::class);
+
+        return $repo;
     }
 
     /**
@@ -116,41 +132,7 @@ class ReportController extends AbstractController
      */
     private function fetchHourlyDistribution(\DateTimeImmutable $start, \DateTimeImmutable $end): array
     {
-        $conn = $this->entityManager->getConnection();
-        $platform = strtolower($conn->getDatabasePlatform()->getName());
-        if (str_contains($platform, 'sqlite')) {
-            $hourExpr = "CAST(strftime('%H', log.created_at) AS INTEGER)";
-        } elseif (str_contains($platform, 'pgsql') || str_contains($platform, 'postgres')) {
-            $hourExpr = 'CAST(EXTRACT(HOUR FROM log.created_at) AS INTEGER)';
-        } else {
-            $hourExpr = 'HOUR(log.created_at)';
-        }
-        $sql = "
-            SELECT {$hourExpr} AS hour, COUNT(log.id) AS count
-            FROM plg_ai_chat_assistant_log log
-            WHERE log.created_at >= :start AND log.created_at < :end
-            GROUP BY hour
-            ORDER BY hour ASC
-        ";
-        $raw = $conn->fetchAllAssociative($sql, [
-            'start' => $start->format('Y-m-d H:i:s'),
-            'end' => $end->format('Y-m-d H:i:s'),
-        ]);
-
-        // 0〜23時すべてのキーを保証
-        $distribution = [];
-        $hourMap = [];
-        foreach ($raw as $row) {
-            $hourMap[(int) $row['hour']] = (int) $row['count'];
-        }
-        for ($h = 0; $h < 24; ++$h) {
-            $distribution[] = [
-                'hour' => $h,
-                'count' => $hourMap[$h] ?? 0,
-            ];
-        }
-
-        return $distribution;
+        return $this->getChatLogRepository()->fetchHourlyDistribution($start, $end);
     }
 
     /**

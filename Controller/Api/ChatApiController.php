@@ -19,6 +19,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Eccube\Controller\AbstractController;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Plugin\AiChatAssistant42\Entity\Feedback;
+use Plugin\AiChatAssistant42\Repository\ChatLogRepository;
 use Plugin\AiChatAssistant42\Repository\ConfigRepository;
 use Plugin\AiChatAssistant42\Repository\ProductRepository;
 use Plugin\AiChatAssistant42\Service\AiAgentFactory;
@@ -56,8 +57,20 @@ class ChatApiController extends AbstractController
         private NotificationService $notificationService,
         private ApiKeyEncryptor $apiKeyEncryptor,
         private LoggerInterface $logger,
+        private ?ChatLogRepository $chatLogRepository = null,
     ) {
         $this->entityManager = $entityManager;
+    }
+
+    private function getChatLogRepository(): ChatLogRepository
+    {
+        if ($this->chatLogRepository !== null) {
+            return $this->chatLogRepository;
+        }
+        /** @var ChatLogRepository $repo */
+        $repo = $this->entityManager->getRepository(\Plugin\AiChatAssistant42\Entity\ChatLog::class);
+
+        return $repo;
     }
 
     /**
@@ -241,14 +254,10 @@ class ChatApiController extends AbstractController
             return null;
         }
 
-        $conn = $this->entityManager->getConnection();
-        $since = (new \DateTimeImmutable('-1 minute'))->format('Y-m-d H:i:s');
+        $since = new \DateTimeImmutable('-1 minute');
 
-        // セッション単位の制限: session:{sessionId}（MySQL/SQLite両対応のためバインドパラメータで日時を渡す）
-        $recentCount = (int) $conn->fetchOne(
-            'SELECT COUNT(*) FROM plg_ai_chat_assistant_log WHERE session_id = :sid AND created_at > :since',
-            ['sid' => $sessionId, 'since' => $since]
-        );
+        // セッション単位の制限: session:{sessionId} — Doctrine QueryBuilder 経由で集計
+        $recentCount = $this->getChatLogRepository()->countRecentBySession($sessionId, $since);
 
         if ($recentCount >= $rateLimit) {
             return $this->json([
@@ -261,10 +270,7 @@ class ChatApiController extends AbstractController
         $clientIp = $request->getClientIp() ?? '';
         if ($clientIp !== '') {
             try {
-                $ipCount = (int) $conn->fetchOne(
-                    'SELECT COUNT(*) FROM plg_ai_chat_assistant_log WHERE client_ip = :ip AND created_at > :since',
-                    ['ip' => $clientIp, 'since' => $since]
-                );
+                $ipCount = $this->getChatLogRepository()->countRecentByIp($clientIp, $since);
                 $ipLimit = $rateLimit * 2;
                 if ($ipCount >= $ipLimit) {
                     return $this->json([
@@ -290,15 +296,11 @@ class ChatApiController extends AbstractController
     private function enforceEmailReplyRateLimit(Request $request, string $sessionId): ?JsonResponse
     {
         $limit = self::MAX_EMAIL_REPLY_PER_HOUR;
-        $since = (new \DateTimeImmutable('-1 hour'))->format('Y-m-d H:i:s');
-        $conn = $this->entityManager->getConnection();
+        $since = new \DateTimeImmutable('-1 hour');
 
         // session 単位: 同一 session からの email 依頼回数（email_reply_address が設定された行を数える）
         try {
-            $sessionCount = (int) $conn->fetchOne(
-                'SELECT COUNT(*) FROM plg_ai_chat_assistant_log WHERE session_id = :sid AND created_at > :since AND email_reply_address IS NOT NULL',
-                ['sid' => $sessionId, 'since' => $since]
-            );
+            $sessionCount = $this->getChatLogRepository()->countEmailReplyBySession($sessionId, $since);
             if ($sessionCount >= $limit) {
                 return $this->json([
                     'success' => false,
@@ -313,10 +315,7 @@ class ChatApiController extends AbstractController
         $clientIp = $request->getClientIp() ?? '';
         if ($clientIp !== '') {
             try {
-                $ipCount = (int) $conn->fetchOne(
-                    'SELECT COUNT(*) FROM plg_ai_chat_assistant_log WHERE client_ip = :ip AND created_at > :since AND email_reply_address IS NOT NULL',
-                    ['ip' => $clientIp, 'since' => $since]
-                );
+                $ipCount = $this->getChatLogRepository()->countEmailReplyByIp($clientIp, $since);
                 if ($ipCount >= $limit) {
                     return $this->json([
                         'success' => false,
@@ -486,22 +485,8 @@ class ChatApiController extends AbstractController
             return $rateLimitResponse;
         }
 
-        // セッションの最新ログにメールアドレスを記録
-        $conn = $this->entityManager->getConnection();
-        $affected = $conn->executeStatement(
-            'UPDATE plg_ai_chat_assistant_log
-             SET email_reply_address = :email
-             WHERE id = (
-                 SELECT id FROM (
-                     SELECT id FROM plg_ai_chat_assistant_log
-                     WHERE session_id = :sid
-                       AND email_reply_address IS NULL
-                     ORDER BY created_at DESC
-                     LIMIT 1
-                 ) AS tmp
-             )',
-            ['email' => $email, 'sid' => $sessionId]
-        );
+        // セッションの最新ログにメールアドレスを記録 — リポジトリに委譲（QueryBuilder）
+        $affected = $this->getChatLogRepository()->updateEmailReplyAddress($sessionId, $email);
 
         if ($affected === 0) {
             return new JsonResponse([
@@ -600,10 +585,7 @@ class ChatApiController extends AbstractController
                 // UPDATE 失敗は warning に留め feedback 保存は維持（同一トランザクション内で catch し rethrow しない）
                 if ($feedbackValue === 'positive') {
                     try {
-                        $this->entityManager->getConnection()->executeStatement(
-                            'UPDATE plg_ai_chat_assistant_log SET is_resolved = 1 WHERE session_id = :sid AND is_resolved = 0',
-                            ['sid' => $sessionId]
-                        );
+                        $this->getChatLogRepository()->markResolvedBySession($sessionId);
                     } catch (\Throwable $e) {
                         $this->logger->warning('Failed to mark chat log as resolved on positive feedback', [
                             'session_id' => $sessionId,
