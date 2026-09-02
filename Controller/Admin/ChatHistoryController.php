@@ -17,6 +17,7 @@ namespace Plugin\AiChatAssistant42\Controller\Admin;
 
 use Eccube\Controller\AbstractController;
 use Plugin\AiChatAssistant42\Entity\ChatLog;
+use Plugin\AiChatAssistant42\Repository\ChatLogRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -31,7 +32,19 @@ class ChatHistoryController extends AbstractController
     private const PAGE_LIMIT = 20;
 
     public function __construct(
+        private ?ChatLogRepository $chatLogRepository = null,
     ) {
+    }
+
+    private function getChatLogRepository(): ChatLogRepository
+    {
+        if ($this->chatLogRepository !== null) {
+            return $this->chatLogRepository;
+        }
+        /** @var ChatLogRepository $repo */
+        $repo = $this->entityManager->getRepository(ChatLog::class);
+
+        return $repo;
     }
 
     /**
@@ -80,14 +93,7 @@ class ChatHistoryController extends AbstractController
      */
     private function fetchLatestIdPerSession(array $filters): array
     {
-        $subQb = $this->buildFilteredQuery($filters)
-            ->select('MAX(log.id) AS max_id')
-            ->groupBy('log.session_id');
-        $subQb->resetDQLPart('orderBy');
-
-        $rows = $subQb->getQuery()->getScalarResult();
-
-        return array_map('intval', array_column($rows, 'max_id'));
+        return $this->getChatLogRepository()->fetchLatestIdPerSession($filters);
     }
 
     /**
@@ -99,19 +105,7 @@ class ChatHistoryController extends AbstractController
      */
     private function fetchGroupedLogs(array $latestIds, int $page): array
     {
-        $offset = ($page - 1) * self::PAGE_LIMIT;
-
-        return $this->entityManager->createQueryBuilder()
-            ->select('log')
-            ->from(ChatLog::class, 'log')
-            ->where('log.id IN (:maxIds)')
-            ->setParameter('maxIds', $latestIds)
-            ->orderBy('log.created_at', 'DESC')
-            ->addOrderBy('log.id', 'DESC')
-            ->setFirstResult($offset)
-            ->setMaxResults(self::PAGE_LIMIT)
-            ->getQuery()
-            ->getResult();
+        return $this->getChatLogRepository()->fetchGroupedLogs($latestIds, $page, self::PAGE_LIMIT);
     }
 
     /**
@@ -121,18 +115,7 @@ class ChatHistoryController extends AbstractController
      */
     private function fetchSessionCounts(array $filters): array
     {
-        $qb = $this->buildFilteredQuery($filters)
-            ->select('log.session_id AS sid, COUNT(log.id) AS cnt')
-            ->groupBy('log.session_id');
-        $qb->resetDQLPart('orderBy');
-
-        $rows = $qb->getQuery()->getScalarResult();
-        $countsBySession = [];
-        foreach ($rows as $row) {
-            $countsBySession[$row['sid']] = (int) $row['cnt'];
-        }
-
-        return $countsBySession;
+        return $this->getChatLogRepository()->fetchSessionCounts($filters);
     }
 
     /**
@@ -181,28 +164,11 @@ class ChatHistoryController extends AbstractController
     /**
      * 同一セッションの全リレーを時系列で取得する。
      *
-     * session_id が空の場合はフォールバックとして現在の1件のみを返す。
-     * DQL 上のフィールド名は Entity プロパティ名（session_id / created_at）に合わせる。
-     *
      * @return ChatLog[]
      */
     private function fetchSessionRelayLogs(ChatLog $currentLog): array
     {
-        $sessionId = $currentLog->getSessionId();
-        if ($sessionId === '' || $sessionId === null) {
-            return [$currentLog];
-        }
-        $relatedLogs = $this->entityManager->createQueryBuilder()
-            ->select('l')
-            ->from(ChatLog::class, 'l')
-            ->where('l.session_id = :sid')
-            ->setParameter('sid', $sessionId)
-            ->orderBy('l.created_at', 'ASC')
-            ->addOrderBy('l.id', 'ASC')
-            ->getQuery()
-            ->getResult();
-
-        return empty($relatedLogs) ? [$currentLog] : $relatedLogs;
+        return $this->getChatLogRepository()->fetchSessionRelayLogs($currentLog);
     }
 
     /**
@@ -248,85 +214,10 @@ class ChatHistoryController extends AbstractController
         $this->addSuccess('削除しました。', 'admin');
 
         // 削除後の総件数から最終ページを再計算し、現在ページが溢れたら丸める
-        $total = (int) $this->entityManager->createQueryBuilder()
-            ->select('COUNT(l.id)')
-            ->from(ChatLog::class, 'l')
-            ->getQuery()
-            ->getSingleScalarResult();
+        $total = $this->getChatLogRepository()->countAll();
         $lastPage = max(1, (int) ceil($total / self::PAGE_LIMIT));
         $redirectPage = min($currentPage, $lastPage);
 
         return $this->redirectToRoute('admin_ai_chat_assistant_history', ['page' => $redirectPage]);
-    }
-
-    /**
-     * フィルタ条件に基づく QueryBuilder を構築する。
-     */
-    private function buildFilteredQuery(array $filters): \Doctrine\ORM\QueryBuilder
-    {
-        $qb = $this->entityManager->createQueryBuilder()
-            ->select('log')
-            ->from(ChatLog::class, 'log')
-            ->orderBy('log.created_at', 'DESC');
-
-        $this->applyDateFilter($qb, $filters);
-        $this->applyProviderFilter($qb, $filters);
-        $this->applyModelFilter($qb, $filters);
-        $this->applyStatusFilter($qb, $filters);
-
-        return $qb;
-    }
-
-    private function applyDateFilter(\Doctrine\ORM\QueryBuilder $qb, array $filters): void
-    {
-        if ($filters['date_from'] !== '') {
-            $qb->andWhere('log.created_at >= :date_from')
-                ->setParameter('date_from', new \DateTimeImmutable($filters['date_from']));
-        }
-
-        if ($filters['date_to'] !== '') {
-            $dateTo = (new \DateTimeImmutable($filters['date_to']))->modify('+1 day');
-            $qb->andWhere('log.created_at < :date_to')
-                ->setParameter('date_to', $dateTo);
-        }
-    }
-
-    private function applyProviderFilter(\Doctrine\ORM\QueryBuilder $qb, array $filters): void
-    {
-        if ($filters['provider'] !== '') {
-            $qb->andWhere('log.provider = :provider')
-                ->setParameter('provider', $filters['provider']);
-        }
-    }
-
-    private function applyModelFilter(\Doctrine\ORM\QueryBuilder $qb, array $filters): void
-    {
-        if ($filters['model'] !== '') {
-            $qb->andWhere('log.model = :model')
-                ->setParameter('model', $filters['model']);
-        }
-    }
-
-    private function applyStatusFilter(\Doctrine\ORM\QueryBuilder $qb, array $filters): void
-    {
-        if ($filters['status'] === '') {
-            return;
-        }
-
-        $statusConditions = [
-            'error' => fn(\Doctrine\ORM\QueryBuilder $qb) => $qb
-                ->andWhere('log.error_message IS NOT NULL')
-                ->andWhere("log.error_message != ''"),
-            'resolved' => fn(\Doctrine\ORM\QueryBuilder $qb) => $qb->andWhere('log.is_resolved = 1'),
-            'unresolved' => fn(\Doctrine\ORM\QueryBuilder $qb) => $qb->andWhere('log.is_resolved = 0'),
-            'email_pending' => fn(\Doctrine\ORM\QueryBuilder $qb) => $qb
-                ->andWhere('log.email_reply_address IS NOT NULL')
-                ->andWhere('log.email_replied_at IS NULL'),
-        ];
-
-        $handler = $statusConditions[$filters['status']] ?? null;
-        if ($handler !== null) {
-            $handler($qb);
-        }
     }
 }

@@ -124,16 +124,18 @@ class ChatHistoryControllerTest extends TestCase
             $em->expects($this->never())->method('remove');
         }
 
-        // createQueryBuilder for lastPage calculation（削除後の総件数）
-        $query = $this->createMock(AbstractQuery::class);
-        $query->method('getSingleScalarResult')->willReturn((string) $totalAfterDelete);
+        // ChatLogRepository mock for countAll (リポジトリ移譲後)
+        $chatLogRepo = $this->createMock(\Plugin\AiChatAssistant42\Repository\ChatLogRepository::class);
+        if ($expectRemove) {
+            $chatLogRepo->method('countAll')->willReturn($totalAfterDelete);
+        }
 
-        $qb = $this->createMock(QueryBuilder::class);
-        $qb->method('select')->willReturnSelf();
-        $qb->method('from')->willReturnSelf();
-        $qb->method('getQuery')->willReturn($query);
-
-        $em->method('createQueryBuilder')->willReturn($qb);
+        $em->method('getRepository')->willReturnCallback(function (string $class) use ($chatLogRepo) {
+            if ($class === ChatLog::class) {
+                return $chatLogRepo;
+            }
+            return null;
+        });
 
         return $em;
     }

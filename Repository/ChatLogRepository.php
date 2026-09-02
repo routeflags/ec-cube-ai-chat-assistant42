@@ -262,4 +262,178 @@ class ChatLogRepository extends AbstractRepository
 
         return $history;
     }
+
+    // ================================================================
+    //  履歴一覧（管理画面 ChatHistoryController 用）
+    // ================================================================
+
+    /**
+     * フィルタ条件に基づく QueryBuilder を構築する。
+     *
+     * @param array{date_from: string, date_to: string, provider: string, model: string, status: string} $filters
+     */
+    public function createFilteredQueryBuilder(array $filters): \Doctrine\ORM\QueryBuilder
+    {
+        $qb = $this->createQueryBuilder('log')
+            ->orderBy('log.created_at', 'DESC');
+
+        $this->applyDateFilter($qb, $filters);
+        $this->applyProviderFilter($qb, $filters);
+        $this->applyModelFilter($qb, $filters);
+        $this->applyStatusFilter($qb, $filters);
+
+        return $qb;
+    }
+
+    /**
+     * フィルタ後の集合からセッションごとの最新 ID を取得する。
+     *
+     * @param array $filters
+     * @return int[]
+     */
+    public function fetchLatestIdPerSession(array $filters): array
+    {
+        $qb = $this->createFilteredQueryBuilder($filters)
+            ->select('MAX(log.id) AS max_id')
+            ->groupBy('log.session_id');
+        $qb->resetDQLPart('orderBy');
+
+        $rows = $qb->getQuery()->getScalarResult();
+
+        return array_map('intval', array_column($rows, 'max_id'));
+    }
+
+    /**
+     * 最新ID群から該当ログを created_at DESC でページング取得する。
+     *
+     * @param int[] $latestIds
+     * @return ChatLog[]
+     */
+    public function fetchGroupedLogs(array $latestIds, int $page, int $limit = 20): array
+    {
+        if (empty($latestIds)) {
+            return [];
+        }
+
+        $offset = ($page - 1) * $limit;
+
+        return $this->createQueryBuilder('log')
+            ->where('log.id IN (:maxIds)')
+            ->setParameter('maxIds', $latestIds)
+            ->orderBy('log.created_at', 'DESC')
+            ->addOrderBy('log.id', 'DESC')
+            ->setFirstResult(max(0, $offset))
+            ->setMaxResults(max(1, $limit))
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * セッションごとの件数マップを取得する。
+     *
+     * @param array $filters
+     * @return array<string,int> ['session_id' => count]
+     */
+    public function fetchSessionCounts(array $filters): array
+    {
+        $qb = $this->createFilteredQueryBuilder($filters)
+            ->select('log.session_id AS sid, COUNT(log.id) AS cnt')
+            ->groupBy('log.session_id');
+        $qb->resetDQLPart('orderBy');
+
+        $rows = $qb->getQuery()->getScalarResult();
+        $countsBySession = [];
+        foreach ($rows as $row) {
+            $countsBySession[$row['sid']] = (int) $row['cnt'];
+        }
+
+        return $countsBySession;
+    }
+
+    /**
+     * 同一セッションの全リレーを時系列で取得する。
+     *
+     * @return ChatLog[]
+     */
+    public function fetchSessionRelayLogs(ChatLog $currentLog): array
+    {
+        $sessionId = $currentLog->getSessionId();
+        if ($sessionId === '' || $sessionId === null) {
+            return [$currentLog];
+        }
+
+        $result = $this->createQueryBuilder('l')
+            ->where('l.session_id = :sid')
+            ->setParameter('sid', $sessionId)
+            ->orderBy('l.created_at', 'ASC')
+            ->addOrderBy('l.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return empty($result) ? [$currentLog] : $result;
+    }
+
+    /**
+     * 全件数を数える。
+     */
+    public function countAll(): int
+    {
+        return (int) $this->createQueryBuilder('l')
+            ->select('COUNT(l.id)')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    private function applyDateFilter(\Doctrine\ORM\QueryBuilder $qb, array $filters): void
+    {
+        if (($filters['date_from'] ?? '') !== '') {
+            $qb->andWhere('log.created_at >= :date_from')
+                ->setParameter('date_from', new \DateTimeImmutable($filters['date_from']));
+        }
+
+        if (($filters['date_to'] ?? '') !== '') {
+            $dateTo = (new \DateTimeImmutable($filters['date_to']))->modify('+1 day');
+            $qb->andWhere('log.created_at < :date_to')
+                ->setParameter('date_to', $dateTo);
+        }
+    }
+
+    private function applyProviderFilter(\Doctrine\ORM\QueryBuilder $qb, array $filters): void
+    {
+        if (($filters['provider'] ?? '') !== '') {
+            $qb->andWhere('log.provider = :provider')
+                ->setParameter('provider', $filters['provider']);
+        }
+    }
+
+    private function applyModelFilter(\Doctrine\ORM\QueryBuilder $qb, array $filters): void
+    {
+        if (($filters['model'] ?? '') !== '') {
+            $qb->andWhere('log.model = :model')
+                ->setParameter('model', $filters['model']);
+        }
+    }
+
+    private function applyStatusFilter(\Doctrine\ORM\QueryBuilder $qb, array $filters): void
+    {
+        if (($filters['status'] ?? '') === '') {
+            return;
+        }
+
+        $statusConditions = [
+            'error' => fn(\Doctrine\ORM\QueryBuilder $qb) => $qb
+                ->andWhere('log.error_message IS NOT NULL')
+                ->andWhere("log.error_message != ''"),
+            'resolved' => fn(\Doctrine\ORM\QueryBuilder $qb) => $qb->andWhere('log.is_resolved = 1'),
+            'unresolved' => fn(\Doctrine\ORM\QueryBuilder $qb) => $qb->andWhere('log.is_resolved = 0'),
+            'email_pending' => fn(\Doctrine\ORM\QueryBuilder $qb) => $qb
+                ->andWhere('log.email_reply_address IS NOT NULL')
+                ->andWhere('log.email_replied_at IS NULL'),
+        ];
+
+        $handler = $statusConditions[$filters['status']] ?? null;
+        if ($handler !== null) {
+            $handler($qb);
+        }
+    }
 }
