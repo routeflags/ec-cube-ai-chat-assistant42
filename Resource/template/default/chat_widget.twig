@@ -117,7 +117,7 @@
         <h3 id="chat-license-title" class="chat-license-modal__title">{{ chat_license_title|default('ソフトウェアライセンスについて')|e }}</h3>
         <button type="button" class="chat-license-modal__close" id="chat-license-close-x" aria-label="ライセンス情報を閉じる">&times;</button>
       </div>
-      <p id="chat-license-desc" class="chat-license-modal__lead">{{ chat_license_lead|default('AiChatAssistant42（チャットソフトウェア）の著作権は ROUTE FLAGS Co., Ltd. に帰属し、GNU General Public License v2 (GPL-2.0-only) に基づき提供されています.')|e|nl2br }} <a href="https://blog.routeflags.com/%e5%88%a9%e7%94%a8%e8%a6%8f%e7%b4%84/" target="_blank" rel="noopener">ROUTE FLAGS Co., Ltd.</a></p>
+      <p id="chat-license-desc" class="chat-license-modal__lead">{{ chat_license_lead|default('AiChatAssistant42（チャットソフトウェア）の著作権は <a href="https://blog.routeflags.com/%e5%88%a9%e7%94%a8%e8%a6%8f%e7%b4%84/" target="_blank" rel="noopener">ROUTE FLAGS Co., Ltd.</a> に帰属し、GNU General Public License v2 (GPL-2.0-only) に基づき提供されています.')|license_html }}</p>
       <div class="chat-license-modal__items">
         <div class="chat-license-modal__item">
           <h4 class="chat-license-modal__item-heading">{{ chat_license_item1_heading|default('著作権')|e }}</h4>

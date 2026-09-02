@@ -57,7 +57,7 @@ class DesignSettingsSyncService extends AbstractPluginDataSyncService
         'assistant_display_name' => '商品アドバイザー',
         'license_footer_label' => 'ライセンスについて',
         'license_title' => 'ソフトウェアライセンスについて',
-        'license_lead' => 'AiChatAssistant42（チャットソフトウェア）の著作権は ROUTE FLAGS Co., Ltd. に帰属し、GNU General Public License v2 (GPL-2.0-only) に基づき提供されています。',
+        'license_lead' => 'AiChatAssistant42（チャットソフトウェア）の著作権は <a href="https://blog.routeflags.com/%e5%88%a9%e7%94%a8%e8%a6%8f%e7%b4%84/" target="_blank" rel="noopener">ROUTE FLAGS Co., Ltd.</a> に帰属し、GNU General Public License v2 (GPL-2.0-only) に基づき提供されています。',
         'license_item1_heading' => '著作権',
         'license_item1_body' => '© 2024-2026 ROUTE FLAGS Co., Ltd. All Rights Reserved.',
         'license_item2_heading' => 'ライセンス (GPL-2.0-only)',

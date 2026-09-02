@@ -46,7 +46,7 @@ class DesignController extends AbstractController
         'assistant_display_name' => '商品アドバイザー',
         'license_footer_label' => 'ライセンスについて',
         'license_title' => 'ソフトウェアライセンスについて',
-        'license_lead' => 'AiChatAssistant42（チャットソフトウェア）の著作権は ROUTE FLAGS Co., Ltd. に帰属し、GNU General Public License v2 (GPL-2.0-only) に基づき提供されています。',
+        'license_lead' => 'AiChatAssistant42（チャットソフトウェア）の著作権は <a href="https://blog.routeflags.com/%e5%88%a9%e7%94%a8%e8%a6%8f%e7%b4%84/" target="_blank" rel="noopener">ROUTE FLAGS Co., Ltd.</a> に帰属し、GNU General Public License v2 (GPL-2.0-only) に基づき提供されています。',
         'license_item1_heading' => '著作権',
         'license_item1_body' => '© 2024-2026 ROUTE FLAGS Co., Ltd. All Rights Reserved.',
         'license_item2_heading' => 'ライセンス (GPL-2.0-only)',
@@ -212,13 +212,17 @@ class DesignController extends AbstractController
     }
 
     /**
-     * ライセンス系フィールドから HTML を除去してプレーンにする（I-22: |raw 全廃のため）。
+     * ライセンス系フィールドをサニタイズする（I-22: license_html でリンクのみ許可）。
+     *
+     * JSON は配信者が正本だが、テンプレ側の license_html フィルタと二重で防御する。
+     * <a> 以外は除去し、<a> の href は許可URLのみ通す。
      *
      * @param array<string,string> $sanitized
      * @return array<string,string>
      */
     private function sanitizeLicenseFields(array $sanitized): array
     {
+        $allowedHref = 'https://blog.routeflags.com/%e5%88%a9%e7%94%a8%e8%a6%8f%e7%b4%84/';
         $licenseKeys = [
             'license_footer_label', 'license_title', 'license_lead',
             'license_item1_heading', 'license_item1_body',
@@ -226,10 +230,30 @@ class DesignController extends AbstractController
             'license_item3_heading', 'license_item3_body',
         ];
         foreach ($licenseKeys as $k) {
-            if (isset($sanitized[$k])) {
-                // HTMLタグを除去（リンク等のHTMLはテンプレート側で固定HTMLとして付与）
-                $sanitized[$k] = trim(strip_tags($sanitized[$k]));
+            if (!isset($sanitized[$k])) {
+                continue;
             }
+            $html = trim($sanitized[$k]);
+            // <a> 以外除去
+            $html = strip_tags($html, '<a>');
+            // <a> の href を検証 — 許可 href 以外はテキスト化
+            $html = (string) preg_replace_callback(
+                '/<a\s+[^>]*href\s*=\s*(["\'])(.*?)\1[^>]*>(.*?)<\/a>/is',
+                static function (array $m) use ($allowedHref): string {
+                    $href = html_entity_decode($m[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    $text = $m[3];
+                    if ($href !== $allowedHref) {
+                        return htmlspecialchars($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    }
+                    $safeText = htmlspecialchars($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    $safeHref = htmlspecialchars($allowedHref, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+                    return sprintf('<a href="%s" target="_blank" rel="noopener">%s</a>', $safeHref, $safeText);
+                },
+                $html
+            );
+            // 残った <a> 以外の < > はエスケープ済み（strip_tags で除去済み）
+            $sanitized[$k] = $html;
         }
 
         return $sanitized;
