@@ -665,13 +665,29 @@ AIによる自動対応と店舗スタッフによる有人対応を組み合わ
 
 ## 付記: 検証方法（本追記作成時の確認手順）
 
+本追記は `anydoc 0.1.7` でテキスト化して作成しています。`pypdf` による先行抽出（前章）は `anydoc` の Markdown 出力で置き換え済みです。テキスト化した Markdown は `Documents/pdfs_text/` に保存しています。
+
 ```bash
+# 1) ダウンロード
 curl -fsSL -o /tmp/pdfs/GL02_plugin_apply.pdf https://www.ec-cube.net/document/GL02_plugin_apply.pdf
 curl -fsSL -o /tmp/pdfs/sales_plugin.pdf https://www.ec-cube.net/document/sales_plugin.pdf
 curl -fsSL -o /tmp/pdfs/verify_key_manual.pdf https://downloads.ec-cube.net/manual/documents/verify_key_manual.pdf
 curl -fsSL -o /tmp/pdfs/eccube_security_plugin_checksheet_v1.0.pdf https://downloads.ec-cube.net/manual/documents/eccube_security_plugin_checksheet_v1.0.pdf
 curl -fsSL -o /tmp/pdfs/eccube_security_plugin_v1.0.pdf https://downloads.ec-cube.net/manual/documents/eccube_security_plugin_v1.0.pdf
 curl -fsSL -o /tmp/pdfs/GL01_plugin_image.pdf https://www.ec-cube.net/document/GL01_plugin_image.pdf
-python3 -c "import pypdf; print(pypdf.PdfReader('/tmp/pdfs/GL02_plugin_apply.pdf').pages[0].extract_text()[:200])"
-# sales_plugin.pdf は画像PDFのため pypdf では本文が取れず、XObject /Im1 を PIL で展開して目視確認
+
+# 2) anydoc 0.1.7 で Markdown 化（1ファイル1回）
+anydoc --version  # 0.1.7
+mkdir -p Documents/pdfs_text
+for f in /tmp/pdfs/*.pdf; do anydoc "$f" -o "Documents/pdfs_text/$(basename "$f" .pdf).md"; done
+# - GL02_plugin_apply: 99 lines / 5863 bytes
+# - verify_key_manual: 23 lines / 1825 bytes
+# - eccube_security_plugin_checksheet_v1.0: 45 lines / 8810 bytes（表形式）
+# - eccube_security_plugin_v1.0: 279 lines / 27665 bytes
+# - GL01_plugin_image: 12 lines / 1206 bytes（表形式）
+# - sales_plugin: anydoc 非対応（ImageBased, OCR required）→ XObject /Im1 (2378×3256) を PIL で展開して目視テキスト化
+
+# 3) sales_plugin のみ画像展開で補完
+python3 -c "import pypdf; r=pypdf.PdfReader('/tmp/pdfs/sales_plugin.pdf'); x=r.pages[0]['/Resources']['/XObject']['/Im1'].get_object(); open('/tmp/sales_Im1.png','wb').write(x.get_data())"
+# → /tmp/sales_Im1.png を目視して Documents/pdfs_text/sales_plugin.md に手書きMarkdown化
 ```
