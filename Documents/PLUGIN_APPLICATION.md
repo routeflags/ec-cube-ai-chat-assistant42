@@ -574,3 +574,104 @@ AIによる自動対応と店舗スタッフによる有人対応を組み合わ
 * [ ] 利用規約確定
 * [ ] ライセンス表記確認
 * [ ] 商品コード最終確認
+
+---
+
+# 17. 準拠根拠（公式PDF）
+
+本申請書の各要件は、以下の EC-CUBE 公式 PDF に基づきます。いずれも 2026年9月2日時点のダウンロードで内容確認済みです。
+
+## 17.1 公式資料一覧
+
+| # | 資料名 | URL | 版・ページ | 本申請書での根拠箇所 |
+|---|--------|-----|-----------|----------------------|
+| ① | EC-CUBEプラグイン申請マニュアル（2022.3版） | https://www.ec-cube.net/document/GL02_plugin_apply.pdf | 2022.3版 全15p | §1 バージョン表記、§2 リリースノート、§16 申請フロー（新規登録/再申請/公開）、禁止事項 |
+| ② | プラグイン販売のご案内 | https://www.ec-cube.net/document/sales_plugin.pdf | 1p（画像PDF） | §3 商品情報の販売区分の整理（本プラグインは無料のため対象外だが有料販売要件の参照用） |
+| ③ | 管理画面からのインストール検証について（検証キー） | https://downloads.ec-cube.net/manual/documents/verify_key_manual.pdf | 全5p | §1 プラグインファイルの管理画面インストール検証（検証キー） |
+| ④ | EC-CUBE セキュリティガイドライン プラグイン チェックシート v1.0 | https://downloads.ec-cube.net/manual/documents/eccube_security_plugin_checksheet_v1.0.pdf | 全3p（§2-1〜2-4） | §5 マニュアル・§16 セキュリティ試験の自己チェック項目 |
+| ⑤ | EC-CUBE セキュリティガイドライン プラグイン v1.0 | https://downloads.ec-cube.net/manual/documents/eccube_security_plugin_v1.0.pdf | 2014-10-15 Version 1.0 全16p | §8 ライセンス・§9〜§15 詳細の外部送信・ログ・個人情報・テンプレート徹底等の実装根拠 |
+| ⑥ | プラグイン画像ガイドライン Ver.1.01 | https://www.ec-cube.net/document/GL01_plugin_image.pdf | Ver.1.01 全3p | §4 商品画像（ミニアイコン/ロゴ/概要画像）のサイズ・表記ルール |
+
+> 重複: `GL02_plugin_apply.pdf` はご提示リストに2回含まれますが、同一ファイル（2022.3版 15p）として1件で扱います。
+
+## 17.2 各資料の要点と本プラグインの対応
+
+### ① GL02_plugin_apply.pdf（申請マニュアル 2022.3版）
+
+> 根拠URL: https://www.ec-cube.net/document/GL02_plugin_apply.pdf
+
+- **p.3 申請フロー（新規/更新共通）:** 「プラグインを新規登録する」→ 審査（2週間目安、メール通知）→ 承認済み後に「公開」して初めてストア反映。非承認時は修正後に「再申請」（バージョンは非承認でもインクリメント要）。本申請書 §1 / §16 / §2 のリリース運用はこれに準拠。
+- **p.4 禁止事項（審査基準）:** 「日本国の法令・公序良俗に反する」「有害なプログラム」「決済機能を搭載又は間接的に公式決済以外と連携」「その他不適切」の4点が審査基準であり、正常動作の保証ではない。本プラグインは外部AI連携のみで決済非搭載・テンプレ内包なし・別途契約不要な範囲のため対象外（§2 本文の機能一覧で明示）。
+- **p.5-15 手順:** プラグイン管理画面の「プラグインを新規登録する」「再申請」「編集」導線は、本申請書の提出物（`AiChatAssistant42.tar.gz` / バージョン `1.0.0`）がこの手順で審査される前提。
+
+### ② sales_plugin.pdf（プラグイン販売のご案内）
+
+> 根拠URL: https://www.ec-cube.net/document/sales_plugin.pdf
+> ※ 本PDFはテキスト抽出不可の画像PDFのため、画像を展開して確認（`/tmp/sales_Im1.png`）
+
+- **p.1:** 有料販売時の流れとして「パートナー管理画面（MYページ）で約款同意→口座登録→プラグイン登録→ストアへ掲載開始（ご登録目安 約30分）」「販売月の月末で締め翌々月に手数料差引後お支払い」「決済モジュール以外の決済は別途契約」等を説明。本プラグインは無料公開（§3 価格未定→無料想定）のため直接適用外だが、販売を検討する際の事前参照資料として保持。
+
+### ③ verify_key_manual.pdf（インストール検証・検証キー）
+
+> 根拠URL: https://downloads.ec-cube.net/manual/documents/verify_key_manual.pdf
+
+- **p.2-5:** EC-CUBE 4.0系より「管理画面からのインストール検証」が可能。申請後に「公開申請中一覧」に表示される検証キーを、自身の EC-CUBE 管理画面の「認証キー」設定に入力することで、公開前のプラグインをインストール〜動作確認できる。検証キーはバージョンごとに発行。本申請書 §1 `AiChatAssistant42.tar.gz` は、この検証キー経由での事前検証を想定して `tar.gz`（§1）としてパッケージ化。
+- **p.5:** 無料プラグインは管理画面から直接インストール可能（Web購入不要）。本プラグインはこの経路での検証を推奨。
+
+### ④ eccube_security_plugin_checksheet_v1.0.pdf（チェックシート）
+
+> 根拠URL: https://downloads.ec-cube.net/manual/documents/eccube_security_plugin_checksheet_v1.0.pdf
+
+- **全3p（§2-1〜2-4 チェック項目）:** 各項目を「はい/いいえ/対象外」で自己チェック。本申請書 §5 マニュアル提供、§16 試験、§9〜§15 実装の妥当性は本チェックシートで担保。
+  - **§2-1 プログラム全体:** コーディング規則準拠、脅威が第三者にも確認しやすいコード、命名・ファイル構成・展開方法が規約準拠、マニュアル/ファイルリスト提供、公開側への設置は必要最小限、公開ポイント（公開/管理者/その他）の明示とアクセス規制の明示、通信相手の明示 等。
+  - **§2-2 パラメータ安全性:** SC_FormParam（EC-CUBE 4系では Symfony Form/Validator 相当）による正規化・エラーチェック必須、グローバル変数（`$_POST/$_GET/$_REQUEST/$_COOKIE`）の直接参照禁止、`$_GLOBAL` 不使用、Cookie/UserAgent への依存禁止、Smarty/Twig 経由の表示とエスケープ徹底 等。
+  - **§2-3 扱うデータ:** 外部へ渡すデータと通信先の明示・事前了承、有効化前の確認、不要データ非保持、ログ記録徹底（EC-CUBE ログ関数で日時・リクエスト元・IP）、個人情報は独自保存せずハッシュ/ID/ステータス等の間接情報のみ、生成ファイルは公開ディレクトリに置かない（`data/downloads` 等の非公開領域） 等。
+  - **§2-4 プログラム介入:** 画面追加はテンプレートフック/prefilter等の正規介入のみ、テンプレート変数は `plg_*` 等の固有prefix、不要な介入をしない 等。
+
+### ⑤ eccube_security_plugin_v1.0.pdf（セキュリティガイドライン本体）
+
+> 根拠URL: https://downloads.ec-cube.net/manual/documents/eccube_security_plugin_v1.0.pdf
+
+- **2014-10-15 Version 1.0 全16p、CC BY-SA 2.1 JP（Spirit of / EC-CUBE Security WG）:** 上記チェックシートの根拠となる詳細版。本申請書の実装方針は本文の「良い例」に整合。
+  - **p.5 §2-1 コード規則・マニュアル・ファイル構成:** 改行 LF 統一・phpDocumentor コメント等の例、公開側への多数ファイル設置は目的明示必須 等 → 本プラグインは `Resource/config/services.yaml` / `composer.json` 等の規約準拠、公開側は Twig/CSS/JS の必要最小限のみ。
+  - **p.7 §2-2 パラメータ安全性:** FormParam による正規化・グローバル変数制限・Twig エスケープ徹底 → 本プラグインは Symfony Form + `escape` フィルタで対応。
+  - **p.8-9 §2-3 外部提供データの明確化・ログ・個人情報制限:** 外部（OpenAI/Anthropic/Gemini）へ渡すデータは設定画面で明示し事前了承を得た上で最小限（本プラグインは「商品情報・ナレッジ・会話履歴のうち必要なもののみ」）、ログは `plg_*_YYYYMMDD.log` 形式で相手先明示、個人情報は独自保存せず 等 → 本申請書 §9 概要・§5 マニュアル・§16 試験で周知。
+  - **p.10 生成ファイルの秘匿:** CSV 等の一時ファイルは公開ディレクトリに置かず、処理中断時の残存による漏洩を防止 → 本プラグインは一時ファイルなし、チャット履歴は DB（非公開）に保存。
+  - **p.11 §2-3 テンプレート徹底・変数固有化:** `plg_example_data_id` のように plugin prefix を付与 → 本プラグインも `plg_aichatassistant42_*` / `aiChatAssistant42*` で固有化。
+
+### ⑥ GL01_plugin_image.pdf（画像ガイドライン Ver.1.01）
+
+> 根拠URL: https://www.ec-cube.net/document/GL01_plugin_image.pdf
+
+- **p.2 ロゴ画像（商品一覧・詳細のバナー）:** 外寸 `338×252`（内寸 `308×222`）。本申請書 §4 ロゴ画像 `338×252` はこれに準拠。要件: 静止画、商品名/連想キーワードを必ず表示、外枠から15px余白、外枠線不要、値引き/キャンペーン文言禁止、長方矩形から変形禁止（角丸禁止）。
+- **p.3 ミニアイコン（ロールオーバー・購入履歴等）:** 外寸 `50×50`（内寸 `40×40`）。本申請書 §4 ミニアイコン `50×50` はこれに準拠。要件: 静止画、サービス/ブランドが一目で分かる特徴的イメージ、外枠から5px余白、外枠線不要、値引き/キャンペーン文言禁止、変形禁止。
+- **§4 概要画像:** 本申請書では `798px幅` 推奨と記載。GL01 本体に数値規定はないが、GL02 などと併せた運用上の推奨として採用。
+
+## 17.3 対応表（抜粋）
+
+| 本申請書の項目 | 準拠PDF | 該当ページ |
+|---------------|---------|-----------|
+| バージョン `1.0.0`（8字/数字とドット） | ① GL02 | p.7 登録画面、p.11 再申請時のインクリメント注意 |
+| `tar.gz`（登録可能拡張子） | ① GL02 | p.7 登録画面 |
+| リリースノート/商品情報/対応環境 | ① GL02 | p.7 入力項目、p.14-15 情報更新 |
+| 申請フロー（新規→審査2週間→承認後「公開」） | ① GL02 | p.3 |
+| 禁止事項（法令・有害・決済・不適切） | ① GL02 | p.4 |
+| 管理画面インストール検証（検証キー） | ③ verify_key | p.2-5 |
+| 有料販売の留意（本プラグインは無料のため対象外） | ② sales | p.1 |
+| セキュリティ自己チェック（コード規則・外部送信明示・ログ・個人情報・ファイル配置・テンプレート介入） | ④ チェックシート + ⑤ ガイドライン | ④ p.1-3 / ⑤ p.5-11 |
+| 画像サイズ（ロゴ 338×252 / アイコン 50×50 / 概要 798px幅） | ⑥ GL01 | p.2-3 |
+
+---
+
+## 付記: 検証方法（本追記作成時の確認手順）
+
+```bash
+curl -fsSL -o /tmp/pdfs/GL02_plugin_apply.pdf https://www.ec-cube.net/document/GL02_plugin_apply.pdf
+curl -fsSL -o /tmp/pdfs/sales_plugin.pdf https://www.ec-cube.net/document/sales_plugin.pdf
+curl -fsSL -o /tmp/pdfs/verify_key_manual.pdf https://downloads.ec-cube.net/manual/documents/verify_key_manual.pdf
+curl -fsSL -o /tmp/pdfs/eccube_security_plugin_checksheet_v1.0.pdf https://downloads.ec-cube.net/manual/documents/eccube_security_plugin_checksheet_v1.0.pdf
+curl -fsSL -o /tmp/pdfs/eccube_security_plugin_v1.0.pdf https://downloads.ec-cube.net/manual/documents/eccube_security_plugin_v1.0.pdf
+curl -fsSL -o /tmp/pdfs/GL01_plugin_image.pdf https://www.ec-cube.net/document/GL01_plugin_image.pdf
+python3 -c "import pypdf; print(pypdf.PdfReader('/tmp/pdfs/GL02_plugin_apply.pdf').pages[0].extract_text()[:200])"
+# sales_plugin.pdf は画像PDFのため pypdf では本文が取れず、XObject /Im1 を PIL で展開して目視確認
+```
