@@ -240,21 +240,14 @@ class ProductRepository extends AbstractRepository
      */
     public function getDetail(int $productId): ?array
     {
-        $sql = <<<'SQL'
-            SELECT
-                p.id,
-                p.name,
-                p.description_list,
-                p.create_date,
-                p.update_date,
-                p.product_status_id AS status_id
-            FROM dtb_product p
-            WHERE p.id = :product_id
-              AND p.product_status_id = 1
-        SQL;
+        $qb = $this->connection->createQueryBuilder()
+            ->select('p.id', 'p.name', 'p.description_list', 'p.create_date', 'p.update_date', 'p.product_status_id AS status_id')
+            ->from('dtb_product', 'p')
+            ->where('p.id = :product_id')
+            ->andWhere('p.product_status_id = 1')
+            ->setParameter('product_id', $productId);
 
-        $stmt = $this->connection->executeQuery($sql, ['product_id' => $productId]);
-        $product = $stmt->fetchAssociative();
+        $product = $qb->executeQuery()->fetchAssociative();
 
         if ($product === false) {
             return null;
@@ -280,26 +273,18 @@ class ProductRepository extends AbstractRepository
      */
     public function getStock(int $productId): array
     {
-        $sql = <<<'SQL'
-            SELECT
-                pc.id AS class_id,
-                pc.product_code AS code,
-                ps.stock,
-                pc.stock_unlimited,
-                pc.price02 AS price,
-                cc1.name AS class_category1,
-                cc2.name AS class_category2
-            FROM dtb_product_class pc
-            LEFT JOIN dtb_product_stock ps ON ps.product_class_id = pc.id
-            LEFT JOIN dtb_class_category cc1 ON cc1.id = pc.class_category_id1
-            LEFT JOIN dtb_class_category cc2 ON cc2.id = pc.class_category_id2
-            WHERE pc.product_id = :product_id
-              AND pc.visible = 1
-            ORDER BY pc.id ASC
-        SQL;
+        $qb = $this->connection->createQueryBuilder()
+            ->select('pc.id AS class_id', 'pc.product_code AS code', 'ps.stock', 'pc.stock_unlimited', 'pc.price02 AS price', 'cc1.name AS class_category1', 'cc2.name AS class_category2')
+            ->from('dtb_product_class', 'pc')
+            ->leftJoin('pc', 'dtb_product_stock', 'ps', 'ps.product_class_id = pc.id')
+            ->leftJoin('pc', 'dtb_class_category', 'cc1', 'cc1.id = pc.class_category_id1')
+            ->leftJoin('pc', 'dtb_class_category', 'cc2', 'cc2.id = pc.class_category_id2')
+            ->where('pc.product_id = :product_id')
+            ->andWhere('pc.visible = 1')
+            ->orderBy('pc.id', 'ASC')
+            ->setParameter('product_id', $productId);
 
-        $stmt = $this->connection->executeQuery($sql, ['product_id' => $productId]);
-        $rows = $stmt->fetchAllAssociative();
+        $rows = $qb->executeQuery()->fetchAllAssociative();
 
         foreach ($rows as &$row) {
             $row['class_id'] = (int) $row['class_id'];
@@ -320,30 +305,20 @@ class ProductRepository extends AbstractRepository
      */
     public function getCategories(?int $parentId = null): array
     {
-        $sql = <<<'SQL'
-            SELECT
-                c.id,
-                c.category_name AS name,
-                c.hierarchy,
-                c.parent_category_id AS parent_id,
-                (SELECT COUNT(*) FROM dtb_category sub WHERE sub.parent_category_id = c.id) AS children_count
-            FROM dtb_category c
-        SQL;
-
-        $params = [];
+        $qb = $this->connection->createQueryBuilder()
+            ->select('c.id', 'c.category_name AS name', 'c.hierarchy', 'c.parent_category_id AS parent_id', '(SELECT COUNT(*) FROM dtb_category sub WHERE sub.parent_category_id = c.id) AS children_count')
+            ->from('dtb_category', 'c')
+            ->orderBy('c.sort_no', 'ASC')
+            ->addOrderBy('c.id', 'ASC');
 
         if ($parentId !== null) {
-            $sql .= ' WHERE c.parent_category_id = :parent_id';
-            $params['parent_id'] = $parentId;
+            $qb->where('c.parent_category_id = :parent_id')
+                ->setParameter('parent_id', $parentId);
         } else {
-            // ルート（親なし）のカテゴリのみ取得
-            $sql .= ' WHERE c.parent_category_id IS NULL';
+            $qb->where('c.parent_category_id IS NULL');
         }
 
-        $sql .= ' ORDER BY c.sort_no ASC, c.id ASC';
-
-        $stmt = $this->connection->executeQuery($sql, $params);
-        $rows = $stmt->fetchAllAssociative();
+        $rows = $qb->executeQuery()->fetchAllAssociative();
 
         foreach ($rows as &$row) {
             $row['id'] = (int) $row['id'];
@@ -399,14 +374,13 @@ class ProductRepository extends AbstractRepository
      */
     public function getTags(): array
     {
-        $sql = <<<'SQL'
-            SELECT t.id, t.name
-            FROM dtb_tag t
-            ORDER BY t.sort_no ASC, t.id ASC
-        SQL;
+        $qb = $this->connection->createQueryBuilder()
+            ->select('t.id', 't.name')
+            ->from('dtb_tag', 't')
+            ->orderBy('t.sort_no', 'ASC')
+            ->addOrderBy('t.id', 'ASC');
 
-        $stmt = $this->connection->executeQuery($sql);
-        $rows = $stmt->fetchAllAssociative();
+        $rows = $qb->executeQuery()->fetchAllAssociative();
 
         foreach ($rows as &$row) {
             $row['id'] = (int) $row['id'];
@@ -735,10 +709,14 @@ class ProductRepository extends AbstractRepository
      */
     private function fetchHelpGuideRow(): ?array
     {
-        $row = $this->connection->fetchAssociative(
-            'SELECT id, page_name, url, meta_robots FROM dtb_page WHERE url = :url LIMIT 1',
-            ['url' => 'help_guide']
-        );
+        $qb = $this->connection->createQueryBuilder()
+            ->select('id', 'page_name', 'url', 'meta_robots')
+            ->from('dtb_page')
+            ->where('url = :url')
+            ->setMaxResults(1)
+            ->setParameter('url', 'help_guide');
+
+        $row = $qb->executeQuery()->fetchAssociative();
 
         if ($row === false) {
             return null;
@@ -758,10 +736,14 @@ class ProductRepository extends AbstractRepository
             return null;
         }
 
-        $row = $this->connection->fetchAssociative(
-            'SELECT page_name, url, meta_robots, file_name FROM dtb_page WHERE url = :url LIMIT 1',
-            ['url' => $url]
-        );
+        $qb = $this->connection->createQueryBuilder()
+            ->select('page_name', 'url', 'meta_robots', 'file_name')
+            ->from('dtb_page')
+            ->where('url = :url')
+            ->setMaxResults(1)
+            ->setParameter('url', $url);
+
+        $row = $qb->executeQuery()->fetchAssociative();
 
         if ($row === false) {
             return null;
@@ -886,15 +868,14 @@ class ProductRepository extends AbstractRepository
             return [];
         }
 
-        $placeholders = implode(',', array_fill(0, count($productIds), '?'));
+        $qb = $this->connection->createQueryBuilder()
+            ->select('product_id', 'file_name')
+            ->from('dtb_product_image')
+            ->where('product_id IN (:product_ids)')
+            ->orderBy('sort_no', 'ASC')
+            ->setParameter('product_ids', $productIds, \Doctrine\DBAL\Connection::PARAM_INT_ARRAY);
 
-        $sql = sprintf(
-            'SELECT product_id, file_name FROM dtb_product_image WHERE product_id IN (%s) ORDER BY sort_no ASC',
-            $placeholders
-        );
-
-        $stmt = $this->connection->executeQuery($sql, $productIds);
-        $rows = $stmt->fetchAllAssociative();
+        $rows = $qb->executeQuery()->fetchAllAssociative();
 
         $map = [];
         foreach ($rows as $row) {
@@ -912,23 +893,17 @@ class ProductRepository extends AbstractRepository
      */
     private function getProductClasses(int $productId): array
     {
-        $sql = <<<'SQL'
-            SELECT
-                pc.id AS class_id,
-                pc.product_code AS code,
-                pc.price02 AS price,
-                cc1.name AS class_category1,
-                cc2.name AS class_category2
-            FROM dtb_product_class pc
-            LEFT JOIN dtb_class_category cc1 ON cc1.id = pc.class_category_id1
-            LEFT JOIN dtb_class_category cc2 ON cc2.id = pc.class_category_id2
-            WHERE pc.product_id = :product_id
-              AND pc.visible = 1
-            ORDER BY pc.id ASC
-        SQL;
+        $qb = $this->connection->createQueryBuilder()
+            ->select('pc.id AS class_id', 'pc.product_code AS code', 'pc.price02 AS price', 'cc1.name AS class_category1', 'cc2.name AS class_category2')
+            ->from('dtb_product_class', 'pc')
+            ->leftJoin('pc', 'dtb_class_category', 'cc1', 'cc1.id = pc.class_category_id1')
+            ->leftJoin('pc', 'dtb_class_category', 'cc2', 'cc2.id = pc.class_category_id2')
+            ->where('pc.product_id = :product_id')
+            ->andWhere('pc.visible = 1')
+            ->orderBy('pc.id', 'ASC')
+            ->setParameter('product_id', $productId);
 
-        $stmt = $this->connection->executeQuery($sql, ['product_id' => $productId]);
-        $rows = $stmt->fetchAllAssociative();
+        $rows = $qb->executeQuery()->fetchAllAssociative();
 
         foreach ($rows as &$row) {
             $row['class_id'] = (int) $row['class_id'];
@@ -945,19 +920,15 @@ class ProductRepository extends AbstractRepository
      */
     private function getProductCategories(int $productId): array
     {
-        $sql = <<<'SQL'
-            SELECT
-                c.id,
-                c.category_name AS name,
-                c.hierarchy
-            FROM dtb_product_category pct
-            INNER JOIN dtb_category c ON c.id = pct.category_id
-            WHERE pct.product_id = :product_id
-            ORDER BY c.sort_no ASC
-        SQL;
+        $qb = $this->connection->createQueryBuilder()
+            ->select('c.id', 'c.category_name AS name', 'c.hierarchy')
+            ->from('dtb_product_category', 'pct')
+            ->innerJoin('pct', 'dtb_category', 'c', 'c.id = pct.category_id')
+            ->where('pct.product_id = :product_id')
+            ->orderBy('c.sort_no', 'ASC')
+            ->setParameter('product_id', $productId);
 
-        $stmt = $this->connection->executeQuery($sql, ['product_id' => $productId]);
-        $rows = $stmt->fetchAllAssociative();
+        $rows = $qb->executeQuery()->fetchAllAssociative();
 
         foreach ($rows as &$row) {
             $row['id'] = (int) $row['id'];
@@ -975,16 +946,14 @@ class ProductRepository extends AbstractRepository
      */
     private function getImages(int $productId): array
     {
-        $sql = <<<'SQL'
-            SELECT file_name
-            FROM dtb_product_image
-            WHERE product_id = :product_id
-            ORDER BY sort_no ASC
-        SQL;
+        $qb = $this->connection->createQueryBuilder()
+            ->select('file_name')
+            ->from('dtb_product_image')
+            ->where('product_id = :product_id')
+            ->orderBy('sort_no', 'ASC')
+            ->setParameter('product_id', $productId);
 
-        $stmt = $this->connection->executeQuery($sql, ['product_id' => $productId]);
-
-        return array_column($stmt->fetchAllAssociative(), 'file_name');
+        return array_column($qb->executeQuery()->fetchAllAssociative(), 'file_name');
     }
 
     /**
@@ -994,16 +963,15 @@ class ProductRepository extends AbstractRepository
      */
     private function getProductTags(int $productId): array
     {
-        $sql = <<<'SQL'
-            SELECT t.id, t.name
-            FROM dtb_product_tag pt
-            INNER JOIN dtb_tag t ON t.id = pt.tag_id
-            WHERE pt.product_id = :product_id
-            ORDER BY t.sort_no ASC
-        SQL;
+        $qb = $this->connection->createQueryBuilder()
+            ->select('t.id', 't.name')
+            ->from('dtb_product_tag', 'pt')
+            ->innerJoin('pt', 'dtb_tag', 't', 't.id = pt.tag_id')
+            ->where('pt.product_id = :product_id')
+            ->orderBy('t.sort_no', 'ASC')
+            ->setParameter('product_id', $productId);
 
-        $stmt = $this->connection->executeQuery($sql, ['product_id' => $productId]);
-        $rows = $stmt->fetchAllAssociative();
+        $rows = $qb->executeQuery()->fetchAllAssociative();
 
         foreach ($rows as &$row) {
             $row['id'] = (int) $row['id'];

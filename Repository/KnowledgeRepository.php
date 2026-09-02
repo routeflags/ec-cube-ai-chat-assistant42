@@ -36,10 +36,6 @@ class KnowledgeRepository extends AbstractRepository
     }
 
     /**
-     * 指定 ID のナレッジを取得する。
-     */
-
-    /**
      * 全件を display_order → id の順で取得する。
      */
 

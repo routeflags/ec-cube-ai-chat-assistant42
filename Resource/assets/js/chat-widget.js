@@ -303,7 +303,7 @@
         if (positiveBtn) positiveBtn.disabled = false;
         if (negativeBtn) negativeBtn.disabled = false;
         addErrorMessage('フィードバックの送信に失敗しました。もう一度お試しください。');
-        if (typeof console !== 'undefined') {
+        if (DEBUG_OVERLAY && typeof console !== 'undefined') {
           console.error('[AiChatAssistant] feedback error', err);
         }
       });
@@ -337,7 +337,7 @@
       }
     } else {
       overlayLog('WARN: modal not found', null);
-      if (typeof console !== 'undefined' && console.warn) console.warn('[AiChatAssistant][Overlay] modal not found');
+      if (DEBUG_OVERLAY && typeof console !== 'undefined' && console.warn) console.warn('[AiChatAssistant][Overlay] modal not found');
     }
     overlayGroupEnd();
   }
@@ -426,7 +426,7 @@
     overlayLog('Step3b: payload prepared', payload);
 
     overlayLog('Step3c: fetch start', { url: EMAIL_API_URL, payload: payload });
-    if (typeof console !== 'undefined' && console.time) console.time('[AiChatAssistant][Overlay] fetch duration');
+    if (DEBUG_OVERLAY && typeof console !== 'undefined' && console.time) console.time('[AiChatAssistant][Overlay] fetch duration');
     fetch(EMAIL_API_URL, {
       method: 'POST',
       headers: {
@@ -436,7 +436,7 @@
       body: JSON.stringify(payload)
     })
       .then(function (response) {
-        if (typeof console !== 'undefined' && console.timeEnd) console.timeEnd('[AiChatAssistant][Overlay] fetch duration');
+        if (DEBUG_OVERLAY && typeof console !== 'undefined' && console.timeEnd) console.timeEnd('[AiChatAssistant][Overlay] fetch duration');
         overlayLog('Step4: fetch response', { ok: response.ok, status: response.status, statusText: response.statusText, url: response.url });
         if (!response.ok) {
           throw new Error('HTTP ' + response.status);
@@ -458,14 +458,14 @@
         overlayGroupEnd();
       })
       .catch(function (err) {
-        if (typeof console !== 'undefined' && console.timeEnd) try { console.timeEnd('[AiChatAssistant][Overlay] fetch duration'); } catch(e) {}
+        if (DEBUG_OVERLAY && typeof console !== 'undefined' && console.timeEnd) try { console.timeEnd('[AiChatAssistant][Overlay] fetch duration'); } catch(e) {}
         overlayLog('Step4b: fetch error', { name: err.name, message: err.message, stack: err.stack });
         closeEmailModal();
         overlayLog('Step5d: closeEmailModal after error');
         removeFeedbackButtons();
         overlayLog('Step6a: removeFeedbackButtons after error');
         addErrorMessage('メールアドレスの送信中にエラーが発生しました。');
-        if (typeof console !== 'undefined' && console.error) {
+        if (DEBUG_OVERLAY && typeof console !== 'undefined' && console.error) {
           console.error('[AiChatAssistant][Overlay] email reply error', err);
         }
         overlayGroupEnd();
@@ -597,7 +597,7 @@
         }
         addErrorMessage(errorMsg);
 
-        if (typeof console !== 'undefined') {
+        if (DEBUG_OVERLAY && typeof console !== 'undefined') {
           console.error('[AiChatAssistant]', err);
         }
       });
