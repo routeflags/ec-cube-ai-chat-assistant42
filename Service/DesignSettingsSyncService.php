@@ -15,10 +15,6 @@ declare(strict_types=1);
 
 namespace Plugin\AiChatAssistant42\Service;
 
-use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Exception\TransferException;
-use Psr\Log\LoggerInterface;
-
 /**
  * design_settings.json のリモート同期を担うサービス。
  *
@@ -28,11 +24,13 @@ use Psr\Log\LoggerInterface;
  * - 対象キー: license_* のみをリモート正本としてマージ、widget_* はローカル保持
  * - 排他: flock(LOCK_EX|LOCK_NB) で多重起動を防止
  * - 原子書き込み: tmp + rename + LOCK_EX、ETag/Last-Modified は meta.json に保存
+ *
+ * 共通インフラは AbstractPluginDataSyncService に集約し、
+ * 本クラスは validate()/persist() の差分のみを担う。
  */
-class DesignSettingsSyncService
+class DesignSettingsSyncService extends AbstractPluginDataSyncService
 {
     public const REMOTE_URL = 'https://routeflags.com/dist/ec_chat/design_settings.json';
-    public const TTL = 86400;
     public const PLUGIN_DATA_PATH = '/app/PluginData/AiChatAssistant42/design_settings.json';
     public const META_PATH = '/app/PluginData/AiChatAssistant42/.design_settings.meta.json';
     public const LOCK_PATH = '/app/PluginData/AiChatAssistant42/.design_settings.sync.lock';
@@ -68,171 +66,54 @@ class DesignSettingsSyncService
         'license_item3_body' => '本ソフトウェアは以下のOSSを利用しています: EC-CUBE 4.2 (GPL-2.0-only)、Symfony 5.4 (MIT)、Doctrine ORM/DBAL (MIT)、Twig 2.x (BSD-3-Clause)、GuzzleHTTP (MIT)、Monolog (MIT)、KnpPaginatorBundle (MIT) ほか composer.json 記載のライブラリ。各OSSのライセンス詳細は各プロジェクトの配布物をご参照ください。',
     ];
 
-    /** 1キーあたりの最大文字数 */
-    private const MAX_STRING_LENGTH = 2000;
-    /** レスポンス全体の最大バイト数 */
-    private const MAX_PAYLOAD_BYTES = 64 * 1024;
-
-    public function __construct(
-        private ClientInterface $httpClient,
-        private LoggerInterface $logger,
-        private string $projectDir,
-    ) {
+    protected function getRemoteUrl(): string
+    {
+        return self::REMOTE_URL;
     }
 
-    /**
-     * TTL 判定し、必要ならリモート同期を試みる。
-     *
-     * @return bool 同期が実行され成功した場合 true、TTL未到達または失敗時は false
-     */
-    public function trySyncIfStale(): bool
+    protected function getDataPath(): string
     {
         if ($this->projectDir === '') {
             throw new \LogicException('DesignSettingsSyncService: projectDir is not configured.');
         }
 
-        if (!$this->isStale()) {
-            return false;
-        }
-
-        $lockHandle = $this->acquireLock();
-        if ($lockHandle === null) {
-            return false;
-        }
-
-        try {
-            // 二重チェック: ロック取得後に再判定
-            if (!$this->isStale()) {
-                return false;
-            }
-
-            $remoteData = $this->fetchRemote();
-            if ($remoteData === null) {
-                return false;
-            }
-
-            $validated = $this->validate($remoteData);
-            if ($validated === null) {
-                return false;
-            }
-
-            $this->mergeAndSave($validated);
-
-            return true;
-        } finally {
-            $this->releaseLock($lockHandle);
-        }
+        return $this->projectDir . self::PLUGIN_DATA_PATH;
     }
 
-    /**
-     * TTL 超過かを判定する。
-     */
-    private function isStale(): bool
+    protected function getMetaPath(): string
     {
-        $meta = $this->loadMeta();
-        if (isset($meta['last_synced_at'])) {
-            $lastSyncedAt = (int) $meta['last_synced_at'];
-            if (time() - $lastSyncedAt < self::TTL) {
-                return false;
-            }
-            return true;
+        if ($this->projectDir === '') {
+            throw new \LogicException('DesignSettingsSyncService: projectDir is not configured.');
         }
 
-        $dataPath = $this->getDataPath();
-        if (!file_exists($dataPath)) {
-            return true;
-        }
-
-        $mtime = (int) filemtime($dataPath);
-        return (time() - $mtime) >= self::TTL;
+        return $this->projectDir . self::META_PATH;
     }
 
-    /**
-     * リモート JSON を取得する。304/エラー時は null を返し warning ログを出す。
-     *
-     * @return array<string,mixed>|null 200時のみ配列、304/失敗時は null
-     */
-    private function fetchRemote(): ?array
+    protected function getLockPath(): string
     {
-        $meta = $this->loadMeta();
-        $headers = [
-            'User-Agent' => 'AiChatAssistant42/1.0 (+https://github.com/routeflags/ec-cube-ai-chat-assistant42)',
-            'Accept' => 'application/json',
-        ];
-        if (!empty($meta['etag'])) {
-            $headers['If-None-Match'] = $meta['etag'];
-        }
-        if (!empty($meta['last_modified'])) {
-            $headers['If-Modified-Since'] = $meta['last_modified'];
+        if ($this->projectDir === '') {
+            throw new \LogicException('DesignSettingsSyncService: projectDir is not configured.');
         }
 
-        try {
-            $response = $this->httpClient->request('GET', self::REMOTE_URL, [
-                'headers' => $headers,
-                'timeout' => 5.0,
-                'connect_timeout' => 2.0,
-                'verify' => true,
-                'allow_redirects' => [
-                    'max' => 3,
-                    'strict' => true,
-                    'referer' => false,
-                    'protocols' => ['https'],
-                ],
-                'http_errors' => false,
-            ]);
-        } catch (TransferException $e) {
-            $this->logger->warning('Design settings sync failed, keeping local', ['error' => $e->getMessage()]);
-            return null;
-        }
-
-        $status = $response->getStatusCode();
-        if ($status === 304) {
-            $this->updateMetaLastSyncedAt();
-            $this->logger->info('Design settings sync: 304 Not Modified', ['etag' => $meta['etag'] ?? null]);
-            return null;
-        }
-
-        if ($status !== 200) {
-            $this->logger->warning('Design settings sync failed, keeping local', ['error' => 'HTTP status ' . $status]);
-            return null;
-        }
-
-        $contentType = $response->getHeaderLine('Content-Type');
-        if ($contentType !== '' && stripos($contentType, 'application/json') === false) {
-            $this->logger->warning('Design settings sync failed, keeping local', ['error' => 'Invalid Content-Type: ' . $contentType]);
-            return null;
-        }
-
-        $body = (string) $response->getBody();
-        if (strlen($body) > self::MAX_PAYLOAD_BYTES) {
-            $this->logger->warning('Design settings sync failed, keeping local', ['error' => 'Payload too large: ' . strlen($body)]);
-            return null;
-        }
-
-        $decoded = json_decode($body, true);
-        if (!is_array($decoded)) {
-            $this->logger->warning('Design settings sync failed, keeping local', ['error' => 'Invalid JSON: ' . json_last_error_msg()]);
-            return null;
-        }
-
-        // ETag / Last-Modified を一時保存 (merge成功後に確定保存)
-        $this->pendingRemoteMeta = [
-            'etag' => $response->getHeaderLine('ETag'),
-            'last_modified' => $response->getHeaderLine('Last-Modified'),
-        ];
-
-        return $decoded;
+        return $this->projectDir . self::LOCK_PATH;
     }
 
-    /** @var array<string,string> */
-    private array $pendingRemoteMeta = [];
+    protected function getSyncFailureLogMessage(): string
+    {
+        return 'Design settings sync failed, keeping local';
+    }
+
+    protected function getNotModifiedLogMessage(): string
+    {
+        return 'Design settings sync: 304 Not Modified';
+    }
 
     /**
      * リモートデータをバリデーションし、未知キー除去・空文字補完を行う。
      *
      * @return array<string,string>|null 不正なら null
      */
-    private function validate(array $remoteData): ?array
+    protected function validate(array $remoteData): ?array
     {
         // 未知キーを除去し、許可キーのみ残す (DEFAULTS に存在するキーのみ)
         $allowedKeys = array_flip(array_keys(self::DEFAULTS));
@@ -246,40 +127,43 @@ class DesignSettingsSyncService
             }
             $value = $filtered[$key];
             if (!is_string($value)) {
-                $this->logger->warning('Design settings sync failed, keeping local', ['error' => "Invalid type for {$key}"]);
+                $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => "Invalid type for {$key}"]);
+
                 return null;
             }
-            // 空文字は DEFAULTS で補完 (保存時ではなく表示時もだが、ここではスキップ)
+            // 空文字は DEFAULTS で補完
             if ($value === '') {
                 $value = self::DEFAULTS[$key];
             }
             if (mb_strlen($value) > self::MAX_STRING_LENGTH) {
-                $this->logger->warning('Design settings sync failed, keeping local', ['error' => "Too long: {$key} (" . mb_strlen($value) . ')']);
+                $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => "Too long: {$key} (" . mb_strlen($value) . ')']);
+
                 return null;
             }
             $result[$key] = $value;
         }
 
         if (empty($result)) {
-            $this->logger->warning('Design settings sync failed, keeping local', ['error' => 'No valid license keys in remote']);
+            $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => 'No valid license keys in remote']);
+
             return null;
         }
 
-        // 文面ドリフト検出: 旧文言が混入していないかはローカル側のマイグレーションで対応するが、
-        // リモートにも旧文言があれば警告 (ただし採用はする)
         return $result;
     }
 
     /**
      * 既存 PluginData にリモートの license_* のみをマージして原子書き込みする。
+     *
+     * @param array<string,string> $validated
      */
-    private function mergeAndSave(array $validatedRemote): void
+    protected function persist(array $validated): void
     {
         $dataPath = $this->getDataPath();
         $existing = $this->loadExistingData();
 
         // license_* のみをリモートで上書き、widget_* はローカル保持
-        $merged = array_merge($existing, array_intersect_key($validatedRemote, array_flip(self::REMOTE_MANAGED_KEYS)));
+        $merged = array_merge($existing, array_intersect_key($validated, array_flip(self::REMOTE_MANAGED_KEYS)));
 
         // 旧文言ドリフトのマイグレーション: 本サイト文言が残っていれば DEFAULTS で上書き
         $merged = $this->migrateDriftedPhrases($merged);
@@ -292,12 +176,14 @@ class DesignSettingsSyncService
 
         $json = json_encode($merged, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         if ($json === false) {
-            $this->logger->warning('Design settings sync failed, keeping local', ['error' => 'json_encode failed: ' . json_last_error_msg()]);
+            $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => 'json_encode failed: ' . json_last_error_msg()]);
+
             return;
         }
 
         if (strlen($json) > self::MAX_PAYLOAD_BYTES) {
-            $this->logger->warning('Design settings sync failed, keeping local', ['error' => 'Merged payload too large']);
+            $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => 'Merged payload too large']);
+
             return;
         }
 
@@ -316,7 +202,7 @@ class DesignSettingsSyncService
 
         $this->logger->info('Design settings synced from remote', [
             'etag' => $meta['etag'] ?? null,
-            'keys' => array_keys($validatedRemote),
+            'keys' => array_keys($validated),
         ]);
     }
 
@@ -334,6 +220,7 @@ class DesignSettingsSyncService
         if (isset($data['license_item1_body']) && str_contains($data['license_item1_body'], '本サイトのコンテンツ')) {
             $data['license_item1_body'] = self::DEFAULTS['license_item1_body'];
         }
+
         return $data;
     }
 
@@ -358,132 +245,8 @@ class DesignSettingsSyncService
         }
         // 未知キー除去 + DEFAULTS 補完
         $filtered = array_intersect_key($decoded, array_flip(array_keys(self::DEFAULTS)));
+
         return array_merge(self::DEFAULTS, $filtered);
-    }
-
-    /**
-     * ファイルを原子的に書き込む (tmp + rename + LOCK_EX)。
-     */
-    private function atomicWrite(string $path, string $content): void
-    {
-        $dir = dirname($path);
-        if (!is_dir($dir)) {
-            mkdir($dir, 0775, true);
-        }
-        $tmpPath = $path . '.tmp.' . bin2hex(random_bytes(4));
-        file_put_contents($tmpPath, $content, LOCK_EX);
-        rename($tmpPath, $path);
-    }
-
-    private function getDataPath(): string
-    {
-        if ($this->projectDir === '') {
-            throw new \LogicException('DesignSettingsSyncService: projectDir is not configured.');
-        }
-        return $this->projectDir . self::PLUGIN_DATA_PATH;
-    }
-
-    private function getMetaPath(): string
-    {
-        if ($this->projectDir === '') {
-            throw new \LogicException('DesignSettingsSyncService: projectDir is not configured.');
-        }
-        return $this->projectDir . self::META_PATH;
-    }
-
-    private function getLockPath(): string
-    {
-        if ($this->projectDir === '') {
-            throw new \LogicException('DesignSettingsSyncService: projectDir is not configured.');
-        }
-        return $this->projectDir . self::LOCK_PATH;
-    }
-
-    /**
-     * @return array<string,mixed>
-     */
-    private function loadMeta(): array
-    {
-        $metaPath = $this->getMetaPath();
-        if (!file_exists($metaPath)) {
-            return [];
-        }
-        $raw = @file_get_contents($metaPath);
-        if ($raw === false) {
-            return [];
-        }
-        $decoded = json_decode($raw, true);
-        return is_array($decoded) ? $decoded : [];
-    }
-
-    /**
-     * @param array<string,mixed> $meta
-     */
-    private function saveMeta(array $meta): void
-    {
-        $metaPath = $this->getMetaPath();
-        $dir = dirname($metaPath);
-        if (!is_dir($dir)) {
-            mkdir($dir, 0775, true);
-        }
-        $json = json_encode($meta, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-        if ($json !== false) {
-            $this->atomicWrite($metaPath, $json);
-        }
-    }
-
-    private function updateMetaLastSyncedAt(): void
-    {
-        $meta = $this->loadMeta();
-        $meta['last_synced_at'] = time();
-        $this->saveMeta($meta);
-    }
-
-    /**
-     * 排他ロックを取得する。
-     *
-     * @return resource|null
-     */
-    private function acquireLock()
-    {
-        $lockPath = $this->getLockPath();
-        $dir = dirname($lockPath);
-        if (!is_dir($dir)) {
-            mkdir($dir, 0775, true);
-        }
-        $handle = fopen($lockPath, 'c');
-        if ($handle === false) {
-            return null;
-        }
-        if (!flock($handle, LOCK_EX | LOCK_NB)) {
-            fclose($handle);
-            return null;
-        }
-        return $handle;
-    }
-
-    /**
-     * @param resource $handle
-     */
-    private function releaseLock($handle): void
-    {
-        flock($handle, LOCK_UN);
-        fclose($handle);
-    }
-
-    /**
-     * 管理画面表示用のメタ情報を取得する。
-     *
-     * @return array{last_synced_at:?int, etag:?string, last_modified:?string}
-     */
-    public function getSyncMeta(): array
-    {
-        $meta = $this->loadMeta();
-        return [
-            'last_synced_at' => isset($meta['last_synced_at']) ? (int) $meta['last_synced_at'] : null,
-            'etag' => $meta['etag'] ?? null,
-            'last_modified' => $meta['last_modified'] ?? null,
-        ];
     }
 
     /**
@@ -514,7 +277,6 @@ class DesignSettingsSyncService
             $sanitized[$key] = $value;
         }
 
-        // 未知キーは除去済み (sanitized のみ返す)
         return [
             'valid' => empty($errors),
             'errors' => $errors,

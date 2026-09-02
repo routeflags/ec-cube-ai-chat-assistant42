@@ -15,11 +15,16 @@ declare(strict_types=1);
 
 namespace Plugin\AiChatAssistant42\Service;
 
+use Psr\Log\LoggerInterface;
+
 /**
  * AI モデルのレジストリ。
  *
  * ai_models.json を読み込み、プロバイダ別モデル情報の参照・検証を行う。
  * チャットアシスタントが利用可能なモデル一覧を単一ソースで管理する。
+ *
+ * フォールバック優先度: PluginData(ai_models.json) → Resource/config/ai_models.json。
+ * Single Source of Truth として、分散していた探索ロジックを本クラスに集約する。
  */
 class AiModelRegistry
 {
@@ -27,14 +32,71 @@ class AiModelRegistry
     private array $config;
 
     /**
-     * @param string $configPath ai_models.json のファイルパス
+     * @param string               $configPath ai_models.json の第一候補パス（通常は PluginData）
+     * @param string               $projectDir プロジェクトルート（%kernel.project_dir%）
+     * @param LoggerInterface|null $logger     フォールバック時の info ログ用（任意）
      *
      * @throws \RuntimeException ファイルが読めない場合
      * @throws \InvalidArgumentException JSON の形式が不正な場合
      */
-    public function __construct(string $configPath)
+    public function __construct(string $configPath, string $projectDir = '', ?LoggerInterface $logger = null)
     {
-        $this->config = self::loadAndValidateConfig($configPath);
+        $resolved = $this->resolveConfigPath($configPath, $projectDir);
+
+        // フォールバック時は任意でログを残す（デバッグ時の追跡用）
+        if ($resolved !== $configPath && $logger !== null) {
+            $logger->info('AI model config fallback', ['primary' => $configPath, 'resolved' => $resolved]);
+        }
+
+        $this->config = self::loadAndValidateConfig($resolved);
+    }
+
+    /**
+     * 実在する設定ファイルパスを優先度順に探索する。
+     *
+     * 優先度:
+     *  1. $primary（PluginData/ai_models.json — リモート同期の正本）
+     *  2. $projectDir/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json（EC-CUBE 本体配置）
+     *  3. プラグイン直下 Resource/config/ai_models.json（単体実行・テスト）
+     *
+     * 見つからなければ $primary を返し、呼び出し元の loadAndValidateConfig で
+     * 既存どおり RuntimeException を投げる。
+     */
+    private function resolveConfigPath(string $primary, string $projectDir): string
+    {
+        // $primary 自体が存在すればそれを採用（テストで Resource 直指定された場合も含む）
+        if (is_file($primary)) {
+            return $primary;
+        }
+
+        // $primary が PluginData 配下でない場合、任意のパスへのフォールバックは行わず
+        // 既存どおり $primary で RuntimeException とする（テストの期待を維持）。
+        // 本番では $primary は必ず PluginData/ai_models.json である。
+        if (strpos($primary, 'PluginData') === false) {
+            return $primary;
+        }
+
+        $candidates = array_filter([
+            $primary,
+            $projectDir !== '' ? $projectDir . '/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json' : null,
+            // EC-CUBE ルート直下の Resource（プラグイン単体リポジトリのレイアウト）
+            $projectDir !== '' ? $projectDir . '/Resource/config/ai_models.json' : null,
+            // プラグイン内部の相対パス（Service の兄弟ディレクトリ）
+            dirname(__DIR__) . '/Resource/config/ai_models.json',
+            dirname(__DIR__, 2) . '/Resource/config/ai_models.json',
+            dirname(__DIR__, 3) . '/Resource/config/ai_models.json',
+        ]);
+
+        // 重複を除去しつつ順序を維持
+        $candidates = array_values(array_unique($candidates));
+
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return $primary;
     }
 
     /**

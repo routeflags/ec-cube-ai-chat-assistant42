@@ -364,11 +364,26 @@ class OpenAiAgent implements AiAgentInterface
      * ai_models.json から supports_reasoning_with_tools を解決するフォールバック。
      *
      * ファイルが見つからない、JSON が壊れている、モデルが未定義の場合は true を返す。
+     *
+     * 将来的には AiModelRegistry 必須化し、本ファイル探索自体を削除する方針。
+     * 現状は PluginData（リモート同期の正本）を最優先で探索する。
+     *
+     * @see \Plugin\AiChatAssistant42\Service\AiModelRegistry::resolveConfigPath()
+     * @todo Registry 必須化後は本メソッドのファイル探索を削除し、Registry 委譲のみにする
      */
     private function resolveCapabilityFromJson(): bool
     {
         // プラグイン単体 / EC-CUBE 本体 (app/Plugin/...) の両配置に対応するため上位を走査
+        // PluginData（リモート同期の正本）を最優先で探索
         $candidates = [
+            // PluginData 同期ファイル（最優先）
+            dirname(__DIR__, 2) . '/app/PluginData/AiChatAssistant42/ai_models.json',
+            dirname(__DIR__, 3) . '/app/PluginData/AiChatAssistant42/ai_models.json',
+            dirname(__DIR__, 4) . '/app/PluginData/AiChatAssistant42/ai_models.json',
+            dirname(__DIR__, 5) . '/app/PluginData/AiChatAssistant42/ai_models.json',
+            dirname(__DIR__, 6) . '/app/PluginData/AiChatAssistant42/ai_models.json',
+            __DIR__ . '/../../app/PluginData/AiChatAssistant42/ai_models.json',
+            // 既存 Resource フォールバック
             dirname(__DIR__, 2) . '/Resource/config/ai_models.json',
             dirname(__DIR__, 3) . '/Resource/config/ai_models.json',
             dirname(__DIR__, 4) . '/Resource/config/ai_models.json',

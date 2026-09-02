@@ -21,7 +21,9 @@ use Plugin\AiChatAssistant42\Entity\ChatLog;
 use Plugin\AiChatAssistant42\Entity\Config;
 use Plugin\AiChatAssistant42\Repository\ChatLogRepository;
 use Plugin\AiChatAssistant42\Service\AiModelRegistry;
+use Plugin\AiChatAssistant42\Service\AiModelSyncService;
 use Plugin\AiChatAssistant42\Service\ApiKeyEncryptor;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -50,6 +52,8 @@ class DashboardController extends AbstractController
         private ?AiModelRegistry $aiModelRegistry = null,
         private ?ApiKeyEncryptor $apiKeyEncryptor = null,
         private ?ChatLogRepository $chatLogRepository = null,
+        private ?AiModelSyncService $syncService = null,
+        private ?LoggerInterface $logger = null,
     ) {
     }
 
@@ -70,9 +74,27 @@ class DashboardController extends AbstractController
 
     /**
      * ダッシュボードトップを表示する。
+     *
+     * 管理画面アクセス時に1日1回リモート同期を試行（DesignController と同パターン）。
+     * 同期失敗は画面表示を継続し、可能な限り warning ログを残す。
      */
     public function index(): Response
     {
+        // 管理画面アクセス時に1日1回だけリモート同期（失敗しても表示は継続）
+        if ($this->syncService !== null) {
+            try {
+                $this->syncService->trySyncIfStale();
+            } catch (\Throwable $e) {
+                // trySyncIfStale は通常 false を返して例外を投げないが、
+                // projectDir 未設定の LogicException 等が漏れた場合も 500 にしない。
+                if ($this->logger !== null) {
+                    $this->logger->warning('AI model sync failed, keeping local', ['error' => $e->getMessage()]);
+                } else {
+                    error_log(sprintf('[AiChatAssistant42] AI model sync failed, keeping local: %s', $e->getMessage()));
+                }
+            }
+        }
+
         $now = new \DateTimeImmutable();
         $periodEnd = $now;
         $periodStart = $now->modify('-30 days');
@@ -551,7 +573,9 @@ class DashboardController extends AbstractController
             return null;
         }
 
+        // Registry 委譲が優先のため、フォールバック経路のみ PluginData を先頭に追加
         $candidates = [
+            $projectDir . '/app/PluginData/AiChatAssistant42/ai_models.json',
             $projectDir . '/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json',
             $projectDir . '/Resource/config/ai_models.json',
         ];

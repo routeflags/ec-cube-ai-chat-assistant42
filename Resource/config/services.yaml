@@ -26,7 +26,9 @@ services:
 
     Plugin\AiChatAssistant42\Service\AiModelRegistry:
         arguments:
-            - '%kernel.project_dir%/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json'
+            $configPath: '%kernel.project_dir%/app/PluginData/AiChatAssistant42/ai_models.json'
+            $projectDir: '%kernel.project_dir%'
+            $logger: '@logger'
 
     Plugin\AiChatAssistant42\Service\ChatLogger:
         arguments:
@@ -74,6 +76,16 @@ services:
             $httpClient: '@GuzzleHttp\ClientInterface'
             $logger: '@logger'
             $projectDir: '%kernel.project_dir%'
+
+    Plugin\AiChatAssistant42\Service\AiModelSyncService:
+        arguments:
+            $httpClient: '@GuzzleHttp\ClientInterface'
+            $logger: '@logger'
+            $projectDir: '%kernel.project_dir%'
+
+    Plugin\AiChatAssistant42\Controller\Admin\DashboardController:
+        arguments:
+            $syncService: '@Plugin\AiChatAssistant42\Service\AiModelSyncService'
 
     Plugin\AiChatAssistant42\Controller\Admin\DesignController:
         arguments:
