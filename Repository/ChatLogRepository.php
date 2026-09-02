@@ -436,4 +436,141 @@ class ChatLogRepository extends AbstractRepository
             $handler($qb);
         }
     }
+
+    // ================================================================
+    //  ダッシュボード / レポート集計（KPI / Stats / Breakdown）
+    // ================================================================
+
+    /**
+     * 指定期間の KPI を集計して返す。
+     *
+     * @return array{total: int, resolved: int, errors: int, avg_response_ms: float, resolution_rate: float, error_rate: float}
+     */
+    public function fetchKpi(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    {
+        $qb = $this->createQueryBuilder('log');
+        $qb->select('
+            COUNT(log.id) AS total,
+            SUM(CASE WHEN log.is_resolved = 1 THEN 1 ELSE 0 END) AS resolved,
+            SUM(CASE WHEN log.error_message IS NOT NULL AND log.error_message != \'\' THEN 1 ELSE 0 END) AS errors,
+            AVG(CASE WHEN log.response_time_ms IS NOT NULL THEN log.response_time_ms ELSE 0 END) AS avg_response_ms
+        ')
+            ->where('log.created_at >= :start')
+            ->andWhere('log.created_at < :end')
+            ->setParameter('start', $start)
+            ->setParameter('end', $end);
+
+        $row = $qb->getQuery()->getSingleResult();
+
+        $total = (int) $row['total'];
+        $resolved = (int) $row['resolved'];
+        $errors = (int) $row['errors'];
+        $avgResponseMs = (float) ($row['avg_response_ms'] ?? 0);
+
+        return [
+            'total' => $total,
+            'resolved' => $resolved,
+            'errors' => $errors,
+            'avg_response_ms' => $avgResponseMs,
+            'resolution_rate' => $total > 0 ? round($resolved / $total * 100, 1) : 0.0,
+            'error_rate' => $total > 0 ? round($errors / $total * 100, 1) : 0.0,
+        ];
+    }
+
+    /**
+     * 直近のチャットログを取得する。
+     *
+     * @return ChatLog[]
+     */
+    public function fetchRecentLogs(int $limit): array
+    {
+        return $this->createQueryBuilder('log')
+            ->orderBy('log.created_at', 'DESC')
+            ->setMaxResults(max(1, $limit))
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * プロバイダ別の使用統計を取得する。
+     *
+     * Report 用は error_count を含むが、Dashboard でも余分なキーは無視されるため
+     * 常に error_count を含めて返す（統一）。
+     *
+     * @return array<array{provider: string, count: int, avg_response_ms: float, error_count: int}>
+     */
+    public function fetchProviderStats(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    {
+        return $this->createQueryBuilder('log')
+            ->select('
+                log.provider AS provider,
+                COUNT(log.id) AS count,
+                AVG(CASE WHEN log.response_time_ms IS NOT NULL THEN log.response_time_ms ELSE 0 END) AS avg_response_ms,
+                SUM(CASE WHEN log.error_message IS NOT NULL AND log.error_message != \'\' THEN 1 ELSE 0 END) AS error_count
+            ')
+            ->where('log.created_at >= :start')
+            ->andWhere('log.created_at < :end')
+            ->setParameter('start', $start)
+            ->setParameter('end', $end)
+            ->groupBy('log.provider')
+            ->orderBy('count', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * モデル別のパフォーマンス統計を取得する。
+     *
+     * 常に token 平均と error_count を含む統一形で返す。
+     *
+     * @return array<array{model: string, provider: string, count: int, avg_response_ms: float, avg_token_input: float, avg_token_output: float, error_count: int}>
+     */
+    public function fetchModelStats(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    {
+        return $this->createQueryBuilder('log')
+            ->select('
+                log.model AS model,
+                log.provider AS provider,
+                COUNT(log.id) AS count,
+                AVG(CASE WHEN log.response_time_ms IS NOT NULL THEN log.response_time_ms ELSE 0 END) AS avg_response_ms,
+                AVG(CASE WHEN log.token_input IS NOT NULL THEN log.token_input ELSE 0 END) AS avg_token_input,
+                AVG(CASE WHEN log.token_output IS NOT NULL THEN log.token_output ELSE 0 END) AS avg_token_output,
+                SUM(CASE WHEN log.error_message IS NOT NULL AND log.error_message != \'\' THEN 1 ELSE 0 END) AS error_count
+            ')
+            ->where('log.created_at >= :start')
+            ->andWhere('log.created_at < :end')
+            ->setParameter('start', $start)
+            ->setParameter('end', $end)
+            ->groupBy('log.model', 'log.provider')
+            ->orderBy('count', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * エラータイプ別の内訳を取得する。
+     *
+     * 常に latest_message を含む統一形で返す（Dashboard では未使用でも無害）。
+     *
+     * @return array<array{error_type: string, count: int, latest_message: string}>
+     */
+    public function fetchErrorBreakdown(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    {
+        return $this->createQueryBuilder('log')
+            ->select('
+                COALESCE(log.error_type, \'unknown\') AS error_type,
+                COUNT(log.id) AS count,
+                MAX(log.error_message) AS latest_message
+            ')
+            ->where('log.created_at >= :start')
+            ->andWhere('log.created_at < :end')
+            ->andWhere('log.error_message IS NOT NULL')
+            ->andWhere('log.error_message != \'\'')
+            ->setParameter('start', $start)
+            ->setParameter('end', $end)
+            ->groupBy('error_type')
+            ->orderBy('count', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
 }

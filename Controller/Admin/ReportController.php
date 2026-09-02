@@ -79,22 +79,7 @@ class ReportController extends AbstractController
      */
     private function fetchProviderStats(\DateTimeImmutable $start, \DateTimeImmutable $end): array
     {
-        return $this->entityManager->createQueryBuilder()
-            ->select('
-                log.provider AS provider,
-                COUNT(log.id) AS count,
-                AVG(CASE WHEN log.response_time_ms IS NOT NULL THEN log.response_time_ms ELSE 0 END) AS avg_response_ms,
-                SUM(CASE WHEN log.error_message IS NOT NULL AND log.error_message != \'\' THEN 1 ELSE 0 END) AS error_count
-            ')
-            ->from(ChatLog::class, 'log')
-            ->where('log.created_at >= :start')
-            ->andWhere('log.created_at < :end')
-            ->setParameter('start', $start)
-            ->setParameter('end', $end)
-            ->groupBy('log.provider')
-            ->orderBy('count', 'DESC')
-            ->getQuery()
-            ->getResult();
+        return $this->getChatLogRepository()->fetchProviderStats($start, $end);
     }
 
     /**
@@ -104,25 +89,7 @@ class ReportController extends AbstractController
      */
     private function fetchModelStats(\DateTimeImmutable $start, \DateTimeImmutable $end): array
     {
-        return $this->entityManager->createQueryBuilder()
-            ->select('
-                log.model AS model,
-                log.provider AS provider,
-                COUNT(log.id) AS count,
-                AVG(CASE WHEN log.response_time_ms IS NOT NULL THEN log.response_time_ms ELSE 0 END) AS avg_response_ms,
-                AVG(CASE WHEN log.token_input IS NOT NULL THEN log.token_input ELSE 0 END) AS avg_token_input,
-                AVG(CASE WHEN log.token_output IS NOT NULL THEN log.token_output ELSE 0 END) AS avg_token_output,
-                SUM(CASE WHEN log.error_message IS NOT NULL AND log.error_message != \'\' THEN 1 ELSE 0 END) AS error_count
-            ')
-            ->from(ChatLog::class, 'log')
-            ->where('log.created_at >= :start')
-            ->andWhere('log.created_at < :end')
-            ->setParameter('start', $start)
-            ->setParameter('end', $end)
-            ->groupBy('log.model', 'log.provider')
-            ->orderBy('count', 'DESC')
-            ->getQuery()
-            ->getResult();
+        return $this->getChatLogRepository()->fetchModelStats($start, $end);
     }
 
     /**
@@ -142,22 +109,6 @@ class ReportController extends AbstractController
      */
     private function fetchErrorBreakdown(\DateTimeImmutable $start, \DateTimeImmutable $end): array
     {
-        return $this->entityManager->createQueryBuilder()
-            ->select('
-                COALESCE(log.error_type, \'unknown\') AS error_type,
-                COUNT(log.id) AS count,
-                MAX(log.error_message) AS latest_message
-            ')
-            ->from(ChatLog::class, 'log')
-            ->where('log.created_at >= :start')
-            ->andWhere('log.created_at < :end')
-            ->andWhere('log.error_message IS NOT NULL')
-            ->andWhere('log.error_message != \'\'')
-            ->setParameter('start', $start)
-            ->setParameter('end', $end)
-            ->groupBy('error_type')
-            ->orderBy('count', 'DESC')
-            ->getQuery()
-            ->getResult();
+        return $this->getChatLogRepository()->fetchErrorBreakdown($start, $end);
     }
 }

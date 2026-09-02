@@ -111,34 +111,7 @@ class DashboardController extends AbstractController
      */
     private function fetchKpi(\DateTimeImmutable $start, \DateTimeImmutable $end): array
     {
-        $qb = $this->entityManager->createQueryBuilder();
-        $qb->select('
-            COUNT(log.id) AS total,
-            SUM(CASE WHEN log.is_resolved = 1 THEN 1 ELSE 0 END) AS resolved,
-            SUM(CASE WHEN log.error_message IS NOT NULL AND log.error_message != \'\' THEN 1 ELSE 0 END) AS errors,
-            AVG(CASE WHEN log.response_time_ms IS NOT NULL THEN log.response_time_ms ELSE 0 END) AS avg_response_ms
-        ')
-            ->from(ChatLog::class, 'log')
-            ->where('log.created_at >= :start')
-            ->andWhere('log.created_at < :end')
-            ->setParameter('start', $start)
-            ->setParameter('end', $end);
-
-        $row = $qb->getQuery()->getSingleResult();
-
-        $total = (int) $row['total'];
-        $resolved = (int) $row['resolved'];
-        $errors = (int) $row['errors'];
-        $avgResponseMs = (float) ($row['avg_response_ms'] ?? 0);
-
-        return [
-            'total' => $total,
-            'resolved' => $resolved,
-            'errors' => $errors,
-            'avg_response_ms' => $avgResponseMs,
-            'resolution_rate' => $total > 0 ? round($resolved / $total * 100, 1) : 0.0,
-            'error_rate' => $total > 0 ? round($errors / $total * 100, 1) : 0.0,
-        ];
+        return $this->getChatLogRepository()->fetchKpi($start, $end);
     }
 
     /**
@@ -148,86 +121,37 @@ class DashboardController extends AbstractController
      */
     private function fetchRecentLogs(int $limit): array
     {
-        return $this->entityManager->createQueryBuilder()
-            ->select('log')
-            ->from(ChatLog::class, 'log')
-            ->orderBy('log.created_at', 'DESC')
-            ->setMaxResults($limit)
-            ->getQuery()
-            ->getResult();
+        return $this->getChatLogRepository()->fetchRecentLogs($limit);
     }
 
     /**
      * プロバイダ別の使用統計を取得する。
      *
-     * @return array<array{provider: string, count: int, avg_response_ms: float}>
+     * @return array<array{provider: string, count: int, avg_response_ms: float, error_count: int}>
      */
     private function fetchProviderStats(\DateTimeImmutable $start, \DateTimeImmutable $end): array
     {
-        return $this->entityManager->createQueryBuilder()
-            ->select('
-                log.provider AS provider,
-                COUNT(log.id) AS count,
-                AVG(CASE WHEN log.response_time_ms IS NOT NULL THEN log.response_time_ms ELSE 0 END) AS avg_response_ms
-            ')
-            ->from(ChatLog::class, 'log')
-            ->where('log.created_at >= :start')
-            ->andWhere('log.created_at < :end')
-            ->setParameter('start', $start)
-            ->setParameter('end', $end)
-            ->groupBy('log.provider')
-            ->orderBy('count', 'DESC')
-            ->getQuery()
-            ->getResult();
+        return $this->getChatLogRepository()->fetchProviderStats($start, $end);
     }
 
     /**
      * モデル別の使用統計を取得する。
      *
-     * @return array<array{model: string, count: int, avg_response_ms: float}>
+     * @return array<array{model: string, count: int, avg_response_ms: float, avg_token_input: float, avg_token_output: float, error_count: int}>
      */
     private function fetchModelStats(\DateTimeImmutable $start, \DateTimeImmutable $end): array
     {
-        return $this->entityManager->createQueryBuilder()
-            ->select('
-                log.model AS model,
-                COUNT(log.id) AS count,
-                AVG(CASE WHEN log.response_time_ms IS NOT NULL THEN log.response_time_ms ELSE 0 END) AS avg_response_ms
-            ')
-            ->from(ChatLog::class, 'log')
-            ->where('log.created_at >= :start')
-            ->andWhere('log.created_at < :end')
-            ->setParameter('start', $start)
-            ->setParameter('end', $end)
-            ->groupBy('log.model')
-            ->orderBy('count', 'DESC')
-            ->getQuery()
-            ->getResult();
+        return $this->getChatLogRepository()->fetchModelStats($start, $end);
     }
 
     /**
      * エラータイプ別の内訳を取得する。
      *
-     * @return array<array{error_type: string, count: int}>
+     * @return array<array{error_type: string, count: int, latest_message: string}>
      */
     private function fetchErrorBreakdown(\DateTimeImmutable $start, \DateTimeImmutable $end): array
     {
-        return $this->entityManager->createQueryBuilder()
-            ->select('
-                COALESCE(log.error_type, \'unknown\') AS error_type,
-                COUNT(log.id) AS count
-            ')
-            ->from(ChatLog::class, 'log')
-            ->where('log.created_at >= :start')
-            ->andWhere('log.created_at < :end')
-            ->andWhere('log.error_message IS NOT NULL')
-            ->andWhere('log.error_message != \'\'')
-            ->setParameter('start', $start)
-            ->setParameter('end', $end)
-            ->groupBy('error_type')
-            ->orderBy('count', 'DESC')
-            ->getQuery()
-            ->getResult();
+        return $this->getChatLogRepository()->fetchErrorBreakdown($start, $end);
     }
 
     /**
