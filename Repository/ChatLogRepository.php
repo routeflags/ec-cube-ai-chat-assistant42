@@ -74,7 +74,7 @@ class ChatLogRepository extends AbstractRepository
     }
 
     /**
-     * 指定セッションのメール返信依頼件数を数える。
+     * 指定セッションのメール返信依頼件数を数える（hash/enc/plain いずれかで判定）。
      */
     public function countEmailReplyBySession(string $sessionId, \DateTimeImmutable $since): int
     {
@@ -82,7 +82,7 @@ class ChatLogRepository extends AbstractRepository
             ->select('COUNT(log.id)')
             ->where('log.session_id = :sid')
             ->andWhere('log.created_at > :since')
-            ->andWhere('log.email_reply_address IS NOT NULL')
+            ->andWhere('(log.email_reply_address_hash IS NOT NULL OR log.email_reply_address_enc IS NOT NULL OR log.email_reply_address IS NOT NULL)')
             ->setParameter('sid', $sessionId)
             ->setParameter('since', $since)
             ->getQuery()
@@ -98,7 +98,7 @@ class ChatLogRepository extends AbstractRepository
             ->select('COUNT(log.id)')
             ->where('log.client_ip = :ip')
             ->andWhere('log.created_at > :since')
-            ->andWhere('log.email_reply_address IS NOT NULL')
+            ->andWhere('(log.email_reply_address_hash IS NOT NULL OR log.email_reply_address_enc IS NOT NULL OR log.email_reply_address IS NOT NULL)')
             ->setParameter('ip', $ip)
             ->setParameter('since', $since)
             ->getQuery()
@@ -112,7 +112,7 @@ class ChatLogRepository extends AbstractRepository
     {
         return (int) $this->createQueryBuilder('log')
             ->select('COUNT(log.id)')
-            ->where('log.email_reply_address IS NOT NULL')
+            ->where('(log.email_reply_address_hash IS NOT NULL OR log.email_reply_address_enc IS NOT NULL OR log.email_reply_address IS NOT NULL)')
             ->andWhere('log.email_replied_at IS NULL')
             ->getQuery()
             ->getSingleScalarResult();
@@ -123,11 +123,9 @@ class ChatLogRepository extends AbstractRepository
     // ================================================================
 
     /**
-     * 最新1件のログにメール返信先を記録する。
+     * 最新1件のログにメール返信先を記録する（平文・非推奨: 互換保持）。
      *
-     * MySQL の LIMIT 付き UPDATE をエミュレートするため、
-     * DBAL QueryBuilder でサブクエリを組み立てる。
-     *
+     * @deprecated hash+enc 版 updateEmailReplyAddressHashed を使用すること。
      * @return int 更新件数（0 の場合は対象ログなし）
      */
     public function updateEmailReplyAddress(string $sessionId, string $email): int
@@ -140,6 +138,7 @@ class ChatLogRepository extends AbstractRepository
             ->from('plg_ai_chat_assistant_log', 'sub')
             ->where('sub.session_id = :sid')
             ->andWhere('sub.email_reply_address IS NULL')
+            ->andWhere('sub.email_reply_address_hash IS NULL')
             ->orderBy('sub.created_at', 'DESC')
             ->setMaxResults(1)
             ->setParameter('sid', $sessionId);
@@ -160,6 +159,102 @@ class ChatLogRepository extends AbstractRepository
         }
 
         return (int) $qb->executeStatement();
+    }
+
+    /**
+     * 最新1件のログにメール返信先をハッシュ+暗号化して記録する（I-30）。
+     *
+     * 平文は保存しない。hash は HMAC-SHA256 64hex、enc は AES-256-GCM base64。
+     *
+     * @return int 更新件数
+     */
+    public function updateEmailReplyAddressHashed(string $sessionId, string $hash, string $enc): int
+    {
+        $conn = $this->entityManager->getConnection();
+
+        $subQb = $conn->createQueryBuilder()
+            ->select('sub.id')
+            ->from('plg_ai_chat_assistant_log', 'sub')
+            ->where('sub.session_id = :sid')
+            ->andWhere('sub.email_reply_address_hash IS NULL')
+            ->andWhere('sub.email_reply_address_enc IS NULL')
+            ->orderBy('sub.created_at', 'DESC')
+            ->setMaxResults(1)
+            ->setParameter('sid', $sessionId);
+
+        $subSql = $subQb->getSQL();
+        $subParams = $subQb->getParameters();
+
+        $qb = $conn->createQueryBuilder()
+            ->update('plg_ai_chat_assistant_log')
+            ->set('email_reply_address_hash', ':hash')
+            ->set('email_reply_address_enc', ':enc')
+            ->where('id IN (SELECT id FROM (' . $subSql . ') AS tmp)')
+            ->setParameter('hash', $hash)
+            ->setParameter('enc', $enc);
+
+        foreach ($subParams as $key => $value) {
+            $qb->setParameter($key, $value);
+        }
+
+        return (int) $qb->executeStatement();
+    }
+
+    /**
+     * 最新1件のログからメール返信先の暗号文を取得する（送信時復号用）。
+     *
+     * hash/enc/plain の優先順位で返す。
+     *
+     * @return string|null 暗号文または平文（互換）、なければ null
+     */
+    public function fetchLatestEmailEnc(string $sessionId): ?string
+    {
+        $row = $this->createQueryBuilder('log')
+            ->select('log.email_reply_address_enc', 'log.email_reply_address')
+            ->where('log.session_id = :sid')
+            ->andWhere('(log.email_reply_address_enc IS NOT NULL OR log.email_reply_address IS NOT NULL)')
+            ->orderBy('log.created_at', 'DESC')
+            ->setMaxResults(1)
+            ->setParameter('sid', $sessionId)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if ($row === null) {
+            return null;
+        }
+        /** @var ChatLog $log */
+        $log = $this->createQueryBuilder('log')
+            ->where('log.session_id = :sid')
+            ->andWhere('(log.email_reply_address_enc IS NOT NULL OR log.email_reply_address IS NOT NULL)')
+            ->orderBy('log.created_at', 'DESC')
+            ->setMaxResults(1)
+            ->setParameter('sid', $sessionId)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if ($log === null) {
+            return null;
+        }
+
+        return $log->getEmailReplyAddressEnc() ?? $log->getEmailReplyAddress();
+    }
+
+    /**
+     * 30日経過の enc を NULL 化する（hash は保持）。
+     *
+     * @return int 更新件数
+     */
+    public function purgeExpiredEmailEnc(\DateTimeImmutable $before): int
+    {
+        return (int) $this->createQueryBuilder('log')
+            ->update()
+            ->set('log.email_reply_address_enc', ':null')
+            ->where('log.email_reply_address_enc IS NOT NULL')
+            ->andWhere('log.created_at < :before')
+            ->setParameter('null', null)
+            ->setParameter('before', $before)
+            ->getQuery()
+            ->execute();
     }
 
     /**
@@ -427,7 +522,7 @@ class ChatLogRepository extends AbstractRepository
             'resolved' => fn(\Doctrine\ORM\QueryBuilder $qb) => $qb->andWhere('log.is_resolved = 1'),
             'unresolved' => fn(\Doctrine\ORM\QueryBuilder $qb) => $qb->andWhere('log.is_resolved = 0'),
             'email_pending' => fn(\Doctrine\ORM\QueryBuilder $qb) => $qb
-                ->andWhere('log.email_reply_address IS NOT NULL')
+                ->andWhere('(log.email_reply_address IS NOT NULL OR log.email_reply_address_hash IS NOT NULL OR log.email_reply_address_enc IS NOT NULL)')
                 ->andWhere('log.email_replied_at IS NULL'),
         ];
 

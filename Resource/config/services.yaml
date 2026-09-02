@@ -24,6 +24,11 @@ services:
             - '%kernel.secret%'
             - '@logger'
 
+    Plugin\AiChatAssistant42\Service\EmailHashService:
+        arguments:
+            - '%kernel.secret%'
+            - '@Plugin\AiChatAssistant42\Service\ApiKeyEncryptor'
+
     Plugin\AiChatAssistant42\Service\AiModelRegistry:
         arguments:
             $configPath: '%kernel.project_dir%/app/PluginData/AiChatAssistant42/ai_models.json'
@@ -57,6 +62,9 @@ services:
         tags: ['console.command']
 
     Plugin\AiChatAssistant42\Command\SyncChatLogsCommand:
+        tags: ['console.command']
+
+    Plugin\AiChatAssistant42\Command\CleanupEmailCommand:
         tags: ['console.command']
 
     Plugin\AiChatAssistant42\Service\NotificationService:

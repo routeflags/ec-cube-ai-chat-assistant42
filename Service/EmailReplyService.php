@@ -42,6 +42,7 @@ class EmailReplyService
         private ChatLogger $chatLogger,
         private LoggerInterface $logger,
         private ?ShopContextService $shopContextService = null,
+        private ?EmailHashService $emailHashService = null,
     ) {
     }
 

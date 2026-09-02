@@ -27,6 +27,7 @@ use Plugin\AiChatAssistant42\Service\AiModelRegistry;
 use Plugin\AiChatAssistant42\Service\ChatFlowService;
 use Plugin\AiChatAssistant42\Service\ApiKeyEncryptor;
 use Plugin\AiChatAssistant42\Service\ChatLogger;
+use Plugin\AiChatAssistant42\Service\EmailHashService;
 use Plugin\AiChatAssistant42\Service\EmailReplyService;
 use Plugin\AiChatAssistant42\Service\NotificationService;
 use Psr\Log\LoggerInterface;
@@ -58,6 +59,7 @@ class ChatApiController extends AbstractController
         private ApiKeyEncryptor $apiKeyEncryptor,
         private LoggerInterface $logger,
         private ?ChatLogRepository $chatLogRepository = null,
+        private ?EmailHashService $emailHashService = null,
     ) {
         $this->entityManager = $entityManager;
     }
@@ -485,8 +487,16 @@ class ChatApiController extends AbstractController
             return $rateLimitResponse;
         }
 
-        // セッションの最新ログにメールアドレスを記録 — リポジトリに委譲（QueryBuilder）
-        $affected = $this->getChatLogRepository()->updateEmailReplyAddress($sessionId, $email);
+        // セッションの最新ログにメールアドレスをハッシュ+暗号化して記録（I-30: 平文保存廃止）
+        $affected = 0;
+        if ($this->emailHashService !== null) {
+            $hash = $this->emailHashService->hash($email);
+            $enc = $this->emailHashService->encrypt($email);
+            $affected = $this->getChatLogRepository()->updateEmailReplyAddressHashed($sessionId, $hash, $enc);
+        } else {
+            // フォールバック: EmailHashService 未注入の旧環境では平文（互換）
+            $affected = $this->getChatLogRepository()->updateEmailReplyAddress($sessionId, $email);
+        }
 
         if ($affected === 0) {
             return new JsonResponse([

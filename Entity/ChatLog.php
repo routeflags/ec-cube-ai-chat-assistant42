@@ -116,12 +116,26 @@ class ChatLog extends \Eccube\Entity\AbstractEntity
     private ?int $order_id = null;
 
     /**
-     * メール返信先アドレス（ユーザーが「解決できません」を選択した際に記録）。
-     */
-    /**
+     * メール返信先アドレス（平文・非推奨: 互換保持のみ。保存時は hash+enc を使用）。
+     *
+     * @deprecated I-30 対応で平文保存を廃止。新規保存は email_reply_address_hash + enc を使用。
      * @ORM\Column(type="string", length=255, nullable=true)
      */
     private ?string $email_reply_address = null;
+
+    /**
+     * メール返信先のハッシュ（HMAC-SHA256, 64hex）。集計・レート制限・検索用（不可逆）。
+     *
+     * @ORM\Column(type="string", length=64, nullable=true, options={"comment":"hmac_sha256(normalized_email, APP_SECRET pepper) 64hex"})
+     */
+    private ?string $email_reply_address_hash = null;
+
+    /**
+     * メール返信先の暗号文（AES-256-GCM, base64(nonce12+cipher+tag16)）。送信時に復号。30日で自動削除。
+     *
+     * @ORM\Column(type="text", nullable=true, options={"comment":"AES-256-GCM encrypted email, purge after 30 days"})
+     */
+    private ?string $email_reply_address_enc = null;
 
     /**
      * メール返信の完了日時。
@@ -338,7 +352,7 @@ class ChatLog extends \Eccube\Entity\AbstractEntity
         return $this;
     }
 
-    /** @return string|null メール返信先アドレス */
+    /** @return string|null メール返信先アドレス（平文・非推奨） */
     public function getEmailReplyAddress(): ?string
     {
         return $this->email_reply_address;
@@ -347,6 +361,30 @@ class ChatLog extends \Eccube\Entity\AbstractEntity
     public function setEmailReplyAddress(?string $emailReplyAddress): self
     {
         $this->email_reply_address = $emailReplyAddress;
+        return $this;
+    }
+
+    /** @return string|null メール返信先ハッシュ（64hex） */
+    public function getEmailReplyAddressHash(): ?string
+    {
+        return $this->email_reply_address_hash;
+    }
+
+    public function setEmailReplyAddressHash(?string $hash): self
+    {
+        $this->email_reply_address_hash = $hash;
+        return $this;
+    }
+
+    /** @return string|null メール返信先暗号文（base64） */
+    public function getEmailReplyAddressEnc(): ?string
+    {
+        return $this->email_reply_address_enc;
+    }
+
+    public function setEmailReplyAddressEnc(?string $enc): self
+    {
+        $this->email_reply_address_enc = $enc;
         return $this;
     }
 
