@@ -465,7 +465,45 @@ class ChatApiController extends AbstractController
      */
     public function emailReplyRequest(Request $request): JsonResponse
     {
+        $validation = $this->validateEmailReplyInput($request);
+        if ($validation instanceof JsonResponse) {
+            return $validation;
+        }
+        [$sessionId, $email] = $validation;
+
+        $rateLimitResponse = $this->enforceEmailReplyRateLimit($request, $sessionId);
+        if ($rateLimitResponse !== null) {
+            return $rateLimitResponse;
+        }
+
+        $affected = $this->persistEmailReplyAddress($sessionId, $email);
+        if ($affected === 0) {
+            return new JsonResponse([
+                'success' => false,
+                'error' => '対象のチャットログが見つかりませんでした。',
+            ], 404);
+        }
+
+        $this->sendEmailReplyNotifications($sessionId, $email);
+
+        return new JsonResponse([
+            'success' => true,
+            'message' => 'メールアドレスを記録しました。後ほどご連絡いたします。',
+        ]);
+    }
+
+    /**
+     * emailReplyRequest の入力を検証する。
+     *
+     * @return array{0: string, 1: string}|JsonResponse sessionId と email、またはエラー
+     */
+    private function validateEmailReplyInput(Request $request): array|JsonResponse
+    {
         $data = json_decode($request->getContent(), true);
+        if (!is_array($data)) {
+            $data = [];
+        }
+
         $rawSessionId = $data['session_id'] ?? '';
         $email = $data['email'] ?? '';
 
@@ -473,7 +511,6 @@ class ChatApiController extends AbstractController
             return new JsonResponse(['success' => false, 'error' => 'リクエストが不正です。'], 400);
         }
 
-        // M1: session_id 形式検証 — 不正形式はログを残しつつ正規化（client が Math.random 等で生成した不正値の無害化）
         $sessionId = $this->normalizeSessionId($rawSessionId);
         if ($sessionId !== (string) $rawSessionId) {
             $this->logger->info('emailReplyRequest: session_id normalized', [
@@ -482,38 +519,35 @@ class ChatApiController extends AbstractController
             ]);
         }
 
-        // メール爆弾防止: IP + session でレート制限（1時間10回）
-        $rateLimitResponse = $this->enforceEmailReplyRateLimit($request, $sessionId);
-        if ($rateLimitResponse !== null) {
-            return $rateLimitResponse;
-        }
+        return [$sessionId, (string) $email];
+    }
 
-        // セッションの最新ログにメールアドレスをハッシュ+暗号化して記録（I-30: 平文保存廃止）
-        $affected = 0;
+    /**
+     * セッションの最新ログにメールアドレスを保存する。
+     */
+    private function persistEmailReplyAddress(string $sessionId, string $email): int
+    {
         if ($this->emailHashService !== null) {
             $hash = $this->emailHashService->hash($email);
             $enc = $this->emailHashService->encrypt($email);
-            $affected = $this->getChatLogRepository()->updateEmailReplyAddressHashed($sessionId, $hash, $enc);
-        } else {
-            // フォールバック: EmailHashService 未注入の旧環境では平文（互換）
-            $affected = $this->getChatLogRepository()->updateEmailReplyAddress($sessionId, $email);
+
+            return $this->getChatLogRepository()->updateEmailReplyAddressHashed($sessionId, $hash, $enc);
         }
 
-        if ($affected === 0) {
-            return new JsonResponse([
-                'success' => false,
-                'error' => '対象のチャットログが見つかりませんでした。',
-            ], 404);
-        }
+        // フォールバック: EmailHashService 未注入の旧環境では平文（互換）
+        return $this->getChatLogRepository()->updateEmailReplyAddress($sessionId, $email);
+    }
 
+    /**
+     * メール返信依頼の通知を送信する（EmailReplyService + NotificationService）。
+     */
+    private function sendEmailReplyNotifications(string $sessionId, string $email): void
+    {
         // メール送信は EmailReplyService に一本化（NotificationService の email チャネルは廃止し二重送信を防止）
-        // 将来 webhook/line は NotificationService、email_reply_request は EmailReplyService と責務を分離
-        // 運用メモ: 既存 plg_ai_chat_assistant_notification WHERE event='email_reply_request' AND notification_type='email' は手動 DELETE でクリーンアップ
         try {
             $this->emailReplyService->sendBoth($sessionId, $email);
         } catch (TransportExceptionInterface | \InvalidArgumentException $e) {
             // MAILER_DSN=null://null（現行開発）でも 500 にしないため warning に留める
-            // catch(\Throwable) でプログラミングエラーを握りつぶさない
             $this->logger->warning('メール返信依頼の送信に失敗しました', [
                 'session_id' => $sessionId,
                 'email' => $email,
@@ -534,11 +568,6 @@ class ChatApiController extends AbstractController
                 'error' => $e->getMessage(),
             ]);
         }
-
-        return new JsonResponse([
-            'success' => true,
-            'message' => 'メールアドレスを記録しました。後ほどご連絡いたします。',
-        ]);
     }
 
     /**
@@ -549,6 +578,37 @@ class ChatApiController extends AbstractController
      *   - feedback: string (必須) — "positive" | "negative"
      */
     public function feedback(Request $request): JsonResponse
+    {
+        $validation = $this->validateFeedbackInput($request);
+        if ($validation instanceof JsonResponse) {
+            return $validation;
+        }
+        [$sessionId, $feedbackValue] = $validation;
+
+        $duplicateResponse = $this->checkFeedbackDuplicate($sessionId);
+        if ($duplicateResponse !== null) {
+            return $duplicateResponse;
+        }
+
+        $saveResult = $this->saveFeedback($sessionId, $feedbackValue);
+        if ($saveResult instanceof JsonResponse) {
+            return $saveResult;
+        }
+
+        $this->notifyLowSatisfactionIfNeeded($sessionId, $feedbackValue);
+
+        return new JsonResponse([
+            'success' => true,
+            'message' => 'フィードバックありがとうございます。',
+        ]);
+    }
+
+    /**
+     * feedback の入力を検証する。
+     *
+     * @return array{0: string, 1: string}|JsonResponse sessionId と feedbackValue、またはエラー
+     */
+    private function validateFeedbackInput(Request $request): array|JsonResponse
     {
         $data = json_decode($request->getContent(), true);
         if (!is_array($data)) {
@@ -562,7 +622,6 @@ class ChatApiController extends AbstractController
             return new JsonResponse(['success' => false, 'error' => 'リクエストが不正です。'], 400);
         }
 
-        // M1: session_id 形式検証
         $sessionId = $this->normalizeSessionId($rawSessionId);
         if ($sessionId !== $rawSessionId) {
             $this->logger->info('feedback: session_id normalized', [
@@ -575,12 +634,29 @@ class ChatApiController extends AbstractController
             return new JsonResponse(['success' => false, 'error' => 'feedback は positive または negative を指定してください。'], 400);
         }
 
-        // 同一セッションの重複投稿は 409 で拒否
+        return [$sessionId, $feedbackValue];
+    }
+
+    /**
+     * 同一セッションの重複フィードバックを検証する。
+     */
+    private function checkFeedbackDuplicate(string $sessionId): ?JsonResponse
+    {
         $existing = $this->entityManager->getRepository(Feedback::class)->findOneBy(['session_id' => $sessionId]);
         if ($existing !== null) {
             return new JsonResponse(['success' => false, 'error' => '既にフィードバック済みです。'], 409);
         }
 
+        return null;
+    }
+
+    /**
+     * フィードバックを永続化する。
+     *
+     * @return JsonResponse|null エラー時は JsonResponse、成功時は null
+     */
+    private function saveFeedback(string $sessionId, string $feedbackValue): ?JsonResponse
+    {
         $feedback = new Feedback();
         $feedback->setSessionId($sessionId);
         $feedback->setFeedback($feedbackValue);
@@ -591,18 +667,8 @@ class ChatApiController extends AbstractController
                 $this->entityManager->persist($feedback);
                 $this->entityManager->flush();
 
-                // ポジティブフィードバック時は同一セッションの ChatLog を解決済みに更新する
-                // negative は更新しない。同一セッションの複数行を一括更新し既に解決済みは冪等にスキップ
-                // UPDATE 失敗は warning に留め feedback 保存は維持（同一トランザクション内で catch し rethrow しない）
                 if ($feedbackValue === 'positive') {
-                    try {
-                        $this->getChatLogRepository()->markResolvedBySession($sessionId);
-                    } catch (\Throwable $e) {
-                        $this->logger->warning('Failed to mark chat log as resolved on positive feedback', [
-                            'session_id' => $sessionId,
-                            'error' => $e->getMessage(),
-                        ]);
-                    }
+                    $this->markChatLogResolved($sessionId);
                 }
             });
         } catch (UniqueConstraintViolationException $e) {
@@ -611,25 +677,44 @@ class ChatApiController extends AbstractController
             return new JsonResponse(['success' => false, 'error' => 'フィードバックの保存中にエラーが発生しました。'], 500);
         }
 
-        // 低評価（negative）はメール依頼の有無に関わらず、全チャネル（email/webhook/line）で通知
-        if ($feedbackValue === 'negative') {
-            try {
-                $this->notificationService->checkAndSend('low_satisfaction', [
-                    'session_id' => $sessionId,
-                    'feedback' => $feedbackValue,
-                ]);
-            } catch (\Throwable $e) {
-                $this->logger->warning('低満足度通知の送信に失敗しました', [
-                    'session_id' => $sessionId,
-                    'error' => $e->getMessage(),
-                ]);
-            }
+        return null;
+    }
+
+    /**
+     * positive フィードバック時に同一セッションの ChatLog を解決済みに更新する。
+     */
+    private function markChatLogResolved(string $sessionId): void
+    {
+        try {
+            $this->getChatLogRepository()->markResolvedBySession($sessionId);
+        } catch (\Throwable $e) {
+            $this->logger->warning('Failed to mark chat log as resolved on positive feedback', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * 低評価（negative）時に全チャネルで通知する。
+     */
+    private function notifyLowSatisfactionIfNeeded(string $sessionId, string $feedbackValue): void
+    {
+        if ($feedbackValue !== 'negative') {
+            return;
         }
 
-        return new JsonResponse([
-            'success' => true,
-            'message' => 'フィードバックありがとうございます。',
-        ]);
+        try {
+            $this->notificationService->checkAndSend('low_satisfaction', [
+                'session_id' => $sessionId,
+                'feedback' => $feedbackValue,
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->warning('低満足度通知の送信に失敗しました', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
