@@ -27,6 +27,7 @@ use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Validator\Constraints as Assert;
+use DateTimeImmutable;
 
 /**
  * ナレッジベース管理コントローラ。
@@ -121,7 +122,7 @@ class KnowledgeController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $now = new \DateTimeImmutable();
+            $now = new DateTimeImmutable();
             $knowledge->setCreateDate($now);
             $knowledge->setUpdateDate($now);
 
@@ -188,7 +189,7 @@ class KnowledgeController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $knowledge->setUpdateDate(new \DateTimeImmutable());
+            $knowledge->setUpdateDate(new DateTimeImmutable());
             $this->knowledgeRepository->save($knowledge);
 
             $this->addSuccess('更新が完了しました。', 'admin');

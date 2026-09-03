@@ -34,6 +34,7 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
+use DateTimeImmutable;
 
 /**
  * AI チャットアシスタントのチャット API。
@@ -256,7 +257,7 @@ class ChatApiController extends AbstractController
             return null;
         }
 
-        $since = new \DateTimeImmutable('-1 minute');
+        $since = new DateTimeImmutable('-1 minute');
 
         // セッション単位の制限: session:{sessionId} — Doctrine QueryBuilder 経由で集計
         $recentCount = $this->getChatLogRepository()->countRecentBySession($sessionId, $since);
@@ -298,7 +299,7 @@ class ChatApiController extends AbstractController
     private function enforceEmailReplyRateLimit(Request $request, string $sessionId): ?JsonResponse
     {
         $limit = self::MAX_EMAIL_REPLY_PER_HOUR;
-        $since = new \DateTimeImmutable('-1 hour');
+        $since = new DateTimeImmutable('-1 hour');
 
         // session 単位: 同一 session からの email 依頼回数（email_reply_address が設定された行を数える）
         try {
@@ -583,7 +584,7 @@ class ChatApiController extends AbstractController
         $feedback = new Feedback();
         $feedback->setSessionId($sessionId);
         $feedback->setFeedback($feedbackValue);
-        $feedback->setCreatedAt(new \DateTimeImmutable());
+        $feedback->setCreatedAt(new DateTimeImmutable());
 
         try {
             $this->entityManager->wrapInTransaction(function () use ($feedback, $feedbackValue, $sessionId): void {

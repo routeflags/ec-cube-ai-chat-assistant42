@@ -26,6 +26,7 @@ use Plugin\AiChatAssistant42\Service\ApiKeyEncryptor;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use DateTimeImmutable;
 
 /**
  * AI チャットアシスタントの管理画面ダッシュボード。
@@ -95,7 +96,7 @@ class DashboardController extends AbstractController
             }
         }
 
-        $now = new \DateTimeImmutable();
+        $now = new DateTimeImmutable();
         $periodEnd = $now;
         $periodStart = $now->modify('-30 days');
         $prevPeriodEnd = $periodStart;
@@ -131,7 +132,7 @@ class DashboardController extends AbstractController
      *
      * @return array{total: int, resolved: int, errors: int, avg_response_ms: float, resolution_rate: float, error_rate: float}
      */
-    private function fetchKpi(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    private function fetchKpi(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
         return $this->getChatLogRepository()->fetchKpi($start, $end);
     }
@@ -151,7 +152,7 @@ class DashboardController extends AbstractController
      *
      * @return array<array{provider: string, count: int, avg_response_ms: float, error_count: int}>
      */
-    private function fetchProviderStats(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    private function fetchProviderStats(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
         return $this->getChatLogRepository()->fetchProviderStats($start, $end);
     }
@@ -161,7 +162,7 @@ class DashboardController extends AbstractController
      *
      * @return array<array{model: string, count: int, avg_response_ms: float, avg_token_input: float, avg_token_output: float, error_count: int}>
      */
-    private function fetchModelStats(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    private function fetchModelStats(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
         return $this->getChatLogRepository()->fetchModelStats($start, $end);
     }
@@ -171,7 +172,7 @@ class DashboardController extends AbstractController
      *
      * @return array<array{error_type: string, count: int, latest_message: string}>
      */
-    private function fetchErrorBreakdown(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    private function fetchErrorBreakdown(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
         return $this->getChatLogRepository()->fetchErrorBreakdown($start, $end);
     }
@@ -193,7 +194,7 @@ class DashboardController extends AbstractController
      *
      * @return array<int, array{hour: int, count: int}>
      */
-    private function fetchHourlyDistribution(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    private function fetchHourlyDistribution(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
         return $this->getChatLogRepository()->fetchHourlyDistribution($start, $end);
     }

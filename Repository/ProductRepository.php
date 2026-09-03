@@ -21,6 +21,10 @@ use Doctrine\Persistence\ManagerRegistry;
 use Eccube\Repository\AbstractRepository;
 use Plugin\AiChatAssistant42\Service\ShopContextService;
 use Plugin\AiChatAssistant42\Service\TwigPlainTextExtractor;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\Routing\Exception\RouteNotFoundException;
+use Symfony\Component\Routing\RequestContext;
+use InvalidArgumentException;
 
 /**
  * AI チャットアシスタント用の商品リポジトリ。
@@ -197,22 +201,22 @@ class ProductRepository extends AbstractRepository
                     };
                 }
             },
-            new \Symfony\Component\HttpFoundation\RequestStack(),
+            new RequestStack(),
             new class implements \Symfony\Component\Routing\Generator\UrlGeneratorInterface {
                 public function generate(
                     string $name,
                     array $parameters = [],
                     int $referenceType = self::ABSOLUTE_PATH
                 ): string {
-                    throw new \Symfony\Component\Routing\Exception\RouteNotFoundException();
+                    throw new RouteNotFoundException();
                 }
 
-                public function getContext(): \Symfony\Component\Routing\RequestContext
+                public function getContext(): RequestContext
                 {
-                    return new \Symfony\Component\Routing\RequestContext();
+                    return new RequestContext();
                 }
 
-                public function setContext(\Symfony\Component\Routing\RequestContext $context): void
+                public function setContext(RequestContext $context): void
                 {
                 }
             }
@@ -515,13 +519,13 @@ class ProductRepository extends AbstractRepository
      *
      * @return array ツール実行結果
      *
-     * @throws \InvalidArgumentException 未知のツール名の場合
+     * @throws InvalidArgumentException 未知のツール名の場合
      */
     public function executeTool(string $name, array $args): array
     {
         $methodName = self::TOOL_HANDLERS[$name] ?? null;
         if ($methodName === null) {
-            throw new \InvalidArgumentException(sprintf('Unknown tool: %s', $name));
+            throw new InvalidArgumentException(sprintf('Unknown tool: %s', $name));
         }
 
         return $this->$methodName($args);

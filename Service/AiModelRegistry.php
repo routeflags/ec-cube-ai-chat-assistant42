@@ -16,6 +16,8 @@ declare(strict_types=1);
 namespace Plugin\AiChatAssistant42\Service;
 
 use Psr\Log\LoggerInterface;
+use RuntimeException;
+use InvalidArgumentException;
 
 /**
  * AI モデルのレジストリ。
@@ -36,8 +38,8 @@ class AiModelRegistry
      * @param string               $projectDir プロジェクトルート（%kernel.project_dir%）
      * @param LoggerInterface|null $logger     フォールバック時の info ログ用（任意）
      *
-     * @throws \RuntimeException ファイルが読めない場合
-     * @throws \InvalidArgumentException JSON の形式が不正な場合
+     * @throws RuntimeException ファイルが読めない場合
+     * @throws InvalidArgumentException JSON の形式が不正な場合
      */
     public function __construct(string $configPath, string $projectDir = '', ?LoggerInterface $logger = null)
     {
@@ -115,23 +117,23 @@ class AiModelRegistry
      * コンストラクタの責務分離により、読み込みロジックの CC を
      * このスタティックメソッドに集約する。
      *
-     * @throws \RuntimeException ファイルが読めない場合
-     * @throws \InvalidArgumentException JSON の形式が不正な場合
+     * @throws RuntimeException ファイルが読めない場合
+     * @throws InvalidArgumentException JSON の形式が不正な場合
      */
     private static function loadAndValidateConfig(string $configPath): array
     {
         if (!file_exists($configPath)) {
-            throw new \RuntimeException(sprintf('AI model config not found: %s', $configPath));
+            throw new RuntimeException(sprintf('AI model config not found: %s', $configPath));
         }
 
         $raw = file_get_contents($configPath);
         if ($raw === false) {
-            throw new \RuntimeException(sprintf('Failed to read AI model config: %s', $configPath));
+            throw new RuntimeException(sprintf('Failed to read AI model config: %s', $configPath));
         }
 
         $decoded = json_decode($raw, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new \InvalidArgumentException(sprintf(
+            throw new InvalidArgumentException(sprintf(
                 'Invalid JSON in AI model config: %s (error: %s)',
                 $configPath,
                 json_last_error_msg()
@@ -140,7 +142,7 @@ class AiModelRegistry
 
         // 構造バリデーション: providers キーが必須
         if (!isset($decoded['providers']) || !is_array($decoded['providers'])) {
-            throw new \InvalidArgumentException(sprintf(
+            throw new InvalidArgumentException(sprintf(
                 'AI model config must contain a "providers" key: %s',
                 $configPath
             ));

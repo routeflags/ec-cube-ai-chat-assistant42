@@ -19,6 +19,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Eccube\Repository\AbstractRepository;
 use Plugin\AiChatAssistant42\Entity\ChatLog;
+use DateTimeImmutable;
 
 /**
  * AI チャットログリポジトリ。
@@ -46,7 +47,7 @@ class ChatLogRepository extends AbstractRepository
     /**
      * 指定セッションの直近ログ件数を数える（レート制限用）。
      */
-    public function countRecentBySession(string $sessionId, \DateTimeImmutable $since): int
+    public function countRecentBySession(string $sessionId, DateTimeImmutable $since): int
     {
         return (int) $this->createQueryBuilder('log')
             ->select('COUNT(log.id)')
@@ -61,7 +62,7 @@ class ChatLogRepository extends AbstractRepository
     /**
      * 指定 IP の直近ログ件数を数える（レート制限用）。
      */
-    public function countRecentByIp(string $ip, \DateTimeImmutable $since): int
+    public function countRecentByIp(string $ip, DateTimeImmutable $since): int
     {
         return (int) $this->createQueryBuilder('log')
             ->select('COUNT(log.id)')
@@ -76,7 +77,7 @@ class ChatLogRepository extends AbstractRepository
     /**
      * 指定セッションのメール返信依頼件数を数える（hash/enc/plain いずれかで判定）。
      */
-    public function countEmailReplyBySession(string $sessionId, \DateTimeImmutable $since): int
+    public function countEmailReplyBySession(string $sessionId, DateTimeImmutable $since): int
     {
         return (int) $this->createQueryBuilder('log')
             ->select('COUNT(log.id)')
@@ -92,7 +93,7 @@ class ChatLogRepository extends AbstractRepository
     /**
      * 指定 IP のメール返信依頼件数を数える。
      */
-    public function countEmailReplyByIp(string $ip, \DateTimeImmutable $since): int
+    public function countEmailReplyByIp(string $ip, DateTimeImmutable $since): int
     {
         return (int) $this->createQueryBuilder('log')
             ->select('COUNT(log.id)')
@@ -244,7 +245,7 @@ class ChatLogRepository extends AbstractRepository
      *
      * @return int 更新件数
      */
-    public function purgeExpiredEmailEnc(\DateTimeImmutable $before): int
+    public function purgeExpiredEmailEnc(DateTimeImmutable $before): int
     {
         return (int) $this->createQueryBuilder('log')
             ->update()
@@ -287,7 +288,7 @@ class ChatLogRepository extends AbstractRepository
      *
      * @return array<int, array{hour: int, count: int}>
      */
-    public function fetchHourlyDistribution(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    public function fetchHourlyDistribution(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
         $conn = $this->entityManager->getConnection();
         $platform = strtolower($conn->getDatabasePlatform()->getName());
@@ -483,11 +484,11 @@ class ChatLogRepository extends AbstractRepository
     {
         if (($filters['date_from'] ?? '') !== '') {
             $qb->andWhere('log.created_at >= :date_from')
-                ->setParameter('date_from', new \DateTimeImmutable($filters['date_from']));
+                ->setParameter('date_from', new DateTimeImmutable($filters['date_from']));
         }
 
         if (($filters['date_to'] ?? '') !== '') {
-            $dateTo = (new \DateTimeImmutable($filters['date_to']))->modify('+1 day');
+            $dateTo = (new DateTimeImmutable($filters['date_to']))->modify('+1 day');
             $qb->andWhere('log.created_at < :date_to')
                 ->setParameter('date_to', $dateTo);
         }
@@ -545,7 +546,7 @@ class ChatLogRepository extends AbstractRepository
      *
      * @return array{total: int, resolved: int, errors: int, avg_response_ms: float, resolution_rate: float, error_rate: float}
      */
-    public function fetchKpi(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    public function fetchKpi(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
         $qb = $this->createQueryBuilder('log');
         $qb->select('
@@ -598,7 +599,7 @@ class ChatLogRepository extends AbstractRepository
      *
      * @return array<array{provider: string, count: int, avg_response_ms: float, error_count: int}>
      */
-    public function fetchProviderStats(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    public function fetchProviderStats(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
         return $this->createQueryBuilder('log')
             ->select('
@@ -625,7 +626,7 @@ class ChatLogRepository extends AbstractRepository
      * @return array<array{model: string, provider: string, count: int, avg_response_ms: float,
      *               avg_token_input: float, avg_token_output: float, error_count: int}>
      */
-    public function fetchModelStats(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    public function fetchModelStats(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
         return $this->createQueryBuilder('log')
             ->select('
@@ -654,7 +655,7 @@ class ChatLogRepository extends AbstractRepository
      *
      * @return array<array{error_type: string, count: int, latest_message: string}>
      */
-    public function fetchErrorBreakdown(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    public function fetchErrorBreakdown(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
         return $this->createQueryBuilder('log')
             ->select('

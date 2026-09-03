@@ -22,6 +22,7 @@ use Plugin\AiChatAssistant42\Service\ApiKeyEncryptor;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use DateTimeImmutable;
 
 /**
  * 通知ルールの CRUD を管理するコントローラ。
@@ -78,8 +79,8 @@ class NotificationController extends AbstractController
         $notification->setTriggerEvent($request->request->get('trigger_event', 'error_threshold'));
         $notification->setConfigJson($this->buildConfigJson($request));
         $notification->setIsActive(1);
-        $notification->setCreateDate(new \DateTimeImmutable());
-        $notification->setUpdateDate(new \DateTimeImmutable());
+        $notification->setCreateDate(new DateTimeImmutable());
+        $notification->setUpdateDate(new DateTimeImmutable());
 
         $this->notificationRepository->save($notification);
 
@@ -111,7 +112,7 @@ class NotificationController extends AbstractController
         $notification->setTriggerEvent($request->request->get('trigger_event', $notification->getTriggerEvent()));
         $notification->setConfigJson($this->buildConfigJson($request));
         $notification->setIsActive((int) $request->request->get('is_active', $notification->getIsActive()));
-        $notification->setUpdateDate(new \DateTimeImmutable());
+        $notification->setUpdateDate(new DateTimeImmutable());
 
         $this->notificationRepository->save($notification);
 

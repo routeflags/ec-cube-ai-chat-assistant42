@@ -15,6 +15,8 @@ declare(strict_types=1);
 
 namespace Plugin\AiChatAssistant42\Service;
 
+use LogicException;
+
 /**
  * design_settings.json のリモート同期を担うサービス。
  *
@@ -83,7 +85,7 @@ class DesignSettingsSyncService extends AbstractPluginDataSyncService
     protected function getDataPath(): string
     {
         if ($this->projectDir === '') {
-            throw new \LogicException('DesignSettingsSyncService: projectDir is not configured.');
+            throw new LogicException('DesignSettingsSyncService: projectDir is not configured.');
         }
 
         return $this->projectDir . self::PLUGIN_DATA_PATH;
@@ -92,7 +94,7 @@ class DesignSettingsSyncService extends AbstractPluginDataSyncService
     protected function getMetaPath(): string
     {
         if ($this->projectDir === '') {
-            throw new \LogicException('DesignSettingsSyncService: projectDir is not configured.');
+            throw new LogicException('DesignSettingsSyncService: projectDir is not configured.');
         }
 
         return $this->projectDir . self::META_PATH;
@@ -101,7 +103,7 @@ class DesignSettingsSyncService extends AbstractPluginDataSyncService
     protected function getLockPath(): string
     {
         if ($this->projectDir === '') {
-            throw new \LogicException('DesignSettingsSyncService: projectDir is not configured.');
+            throw new LogicException('DesignSettingsSyncService: projectDir is not configured.');
         }
 
         return $this->projectDir . self::LOCK_PATH;

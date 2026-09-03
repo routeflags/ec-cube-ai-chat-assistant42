@@ -18,6 +18,7 @@ namespace Plugin\AiChatAssistant42\Service;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\TransferException;
 use Psr\Log\LoggerInterface;
+use LogicException;
 
 /**
  * プラグインデータ同期の共通基盤。
@@ -55,7 +56,7 @@ abstract class AbstractPluginDataSyncService
     public function trySyncIfStale(): bool
     {
         if ($this->projectDir === '') {
-            throw new \LogicException(sprintf('%s: projectDir is not configured.', static::class));
+            throw new LogicException(sprintf('%s: projectDir is not configured.', static::class));
         }
 
         if (!$this->isStale()) {

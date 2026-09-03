@@ -21,6 +21,7 @@ use Plugin\AiChatAssistant42\Repository\AccessRuleRepository;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use DateTimeImmutable;
 
 /**
  * アクセスルールの CRUD を管理するコントローラ。
@@ -79,8 +80,8 @@ class AccessRuleController extends AbstractController
         $rule->setRuleValue($ruleValue);
         $rule->setAction($request->request->get('action', 'deny'));
         $rule->setIsActive(1);
-        $rule->setCreateDate(new \DateTimeImmutable());
-        $rule->setUpdateDate(new \DateTimeImmutable());
+        $rule->setCreateDate(new DateTimeImmutable());
+        $rule->setUpdateDate(new DateTimeImmutable());
 
         $this->accessRuleRepository->save($rule);
 
@@ -118,7 +119,7 @@ class AccessRuleController extends AbstractController
         $rule->setRuleValue($ruleValue);
         $rule->setAction($request->request->get('action', $rule->getAction()));
         $rule->setIsActive((int) $request->request->get('is_active', $rule->getIsActive()));
-        $rule->setUpdateDate(new \DateTimeImmutable());
+        $rule->setUpdateDate(new DateTimeImmutable());
 
         $this->accessRuleRepository->save($rule);
 

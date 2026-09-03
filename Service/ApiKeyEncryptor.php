@@ -16,6 +16,7 @@ declare(strict_types=1);
 namespace Plugin\AiChatAssistant42\Service;
 
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 
 /**
  * API キーの暗号化・復号を担当するサービス.
@@ -62,7 +63,7 @@ class ApiKeyEncryptor
         );
 
         if ($ciphertext === false) {
-            throw new \RuntimeException('APIキーの暗号化に失敗しました');
+            throw new RuntimeException('APIキーの暗号化に失敗しました');
         }
 
         return base64_encode($nonce . $ciphertext . $tag);

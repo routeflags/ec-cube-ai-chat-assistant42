@@ -26,6 +26,7 @@ use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Validator\Constraints as Assert;
+use DateTimeImmutable;
 
 /**
  * 自動応答シナリオ管理コントローラ。
@@ -118,7 +119,7 @@ class ScenarioController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $now = new \DateTimeImmutable();
+            $now = new DateTimeImmutable();
             $scenario->setCreateDate($now);
             $scenario->setUpdateDate($now);
 
@@ -193,7 +194,7 @@ class ScenarioController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $scenario->setUpdateDate(new \DateTimeImmutable());
+            $scenario->setUpdateDate(new DateTimeImmutable());
             $this->scenarioRepository->save($scenario);
 
             $this->addSuccess('更新が完了しました。', 'admin');

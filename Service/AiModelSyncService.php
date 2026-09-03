@@ -15,6 +15,8 @@ declare(strict_types=1);
 
 namespace Plugin\AiChatAssistant42\Service;
 
+use LogicException;
+
 /**
  * ai_models.json のリモート同期を担うサービス。
  *
@@ -57,7 +59,7 @@ class AiModelSyncService extends AbstractPluginDataSyncService
     protected function getDataPath(): string
     {
         if ($this->projectDir === '') {
-            throw new \LogicException('AiModelSyncService: projectDir is not configured.');
+            throw new LogicException('AiModelSyncService: projectDir is not configured.');
         }
 
         return $this->projectDir . self::PLUGIN_DATA_PATH;
@@ -66,7 +68,7 @@ class AiModelSyncService extends AbstractPluginDataSyncService
     protected function getMetaPath(): string
     {
         if ($this->projectDir === '') {
-            throw new \LogicException('AiModelSyncService: projectDir is not configured.');
+            throw new LogicException('AiModelSyncService: projectDir is not configured.');
         }
 
         return $this->projectDir . self::META_PATH;
@@ -75,7 +77,7 @@ class AiModelSyncService extends AbstractPluginDataSyncService
     protected function getLockPath(): string
     {
         if ($this->projectDir === '') {
-            throw new \LogicException('AiModelSyncService: projectDir is not configured.');
+            throw new LogicException('AiModelSyncService: projectDir is not configured.');
         }
 
         return $this->projectDir . self::LOCK_PATH;

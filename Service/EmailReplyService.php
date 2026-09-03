@@ -21,6 +21,7 @@ use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
+use DateTime;
 
 /**
  * AIチャットの「メールで返信依頼」2通送信を担うサービス.
@@ -192,7 +193,7 @@ class EmailReplyService
 
     private function buildUserBody(string $sessionId, string $userEmail, array $history, string $shopName): string
     {
-        $now = (new \DateTime())->format('Y-m-d H:i');
+        $now = (new DateTime())->format('Y-m-d H:i');
         $historyText = $this->formatHistory($history);
 
         return <<<BODY
@@ -217,7 +218,7 @@ BODY;
 
     private function buildAdminBody(string $sessionId, string $userEmail, array $history): string
     {
-        $now = (new \DateTime())->format('Y-m-d H:i');
+        $now = (new DateTime())->format('Y-m-d H:i');
         $historyText = $this->formatHistory($history);
 
         return <<<BODY

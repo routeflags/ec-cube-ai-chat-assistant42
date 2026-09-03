@@ -20,6 +20,8 @@ use Plugin\AiChatAssistant42\Service\AiModelRegistry;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use Psr\Log\LoggerInterface;
+use stdClass;
+use RuntimeException;
 
 /**
  * OpenAI API を利用する AI エージェント実装。
@@ -273,11 +275,11 @@ class OpenAiAgent implements AiAgentInterface
         foreach ($mcpTools as $tool) {
             $schema = $tool['inputSchema'] ?? $tool['input_schema'] ?? $tool['parameters'] ?? [
                 'type' => 'object',
-                'properties' => new \stdClass(),
+                'properties' => new stdClass(),
             ];
             // 空配列 [] は JSON で [] になるため、空オブジェクト {} に変換
             if (isset($schema['properties']) && $schema['properties'] === []) {
-                $schema['properties'] = new \stdClass();
+                $schema['properties'] = new stdClass();
             }
             $converted[] = [
                 'type' => 'function',
@@ -429,7 +431,7 @@ class OpenAiAgent implements AiAgentInterface
      *
      * @return array<string, mixed> API レスポンス（JSON パース済み）
      *
-     * @throws \RuntimeException API 呼び出しが失敗した場合
+     * @throws RuntimeException API 呼び出しが失敗した場合
      */
     private function sendRequest(array $payload): array
     {
@@ -446,12 +448,12 @@ class OpenAiAgent implements AiAgentInterface
             $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
 
             if (!is_array($decoded)) {
-                throw new \RuntimeException('OpenAI API returned non-array response');
+                throw new RuntimeException('OpenAI API returned non-array response');
             }
 
             return $decoded;
         } catch (GuzzleException $e) {
-            throw new \RuntimeException(
+            throw new RuntimeException(
                 sprintf('OpenAI API request failed: %s', $e->getMessage()),
                 0,
                 $e

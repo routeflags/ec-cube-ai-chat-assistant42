@@ -22,6 +22,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use DateTimeImmutable;
 
 #[AsCommand(name: 'ai-chat-assistant:cleanup-email', description: '30日経過のメール返信先暗号文を削除する（hashは保持）')]
 class CleanupEmailCommand extends Command
@@ -42,7 +43,7 @@ class CleanupEmailCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $days = (int) $input->getOption('days');
         $dryRun = (bool) $input->getOption('dry-run');
-        $before = new \DateTimeImmutable(sprintf('-%d days', max(1, $days)));
+        $before = new DateTimeImmutable(sprintf('-%d days', max(1, $days)));
 
         if ($dryRun) {
             $io->note(sprintf('dry-run: %s より前の enc を削除対象とします', $before->format('Y-m-d H:i:s')));
