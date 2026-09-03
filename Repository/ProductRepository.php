@@ -19,6 +19,8 @@ use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Eccube\Repository\AbstractRepository;
+use Plugin\AiChatAssistant42\Service\ProductToolDefinition;
+use Plugin\AiChatAssistant42\Service\ProductToolExecutor;
 use Plugin\AiChatAssistant42\Service\ShopContextService;
 use Plugin\AiChatAssistant42\Service\TwigPlainTextExtractor;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -32,120 +34,11 @@ use InvalidArgumentException;
  * EC-CUBE の商品テーブル群を検索し、AI ツールから呼び出されるための
  * フラットな配列データを返す。 Doctrine の QueryBuilder を使い、
  * 全パラメータはバインドパラメータで渡す（SQL インジェクション防止）。
+ *
+ * @SuppressWarnings("PHPMD.UnusedFormalParameter")
  */
 class ProductRepository extends AbstractRepository
 {
-    /**
-     * AI ツール定数配列。CC ポイントを増やさずにツールスキーマを管理する。
-     *
-     * @var array<int, array{type: string, name: string, description: string, input_schema: array}>
-     */
-    private const TOOL_DEFINITIONS = [
-        [
-            'type' => 'function',
-            'name' => 'search_products',
-            'description' => '商品をキーワードとカテゴリで検索します。'
-                . '商品名・検索ワード・商品コードが対象です。'
-                . '返却される各商品の url はショップの商品詳細ページの絶対URLです。'
-                . '相対パスや https://www.example.com は使用しないでください。',
-            'input_schema' => [
-                'type' => 'object',
-                'properties' => [
-                    'keyword' => ['type' => 'string', 'description' => '検索キーワード'],
-                    'category_id' => ['type' => 'integer', 'description' => 'カテゴリ ID'],
-                    'limit' => ['type' => 'integer', 'description' => '取得件数上限（デフォルト: 20）', 'default' => 20],
-                    'offset' => ['type' => 'integer', 'description' => 'オフセット（デフォルト: 0）', 'default' => 0],
-                ],
-            ],
-        ],
-        [
-            'type' => 'function',
-            'name' => 'get_product_detail',
-            'description' => '商品の詳細情報を取得します。規格・在庫・カテゴリ・画像・タグを含みます。'
-                . '返却される url はショップの商品詳細ページの絶対URLです。'
-                . '相対パスや https://www.example.com は使用しないでください。',
-            'input_schema' => [
-                'type' => 'object',
-                'properties' => [
-                    'product_id' => ['type' => 'integer', 'description' => '商品 ID'],
-                ],
-                'required' => ['product_id'],
-            ],
-        ],
-        [
-            'type' => 'function',
-            'name' => 'get_stock',
-            'description' => '商品の規格ごとの在庫情報を取得します。返却される在庫情報と紐づく商品URLはショップの商品詳細ページの絶対URLで案内してください。相対パスや https://www.example.com は使用しないでください。',
-            'input_schema' => [
-                'type' => 'object',
-                'properties' => [
-                    'product_id' => ['type' => 'integer', 'description' => '商品 ID'],
-                ],
-                'required' => ['product_id'],
-            ],
-        ],
-        [
-            'type' => 'function',
-            'name' => 'get_categories',
-            'description' => 'カテゴリ階層を取得します。親カテゴリ ID を指定すると子カテゴリのみ返します。',
-            'input_schema' => [
-                'type' => 'object',
-                'properties' => [
-                    'parent_id' => ['type' => 'integer', 'description' => '親カテゴリ ID（省略時はルートカテゴリ）'],
-                ],
-            ],
-        ],
-        [
-            'type' => 'function',
-            'name' => 'get_category_products',
-            'description' => '指定カテゴリに属する商品一覧を取得します。返却される各商品の url はショップの商品詳細ページの絶対URLです。相対パスや https://www.example.com は使用しないでください。',
-            'input_schema' => [
-                'type' => 'object',
-                'properties' => [
-                    'category_id' => ['type' => 'integer', 'description' => 'カテゴリ ID'],
-                    'limit' => ['type' => 'integer', 'description' => '取得件数上限（デフォルト: 50）', 'default' => 50],
-                    'offset' => ['type' => 'integer', 'description' => 'オフセット（デフォルト: 0）', 'default' => 0],
-                ],
-                'required' => ['category_id'],
-            ],
-        ],
-        [
-            'type' => 'function',
-            'name' => 'get_tags',
-            'description' => '全タグ一覧を取得します。',
-            'input_schema' => ['type' => 'object', 'properties' => []],
-        ],
-        [
-            'type' => 'function',
-            'name' => 'search_by_tag',
-            'description' => '特定タグに紐づく商品を検索します。返却される各商品の url はショップの商品詳細ページの絶対URLです。相対パスや https://www.example.com は使用しないでください。',
-            'input_schema' => [
-                'type' => 'object',
-                'properties' => [
-                    'tag_id' => ['type' => 'integer', 'description' => 'タグ ID'],
-                    'limit' => ['type' => 'integer', 'description' => '取得件数上限（デフォルト: 20）', 'default' => 20],
-                    'offset' => ['type' => 'integer', 'description' => 'オフセット（デフォルト: 0）', 'default' => 0],
-                ],
-                'required' => ['tag_id'],
-            ],
-        ],
-    ];
-
-    /**
-     * ツール名 => ハンドラメソッドのマップ。
-     * match 文を置き換え、CC ポイントを削減する。
-     *
-     * @var array<string, string>
-     */
-    private const TOOL_HANDLERS = [
-        'search_products' => 'executeSearchProducts',
-        'get_product_detail' => 'executeGetProductDetail',
-        'get_stock' => 'executeGetStock',
-        'get_categories' => 'executeGetCategories',
-        'get_category_products' => 'executeGetCategoryProducts',
-        'get_tags' => 'executeGetTags',
-        'search_by_tag' => 'executeSearchByTag',
-    ];
 
     private EntityManagerInterface $entityManager;
     private Connection $connection;
@@ -379,7 +272,9 @@ class ProductRepository extends AbstractRepository
         if ($parentId !== null) {
             $qb->where('c.parent_category_id = :parent_id')
                 ->setParameter('parent_id', $parentId);
-        } else {
+        }
+
+        if ($parentId === null) {
             $qb->where('c.parent_category_id IS NULL');
         }
 
@@ -505,14 +400,13 @@ class ProductRepository extends AbstractRepository
      */
     public function getToolDefinitions(): array
     {
-        return self::TOOL_DEFINITIONS;
+        return ProductToolDefinition::all();
     }
 
     /**
      * AI ツール呼び出しを対応するメソッドにルーティングする。
      *
-     * ハンドラメソッドのディスパッチテーブルを使用し、
-     * match 文の CC ポイントを削減している。
+     * @deprecated ProductToolExecutor::execute() を使用すること。互換保持のための委譲ラッパ。
      *
      * @param string $name ツール名
      * @param array  $args ツール引数
@@ -523,111 +417,7 @@ class ProductRepository extends AbstractRepository
      */
     public function executeTool(string $name, array $args): array
     {
-        $methodName = self::TOOL_HANDLERS[$name] ?? null;
-        if ($methodName === null) {
-            throw new InvalidArgumentException(sprintf('Unknown tool: %s', $name));
-        }
-
-        return $this->$methodName($args);
-    }
-
-    // ================================================================
-    //  ツールハンドラメソッド（executeTool からディスパッチ）
-    // ================================================================
-
-    /**
-     * search_products ツールの引数を解析して実行する。
-     */
-    private function executeSearchProducts(array $args): array
-    {
-        return $this->search(
-            $args['keyword'] ?? '',
-            isset($args['category_id']) ? (int) $args['category_id'] : null,
-            (int) ($args['limit'] ?? 20),
-            (int) ($args['offset'] ?? 0)
-        );
-    }
-
-    /**
-     * get_product_detail ツールの引数を解析して実行する。
-     */
-    private function executeGetProductDetail(array $args): array
-    {
-        return $this->getDetail((int) $args['product_id']) ?? ['error' => 'Product not found'];
-    }
-
-    /**
-     * get_stock ツールの引数を解析して実行する。
-     */
-    private function executeGetStock(array $args): array
-    {
-        return $this->getStock((int) $args['product_id']);
-    }
-
-    /**
-     * get_categories ツールの引数を解析して実行する。
-     */
-    private function executeGetCategories(array $args): array
-    {
-        return $this->getCategories(
-            isset($args['parent_id']) ? (int) $args['parent_id'] : null
-        );
-    }
-
-    /**
-     * get_category_products ツールの引数を解析して実行する。
-     */
-    private function executeGetCategoryProducts(array $args): array
-    {
-        return $this->getCategoryProducts(
-            (int) $args['category_id'],
-            (int) ($args['limit'] ?? 50),
-            (int) ($args['offset'] ?? 0)
-        );
-    }
-
-    /**
-     * get_tags ツールを実行する（引数なし）。
-     */
-    private function executeGetTags(array $args): array
-    {
-        return $this->getTags();
-    }
-
-    /**
-     * search_by_tag ツールの引数を解析して実行する。
-     */
-    private function executeSearchByTag(array $args): array
-    {
-        return $this->searchByTag(
-            (int) $args['tag_id'],
-            (int) ($args['limit'] ?? 20),
-            (int) ($args['offset'] ?? 0)
-        );
-    }
-
-    /**
-     * @deprecated News は汎用化により廃止（データソースはナレッジと商品のみ）。
-     */
-    private function executeGetNews(array $args): array
-    {
-        return [];
-    }
-
-    /**
-     * @deprecated Help は汎用化により廃止。
-     */
-    private function executeSearchHelp(array $args): array
-    {
-        return [];
-    }
-
-    /**
-     * @deprecated Help は汎用化により廃止。
-     */
-    private function executeGetHelpDetail(array $args): array
-    {
-        return ['error' => 'Help page not found (deprecated)'];
+        return (new ProductToolExecutor($this))->execute($name, $args);
     }
 
     // ================================================================
@@ -653,143 +443,6 @@ class ProductRepository extends AbstractRepository
     public function searchHelp(string $keyword = '', int $limit = 10): array
     {
         return [];
-    }
-
-
-
-    /**
-     * 検索結果に help_guide が含まれているか判定する。
-     */
-    private function isHelpGuideInResults(array $results): bool
-    {
-        foreach ($results as $row) {
-            if (($row['url'] ?? '') === 'help_guide') {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * help_guide（Help/guide.twig）のファイル内容がキーワードを含むか判定する。
-     *
-     * DBカラムに含まれない FAQ 本文（例: 二日酔い、カンナビノイド）を補完するための
-     * ファイル内容検索。Twig/HTMLをプレーンテキスト化して部分一致で判定する。
-     */
-    private function doesHelpGuideContainKeyword(string $keyword): bool
-    {
-        $keyword = trim($keyword);
-        if ($keyword === '') {
-            return false;
-        }
-
-        $text = $this->getHelpGuidePlainTextForSearch();
-        if ($text === '') {
-            return false;
-        }
-
-        // 完全一致（部分一致）の直接検索 — 「カンナビノイドの二日酔いを抑える方法はありますか？」等は
-        // ファイル内に「Q. カンナビノイドの二日酔いを抑える方法はありますか？」として存在するため
-        // 正規化せず直接 stripos でもヒットするが、記号差異に対応するため正規化も試す
-        if (mb_stripos($text, $keyword) !== false) {
-            return true;
-        }
-
-        // 正規化して再試行（全角/半角、記号除去、空白除去）
-        $normalizedKeyword = $this->normalizeKeywordForFaqSearch($keyword);
-        $normalizedText = $this->normalizeKeywordForFaqSearch($text);
-        if ($normalizedKeyword !== '' && mb_strpos($normalizedText, $normalizedKeyword) !== false) {
-            return true;
-        }
-
-        // トークン分割して FAQ 固有語が含まれているかチェック
-        // 例: 「二日酔い」「カンナビノイド」「白玉点滴」「グルタチオン」等が help_guide FAQ に存在
-        $tokens = preg_split('/[\s\p{P}]+/u', $keyword);
-        if ($tokens === false) {
-            return false;
-        }
-
-        foreach ($tokens as $token) {
-            $token = trim($token);
-            if (mb_strlen($token) < 2) {
-                continue;
-            }
-            // 2文字以上のトークンが FAQ 本文に含まれていれば help_guide 関連とみなす
-            // ただし一般的すぎる語（「方法」「ありますか」等）は除外せず、FAQ候補として扱う
-            if (mb_stripos($text, $token) !== false) {
-                // 少なくとも1つのトークンがヒットし、かつそのトークンが FAQ らしい語であれば補完対象
-                // ここでは「二日酔い」「カンナビノイド」「妊活」「梱包」等の FAQ 語が含まれていれば優先
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * FAQ 検索用のキーワード正規化（小文字化、全角半角、記号除去）。
-     */
-    private function normalizeKeywordForFaqSearch(string $keyword): string
-    {
-        $keyword = mb_strtolower($keyword);
-        // 記号・空白を除去（「Q.」「？」「。」「、」等）
-        $keyword = preg_replace('/[\s\p{P}\p{S}]+/u', '', $keyword) ?? $keyword;
-
-        return $keyword;
-    }
-
-    /**
-     * help_guide のプレーンテキストを取得（キャッシュなし、毎回読み込み）。
-     * 検索用に軽量に取得する。
-     */
-    private function getHelpGuidePlainTextForSearch(): string
-    {
-        // dtb_page から file_name を取得せず、既知のパスを直接参照して高速化
-        $projectDir = dirname(__DIR__, 3);
-        $candidates = [
-            $projectDir . '/app/template/default/Help/guide.twig',
-            $projectDir . '/src/Eccube/Resource/template/default/Help/guide.twig',
-        ];
-
-        $filePath = null;
-        foreach ($candidates as $candidate) {
-            if (is_file($candidate)) {
-                $filePath = $candidate;
-                break;
-            }
-        }
-
-        if ($filePath === null) {
-            return '';
-        }
-
-        $raw = (string) file_get_contents($filePath);
-
-        return $this->htmlToPlainText($raw);
-    }
-
-    /**
-     * help_guide の dtb_page 行を取得する。
-     *
-     * @return array{id: int, page_name: string|null, url: string, meta_robots: string|null}|null
-     */
-    private function fetchHelpGuideRow(): ?array
-    {
-        $qb = $this->connection->createQueryBuilder()
-            ->select('id', 'page_name', 'url', 'meta_robots')
-            ->from('dtb_page')
-            ->where('url = :url')
-            ->setMaxResults(1)
-            ->setParameter('url', 'help_guide');
-
-        $row = $qb->executeQuery()->fetchAssociative();
-
-        if ($row === false) {
-            return null;
-        }
-
-        return $row;
     }
 
     /**

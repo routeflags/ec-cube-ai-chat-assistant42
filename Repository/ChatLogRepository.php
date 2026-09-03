@@ -27,6 +27,8 @@ use DateTimeImmutable;
  * コントローラやサービスが直接 SQL を発行するのではなく、
  * 本リポジトリに集約して Doctrine 形式（ORM QueryBuilder / DBAL QueryBuilder）で
  * データアクセスを一元管理する。
+ *
+ * @SuppressWarnings("PHPMD.TooManyPublicMethods")
  */
 class ChatLogRepository extends AbstractRepository
 {
@@ -373,10 +375,48 @@ class ChatLogRepository extends AbstractRepository
         $qb = $this->createQueryBuilder('log')
             ->orderBy('log.created_at', 'DESC');
 
-        $this->applyDateFilter($qb, $filters);
-        $this->applyProviderFilter($qb, $filters);
-        $this->applyModelFilter($qb, $filters);
-        $this->applyStatusFilter($qb, $filters);
+        if (($filters['date_from'] ?? '') !== '') {
+            $qb->andWhere('log.created_at >= :date_from')
+                ->setParameter('date_from', new DateTimeImmutable($filters['date_from']));
+        }
+
+        if (($filters['date_to'] ?? '') !== '') {
+            $dateTo = (new DateTimeImmutable($filters['date_to']))->modify('+1 day');
+            $qb->andWhere('log.created_at < :date_to')
+                ->setParameter('date_to', $dateTo);
+        }
+
+        if (($filters['provider'] ?? '') !== '') {
+            $qb->andWhere('log.provider = :provider')
+                ->setParameter('provider', $filters['provider']);
+        }
+
+        if (($filters['model'] ?? '') !== '') {
+            $qb->andWhere('log.model = :model')
+                ->setParameter('model', $filters['model']);
+        }
+
+        if (($filters['status'] ?? '') !== '') {
+            $statusConditions = [
+                'error' => fn(\Doctrine\ORM\QueryBuilder $qb) => $qb
+                    ->andWhere('log.error_message IS NOT NULL')
+                    ->andWhere("log.error_message != ''"),
+                'resolved' => fn(\Doctrine\ORM\QueryBuilder $qb) => $qb->andWhere('log.is_resolved = 1'),
+                'unresolved' => fn(\Doctrine\ORM\QueryBuilder $qb) => $qb->andWhere('log.is_resolved = 0'),
+                'email_pending' => fn(\Doctrine\ORM\QueryBuilder $qb) => $qb
+                    ->andWhere(
+                        '(log.email_reply_address IS NOT NULL'
+                        . ' OR log.email_reply_address_hash IS NOT NULL'
+                        . ' OR log.email_reply_address_enc IS NOT NULL)'
+                    )
+                    ->andWhere('log.email_replied_at IS NULL'),
+            ];
+
+            $handler = $statusConditions[$filters['status']] ?? null;
+            if ($handler !== null) {
+                $handler($qb);
+            }
+        }
 
         return $qb;
     }
@@ -478,63 +518,6 @@ class ChatLogRepository extends AbstractRepository
             ->select('COUNT(l.id)')
             ->getQuery()
             ->getSingleScalarResult();
-    }
-
-    private function applyDateFilter(\Doctrine\ORM\QueryBuilder $qb, array $filters): void
-    {
-        if (($filters['date_from'] ?? '') !== '') {
-            $qb->andWhere('log.created_at >= :date_from')
-                ->setParameter('date_from', new DateTimeImmutable($filters['date_from']));
-        }
-
-        if (($filters['date_to'] ?? '') !== '') {
-            $dateTo = (new DateTimeImmutable($filters['date_to']))->modify('+1 day');
-            $qb->andWhere('log.created_at < :date_to')
-                ->setParameter('date_to', $dateTo);
-        }
-    }
-
-    private function applyProviderFilter(\Doctrine\ORM\QueryBuilder $qb, array $filters): void
-    {
-        if (($filters['provider'] ?? '') !== '') {
-            $qb->andWhere('log.provider = :provider')
-                ->setParameter('provider', $filters['provider']);
-        }
-    }
-
-    private function applyModelFilter(\Doctrine\ORM\QueryBuilder $qb, array $filters): void
-    {
-        if (($filters['model'] ?? '') !== '') {
-            $qb->andWhere('log.model = :model')
-                ->setParameter('model', $filters['model']);
-        }
-    }
-
-    private function applyStatusFilter(\Doctrine\ORM\QueryBuilder $qb, array $filters): void
-    {
-        if (($filters['status'] ?? '') === '') {
-            return;
-        }
-
-        $statusConditions = [
-            'error' => fn(\Doctrine\ORM\QueryBuilder $qb) => $qb
-                ->andWhere('log.error_message IS NOT NULL')
-                ->andWhere("log.error_message != ''"),
-            'resolved' => fn(\Doctrine\ORM\QueryBuilder $qb) => $qb->andWhere('log.is_resolved = 1'),
-            'unresolved' => fn(\Doctrine\ORM\QueryBuilder $qb) => $qb->andWhere('log.is_resolved = 0'),
-            'email_pending' => fn(\Doctrine\ORM\QueryBuilder $qb) => $qb
-                ->andWhere(
-                    '(log.email_reply_address IS NOT NULL'
-                    . ' OR log.email_reply_address_hash IS NOT NULL'
-                    . ' OR log.email_reply_address_enc IS NOT NULL)'
-                )
-                ->andWhere('log.email_replied_at IS NULL'),
-        ];
-
-        $handler = $statusConditions[$filters['status']] ?? null;
-        if ($handler !== null) {
-            $handler($qb);
-        }
     }
 
     // ================================================================
