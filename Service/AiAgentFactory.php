@@ -51,9 +51,32 @@ class AiAgentFactory
         string $systemPrompt = ''
     ): AiAgentInterface {
         return match ($provider) {
-            'openai' => new OpenAiAgent($apiKey, $model, $maxTokens, $systemPrompt, 'https://api.openai.com/v1', null, null, $this->logger),
-            'anthropic' => new AnthropicAgent($apiKey, $model, $maxTokens, $systemPrompt, 'https://api.anthropic.com/v1', $this->logger),
-            'gemini' => new GeminiAgent($apiKey, $model, $maxTokens, $systemPrompt, 'https://generativelanguage.googleapis.com/v1beta', $this->logger),
+            'openai' => new OpenAiAgent(
+                $apiKey,
+                $model,
+                $maxTokens,
+                $systemPrompt,
+                'https://api.openai.com/v1',
+                null,
+                null,
+                $this->logger
+            ),
+            'anthropic' => new AnthropicAgent(
+                $apiKey,
+                $model,
+                $maxTokens,
+                $systemPrompt,
+                'https://api.anthropic.com/v1',
+                $this->logger
+            ),
+            'gemini' => new GeminiAgent(
+                $apiKey,
+                $model,
+                $maxTokens,
+                $systemPrompt,
+                'https://generativelanguage.googleapis.com/v1beta',
+                $this->logger
+            ),
             default => throw new \InvalidArgumentException(
                 sprintf('Unknown AI provider: %s', $provider)
             ),

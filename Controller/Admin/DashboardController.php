@@ -532,7 +532,9 @@ class DashboardController extends AbstractController
      * AiModelRegistry を優先して再利用し、二重実装を解消。
      * フォールバックとして従来の file_get_contents 経由も維持（Registry 未注入やテスト時の後方互換）。
      *
-     * @return array<string, array{name: string, api_base: string, models: array<int, array{id: string, name: string, description: string, supports_tools: bool, cost_tier: string, is_default: bool}>}>
+     * @return array<string, array{name: string, api_base: string, models: array<int, array{
+     *               id: string, name: string, description: string, supports_tools: bool,
+     *               cost_tier: string, is_default: bool}>}>
      */
     private function loadAiModels(): array
     {

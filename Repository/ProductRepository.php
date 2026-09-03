@@ -40,7 +40,10 @@ class ProductRepository extends AbstractRepository
         [
             'type' => 'function',
             'name' => 'search_products',
-            'description' => '商品をキーワードとカテゴリで検索します。商品名・検索ワード・商品コードが対象です。返却される各商品の url はショップの商品詳細ページの絶対URLです。相対パスや https://www.example.com は使用しないでください。',
+            'description' => '商品をキーワードとカテゴリで検索します。'
+                . '商品名・検索ワード・商品コードが対象です。'
+                . '返却される各商品の url はショップの商品詳細ページの絶対URLです。'
+                . '相対パスや https://www.example.com は使用しないでください。',
             'input_schema' => [
                 'type' => 'object',
                 'properties' => [
@@ -54,7 +57,9 @@ class ProductRepository extends AbstractRepository
         [
             'type' => 'function',
             'name' => 'get_product_detail',
-            'description' => '商品の詳細情報を取得します。規格・在庫・カテゴリ・画像・タグを含みます。返却される url はショップの商品詳細ページの絶対URLです。相対パスや https://www.example.com は使用しないでください。',
+            'description' => '商品の詳細情報を取得します。規格・在庫・カテゴリ・画像・タグを含みます。'
+                . '返却される url はショップの商品詳細ページの絶対URLです。'
+                . '相対パスや https://www.example.com は使用しないでください。',
             'input_schema' => [
                 'type' => 'object',
                 'properties' => [
@@ -226,7 +231,8 @@ class ProductRepository extends AbstractRepository
      * @param int         $limit    取得件数上限
      * @param int         $offset   オフセット
      *
-     * @return array<int, array{id: int, name: string, price: string|null, stock: string|null, stock_unlimited: bool, description_list: string|null, images: array<int, string>}>
+     * @return array<int, array{id: int, name: string, price: string|null, stock: string|null,
+     *               stock_unlimited: bool, description_list: string|null, images: array<int, string>}>
      */
     public function search(string $keyword = '', ?int $categoryId = null, int $limit = 20, int $offset = 0): array
     {
@@ -308,12 +314,22 @@ class ProductRepository extends AbstractRepository
      *
      * @param int $productId 商品 ID
      *
-     * @return array<int, array{class_id: int, code: string|null, stock: string|null, stock_unlimited: bool, price: string|null, class_category1: string|null, class_category2: string|null}>
+     * @return array<int, array{class_id: int, code: string|null, stock: string|null,
+     *               stock_unlimited: bool, price: string|null, class_category1: string|null,
+     *               class_category2: string|null}>
      */
     public function getStock(int $productId): array
     {
         $qb = $this->connection->createQueryBuilder()
-            ->select('pc.id AS class_id', 'pc.product_code AS code', 'ps.stock', 'pc.stock_unlimited', 'pc.price02 AS price', 'cc1.name AS class_category1', 'cc2.name AS class_category2')
+            ->select(
+                'pc.id AS class_id',
+                'pc.product_code AS code',
+                'ps.stock',
+                'pc.stock_unlimited',
+                'pc.price02 AS price',
+                'cc1.name AS class_category1',
+                'cc2.name AS class_category2'
+            )
             ->from('dtb_product_class', 'pc')
             ->leftJoin('pc', 'dtb_product_stock', 'ps', 'ps.product_class_id = pc.id')
             ->leftJoin('pc', 'dtb_class_category', 'cc1', 'cc1.id = pc.class_category_id1')
@@ -345,7 +361,13 @@ class ProductRepository extends AbstractRepository
     public function getCategories(?int $parentId = null): array
     {
         $qb = $this->connection->createQueryBuilder()
-            ->select('c.id', 'c.category_name AS name', 'c.hierarchy', 'c.parent_category_id AS parent_id', '(SELECT COUNT(*) FROM dtb_category sub WHERE sub.parent_category_id = c.id) AS children_count')
+            ->select(
+                'c.id',
+                'c.category_name AS name',
+                'c.hierarchy',
+                'c.parent_category_id AS parent_id',
+                '(SELECT COUNT(*) FROM dtb_category sub WHERE sub.parent_category_id = c.id) AS children_count'
+            )
             ->from('dtb_category', 'c')
             ->orderBy('c.sort_no', 'ASC')
             ->addOrderBy('c.id', 'ASC');
@@ -376,7 +398,8 @@ class ProductRepository extends AbstractRepository
      * @param int $limit      取得件数上限
      * @param int $offset     オフセット
      *
-     * @return array<int, array{id: int, name: string, price: string|null, stock: string|null, stock_unlimited: bool, description_list: string|null, images: array<int, string>}>
+     * @return array<int, array{id: int, name: string, price: string|null, stock: string|null,
+     *               stock_unlimited: bool, description_list: string|null, images: array<int, string>}>
      */
     public function getCategoryProducts(int $categoryId, int $limit = 50, int $offset = 0): array
     {
@@ -436,7 +459,8 @@ class ProductRepository extends AbstractRepository
      * @param int $limit   取得件数上限
      * @param int $offset  オフセット
      *
-     * @return array<int, array{id: int, name: string, price: string|null, stock: string|null, stock_unlimited: bool, description_list: string|null, images: array<int, string>}>
+     * @return array<int, array{id: int, name: string, price: string|null, stock: string|null,
+     *               stock_unlimited: bool, description_list: string|null, images: array<int, string>}>
      */
     public function searchByTag(int $tagId, int $limit = 20, int $offset = 0): array
     {
@@ -928,12 +952,19 @@ class ProductRepository extends AbstractRepository
     /**
      * 商品の規格クラス情報を取得する。
      *
-     * @return array<int, array{class_id: int, code: string|null, price: string|null, class_category1: string|null, class_category2: string|null}>
+     * @return array<int, array{class_id: int, code: string|null, price: string|null,
+     *               class_category1: string|null, class_category2: string|null}>
      */
     private function getProductClasses(int $productId): array
     {
         $qb = $this->connection->createQueryBuilder()
-            ->select('pc.id AS class_id', 'pc.product_code AS code', 'pc.price02 AS price', 'cc1.name AS class_category1', 'cc2.name AS class_category2')
+            ->select(
+                'pc.id AS class_id',
+                'pc.product_code AS code',
+                'pc.price02 AS price',
+                'cc1.name AS class_category1',
+                'cc2.name AS class_category2'
+            )
             ->from('dtb_product_class', 'pc')
             ->leftJoin('pc', 'dtb_class_category', 'cc1', 'cc1.id = pc.class_category_id1')
             ->leftJoin('pc', 'dtb_class_category', 'cc2', 'cc2.id = pc.class_category_id2')

@@ -50,20 +50,20 @@ class PluginManager extends AbstractPluginManager
         if ($container->hasParameter('eccube.plugin_html_realdir')) {
             $pluginHtmlDir = rtrim($container->getParameter('eccube.plugin_html_realdir'), '/');
         } else {
-            $pluginHtmlDir = $projectDir.'/html/plugin';
+            $pluginHtmlDir = $projectDir . '/html/plugin';
         }
 
-        $source = $projectDir.'/app/Plugin/AiChatAssistant42/Resource/assets';
+        $source = $projectDir . '/app/Plugin/AiChatAssistant42/Resource/assets';
         // フォールバック: 本リポジトリ直下で動作させる場合（単体テスト等）
         if (!file_exists($source)) {
-            $source = __DIR__.'/Resource/assets';
+            $source = __DIR__ . '/Resource/assets';
         }
 
         if (!file_exists($source)) {
             return;
         }
 
-        $target = $pluginHtmlDir.'/AiChatAssistant42/assets';
+        $target = $pluginHtmlDir . '/AiChatAssistant42/assets';
         $fs = new Filesystem();
         $fs->mirror($source, $target);
     }

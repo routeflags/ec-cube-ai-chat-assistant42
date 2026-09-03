@@ -154,7 +154,8 @@ class AiModelRegistry
      *
      * @param string $provider プロバイダキー（openai / anthropic / gemini）
      *
-     * @return array<int, array{id: string, name: string, description: string, supports_tools: bool, supports_reasoning_with_tools?: bool, cost_tier: string, is_default: bool}>
+     * @return array<int, array{id: string, name: string, description: string, supports_tools: bool,
+     *               supports_reasoning_with_tools?: bool, cost_tier: string, is_default: bool}>
      */
     public function getModels(string $provider): array
     {
@@ -166,7 +167,8 @@ class AiModelRegistry
      *
      * 見つからない場合は null を返す。
      *
-     * @return array{id: string, name: string, description: string, supports_tools: bool, supports_reasoning_with_tools?: bool, cost_tier: string, is_default: bool}|null
+     * @return array{id: string, name: string, description: string, supports_tools: bool,
+     *               supports_reasoning_with_tools?: bool, cost_tier: string, is_default: bool}|null
      */
     public function getModel(string $provider, string $modelId): ?array
     {
@@ -303,7 +305,8 @@ class AiModelRegistry
     /**
      * 全プロバイダの全モデルを平坦化して返す。
      *
-     * @return array<int, array{provider: string, id: string, name: string, description: string, supports_tools: bool, cost_tier: string, is_default: bool}>
+     * @return array<int, array{provider: string, id: string, name: string, description: string,
+     *               supports_tools: bool, cost_tier: string, is_default: bool}>
      */
     public function getAllModels(): array
     {

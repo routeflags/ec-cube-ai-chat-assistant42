@@ -85,7 +85,8 @@ class ReportController extends AbstractController
     /**
      * モデル別のパフォーマンス統計を取得する。
      *
-     * @return array<array{model: string, provider: string, count: int, avg_response_ms: float, avg_token_input: float, avg_token_output: float, error_count: int}>
+     * @return array<array{model: string, provider: string, count: int, avg_response_ms: float,
+     *               avg_token_input: float, avg_token_output: float, error_count: int}>
      */
     private function fetchModelStats(\DateTimeImmutable $start, \DateTimeImmutable $end): array
     {

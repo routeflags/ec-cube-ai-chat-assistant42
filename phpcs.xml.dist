@@ -14,12 +14,14 @@
     <!-- Coding Standard -->
     <rule ref="PSR12"/>
 
-    <!-- 行長: 120 まで許容、150 でエラー -->
+    <!-- 行長: 120 まで許容、150 でエラー。DoctrineMigrations / Tests は除外（自動生成・フィクスチャで長行が不可避） -->
     <rule ref="Generic.Files.LineLength">
         <properties>
             <property name="lineLimit" value="120"/>
             <property name="absoluteLineLimit" value="150"/>
         </properties>
+        <exclude-pattern>*/DoctrineMigrations/*</exclude-pattern>
+        <exclude-pattern>*/Tests/*</exclude-pattern>
     </rule>
 
     <!-- EC-CUBE plugin AiChatAssistant42 -->
@@ -34,6 +36,7 @@
     <file>Tests</file>
     <file>bin</file>
     <file>Nav.php</file>
+    <file>PluginManager.php</file>
 
     <!-- 除外 -->
     <exclude-pattern>vendor/*</exclude-pattern>

@@ -46,13 +46,22 @@ class DesignController extends AbstractController
         'assistant_display_name' => '商品アドバイザー',
         'license_footer_label' => 'ライセンスについて',
         'license_title' => 'ソフトウェアライセンスについて',
-        'license_lead' => 'AiChatAssistant42（チャットソフトウェア）の著作権は <a href="https://blog.routeflags.com/%e5%88%a9%e7%94%a8%e8%a6%8f%e7%b4%84/" target="_blank" rel="noopener">ROUTE FLAGS Co., Ltd.</a> に帰属し、GNU General Public License v2 (GPL-2.0-only) に基づき提供されています。',
+        'license_lead' => 'AiChatAssistant42（チャットソフトウェア）の著作権は '
+            . '<a href="https://blog.routeflags.com/%e5%88%a9%e7%94%a8%e8%a6%8f%e7%b4%84/"'
+            . ' target="_blank" rel="noopener">ROUTE FLAGS Co., Ltd.</a> に帰属し、'
+            . 'GNU General Public License v2 (GPL-2.0-only) に基づき提供されています。',
         'license_item1_heading' => '著作権',
         'license_item1_body' => '© 2024-2026 ROUTE FLAGS Co., Ltd. All Rights Reserved.',
         'license_item2_heading' => 'ライセンス (GPL-2.0-only)',
-        'license_item2_body' => '本ソフトウェアのソースコードは GPL-2.0-only で提供されています。複製・改変・再配布する際は GPL-2.0 の条件（著作権表示とライセンス条文の保持、改変時の変更明示、ソースコードの提供等）を遵守してください。',
+        'license_item2_body' => '本ソフトウェアのソースコードは GPL-2.0-only で提供されています。'
+            . '複製・改変・再配布する際は GPL-2.0 の条件（著作権表示とライセンス条文の保持、'
+            . '改変時の変更明示、ソースコードの提供等）を遵守してください。',
         'license_item3_heading' => 'オープンソースソフトウェアの利用',
-        'license_item3_body' => '本ソフトウェアは以下のOSSを利用しています: EC-CUBE 4.2 (GPL-2.0-only)、Symfony 5.4 (MIT)、Doctrine ORM/DBAL (MIT)、Twig 2.x (BSD-3-Clause)、GuzzleHTTP (MIT)、Monolog (MIT)、KnpPaginatorBundle (MIT) ほか composer.json 記載のライブラリ。各OSSのライセンス詳細は各プロジェクトの配布物をご参照ください。',
+        'license_item3_body' => '本ソフトウェアは以下のOSSを利用しています: EC-CUBE 4.2 (GPL-2.0-only)、'
+            . 'Symfony 5.4 (MIT)、Doctrine ORM/DBAL (MIT)、Twig 2.x (BSD-3-Clause)、'
+            . 'GuzzleHTTP (MIT)、Monolog (MIT)、KnpPaginatorBundle (MIT) ほか '
+            . 'composer.json 記載のライブラリ。各OSSのライセンス詳細は各プロジェクトの配布物を'
+            . 'ご参照ください。',
     ];
 
     public function __construct(
@@ -113,20 +122,62 @@ class DesignController extends AbstractController
         // I-15/I-22: 入力バリデーション + ライセンスHTMLサニタイズ（ガイドライン §2-2）
         $existing = $this->loadDesignSettings();
         $rawInput = [
-            'widget_color' => $request->request->get('widget_color', $existing['widget_color'] ?? self::DEFAULTS['widget_color']),
-            'widget_size' => $request->request->get('widget_size', $existing['widget_size'] ?? self::DEFAULTS['widget_size']),
-            'position' => $request->request->get('position', $existing['position'] ?? self::DEFAULTS['position']),
-            'greeting_message' => $request->request->get('greeting_message', $existing['greeting_message'] ?? self::DEFAULTS['greeting_message']),
-            'assistant_display_name' => $request->request->get('assistant_display_name', $existing['assistant_display_name'] ?? self::DEFAULTS['assistant_display_name']),
-            'license_footer_label' => $request->request->get('license_footer_label', $existing['license_footer_label'] ?? self::DEFAULTS['license_footer_label']),
-            'license_title' => $request->request->get('license_title', $existing['license_title'] ?? self::DEFAULTS['license_title']),
-            'license_lead' => $request->request->get('license_lead', $existing['license_lead'] ?? self::DEFAULTS['license_lead']),
-            'license_item1_heading' => $request->request->get('license_item1_heading', $existing['license_item1_heading'] ?? self::DEFAULTS['license_item1_heading']),
-            'license_item1_body' => $request->request->get('license_item1_body', $existing['license_item1_body'] ?? self::DEFAULTS['license_item1_body']),
-            'license_item2_heading' => $request->request->get('license_item2_heading', $existing['license_item2_heading'] ?? self::DEFAULTS['license_item2_heading']),
-            'license_item2_body' => $request->request->get('license_item2_body', $existing['license_item2_body'] ?? self::DEFAULTS['license_item2_body']),
-            'license_item3_heading' => $request->request->get('license_item3_heading', $existing['license_item3_heading'] ?? self::DEFAULTS['license_item3_heading']),
-            'license_item3_body' => $request->request->get('license_item3_body', $existing['license_item3_body'] ?? self::DEFAULTS['license_item3_body']),
+            'widget_color' => $request->request->get(
+                'widget_color',
+                $existing['widget_color'] ?? self::DEFAULTS['widget_color']
+            ),
+            'widget_size' => $request->request->get(
+                'widget_size',
+                $existing['widget_size'] ?? self::DEFAULTS['widget_size']
+            ),
+            'position' => $request->request->get(
+                'position',
+                $existing['position'] ?? self::DEFAULTS['position']
+            ),
+            'greeting_message' => $request->request->get(
+                'greeting_message',
+                $existing['greeting_message'] ?? self::DEFAULTS['greeting_message']
+            ),
+            'assistant_display_name' => $request->request->get(
+                'assistant_display_name',
+                $existing['assistant_display_name'] ?? self::DEFAULTS['assistant_display_name']
+            ),
+            'license_footer_label' => $request->request->get(
+                'license_footer_label',
+                $existing['license_footer_label'] ?? self::DEFAULTS['license_footer_label']
+            ),
+            'license_title' => $request->request->get(
+                'license_title',
+                $existing['license_title'] ?? self::DEFAULTS['license_title']
+            ),
+            'license_lead' => $request->request->get(
+                'license_lead',
+                $existing['license_lead'] ?? self::DEFAULTS['license_lead']
+            ),
+            'license_item1_heading' => $request->request->get(
+                'license_item1_heading',
+                $existing['license_item1_heading'] ?? self::DEFAULTS['license_item1_heading']
+            ),
+            'license_item1_body' => $request->request->get(
+                'license_item1_body',
+                $existing['license_item1_body'] ?? self::DEFAULTS['license_item1_body']
+            ),
+            'license_item2_heading' => $request->request->get(
+                'license_item2_heading',
+                $existing['license_item2_heading'] ?? self::DEFAULTS['license_item2_heading']
+            ),
+            'license_item2_body' => $request->request->get(
+                'license_item2_body',
+                $existing['license_item2_body'] ?? self::DEFAULTS['license_item2_body']
+            ),
+            'license_item3_heading' => $request->request->get(
+                'license_item3_heading',
+                $existing['license_item3_heading'] ?? self::DEFAULTS['license_item3_heading']
+            ),
+            'license_item3_body' => $request->request->get(
+                'license_item3_body',
+                $existing['license_item3_body'] ?? self::DEFAULTS['license_item3_body']
+            ),
         ];
 
         // バリデーション

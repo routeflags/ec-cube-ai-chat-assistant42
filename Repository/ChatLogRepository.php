@@ -522,7 +522,11 @@ class ChatLogRepository extends AbstractRepository
             'resolved' => fn(\Doctrine\ORM\QueryBuilder $qb) => $qb->andWhere('log.is_resolved = 1'),
             'unresolved' => fn(\Doctrine\ORM\QueryBuilder $qb) => $qb->andWhere('log.is_resolved = 0'),
             'email_pending' => fn(\Doctrine\ORM\QueryBuilder $qb) => $qb
-                ->andWhere('(log.email_reply_address IS NOT NULL OR log.email_reply_address_hash IS NOT NULL OR log.email_reply_address_enc IS NOT NULL)')
+                ->andWhere(
+                    '(log.email_reply_address IS NOT NULL'
+                    . ' OR log.email_reply_address_hash IS NOT NULL'
+                    . ' OR log.email_reply_address_enc IS NOT NULL)'
+                )
                 ->andWhere('log.email_replied_at IS NULL'),
         ];
 
@@ -618,7 +622,8 @@ class ChatLogRepository extends AbstractRepository
      *
      * 常に token 平均と error_count を含む統一形で返す。
      *
-     * @return array<array{model: string, provider: string, count: int, avg_response_ms: float, avg_token_input: float, avg_token_output: float, error_count: int}>
+     * @return array<array{model: string, provider: string, count: int, avg_response_ms: float,
+     *               avg_token_input: float, avg_token_output: float, error_count: int}>
      */
     public function fetchModelStats(\DateTimeImmutable $start, \DateTimeImmutable $end): array
     {

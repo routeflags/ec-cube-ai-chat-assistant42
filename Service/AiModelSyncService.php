@@ -124,7 +124,10 @@ class AiModelSyncService extends AbstractPluginDataSyncService
             }
 
             if (count($provider['models']) > self::MAX_MODELS_PER_PROVIDER) {
-                $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => "Too many models for {$providerKey}: " . count($provider['models'])]);
+                $this->logger->warning(
+                    $this->getSyncFailureLogMessage(),
+                    ['error' => "Too many models for {$providerKey}: " . count($provider['models'])]
+                );
 
                 return null;
             }
@@ -143,8 +146,17 @@ class AiModelSyncService extends AbstractPluginDataSyncService
 
             $seenIds = [];
             foreach ($provider['models'] as $model) {
-                if (!is_array($model) || !isset($model['id']) || !is_string($model['id']) || $model['id'] === '' || mb_strlen($model['id']) > self::MAX_ID_LENGTH) {
-                    $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => "Invalid id for provider: {$providerKey}"]);
+                if (
+                    !is_array($model)
+                    || !isset($model['id'])
+                    || !is_string($model['id'])
+                    || $model['id'] === ''
+                    || mb_strlen($model['id']) > self::MAX_ID_LENGTH
+                ) {
+                    $this->logger->warning(
+                        $this->getSyncFailureLogMessage(),
+                        ['error' => "Invalid id for provider: {$providerKey}"]
+                    );
 
                     return null;
                 }
@@ -156,38 +168,69 @@ class AiModelSyncService extends AbstractPluginDataSyncService
                 }
                 $seenIds[$model['id']] = true;
 
-                if (isset($model['cost_tier']) && !in_array($model['cost_tier'], self::ALLOWED_COST_TIERS, true)) {
-                    $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => "Invalid cost_tier for {$providerKey}/{$model['id']}: {$model['cost_tier']}"]);
+                if (
+                    isset($model['cost_tier'])
+                    && !in_array($model['cost_tier'], self::ALLOWED_COST_TIERS, true)
+                ) {
+                    $this->logger->warning(
+                        $this->getSyncFailureLogMessage(),
+                        ['error' => "Invalid cost_tier for {$providerKey}/{$model['id']}: {$model['cost_tier']}"]
+                    );
 
                     return null;
                 }
 
                 if (isset($model['supports_tools']) && !is_bool($model['supports_tools'])) {
-                    $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => "Invalid supports_tools for {$providerKey}/{$model['id']}"]);
+                    $this->logger->warning(
+                        $this->getSyncFailureLogMessage(),
+                        ['error' => "Invalid supports_tools for {$providerKey}/{$model['id']}"]
+                    );
 
                     return null;
                 }
 
-                if (isset($model['supports_reasoning_with_tools']) && !is_bool($model['supports_reasoning_with_tools'])) {
-                    $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => "Invalid supports_reasoning_with_tools for {$providerKey}/{$model['id']}"]);
+                if (
+                    isset($model['supports_reasoning_with_tools'])
+                    && !is_bool($model['supports_reasoning_with_tools'])
+                ) {
+                    $this->logger->warning(
+                        $this->getSyncFailureLogMessage(),
+                        ['error' => "Invalid supports_reasoning_with_tools for {$providerKey}/{$model['id']}"]
+                    );
 
                     return null;
                 }
 
                 if (isset($model['is_default']) && !is_bool($model['is_default'])) {
-                    $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => "Invalid is_default for {$providerKey}/{$model['id']}"]);
+                    $this->logger->warning(
+                        $this->getSyncFailureLogMessage(),
+                        ['error' => "Invalid is_default for {$providerKey}/{$model['id']}"]
+                    );
 
                     return null;
                 }
 
-                if (isset($model['name']) && (!is_string($model['name']) || mb_strlen($model['name']) > self::MAX_STRING_LENGTH)) {
-                    $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => "Too long name for {$providerKey}/{$model['id']}"]);
+                if (
+                    isset($model['name'])
+                    && (!is_string($model['name']) || mb_strlen($model['name']) > self::MAX_STRING_LENGTH)
+                ) {
+                    $this->logger->warning(
+                        $this->getSyncFailureLogMessage(),
+                        ['error' => "Too long name for {$providerKey}/{$model['id']}"]
+                    );
 
                     return null;
                 }
 
-                if (isset($model['description']) && (!is_string($model['description']) || mb_strlen($model['description']) > self::MAX_STRING_LENGTH)) {
-                    $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => "Too long description for {$providerKey}/{$model['id']}"]);
+                if (
+                    isset($model['description'])
+                    && (!is_string($model['description'])
+                        || mb_strlen($model['description']) > self::MAX_STRING_LENGTH)
+                ) {
+                    $this->logger->warning(
+                        $this->getSyncFailureLogMessage(),
+                        ['error' => "Too long description for {$providerKey}/{$model['id']}"]
+                    );
 
                     return null;
                 }
