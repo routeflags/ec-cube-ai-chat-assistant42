@@ -510,7 +510,7 @@ class ChatApiController extends AbstractController
         // 運用メモ: 既存 plg_ai_chat_assistant_notification WHERE event='email_reply_request' AND notification_type='email' は手動 DELETE でクリーンアップ
         try {
             $this->emailReplyService->sendBoth($sessionId, $email);
-        } catch (TransportExceptionInterface|\InvalidArgumentException $e) {
+        } catch (TransportExceptionInterface | \InvalidArgumentException $e) {
             // MAILER_DSN=null://null（現行開発）でも 500 にしないため warning に留める
             // catch(\Throwable) でプログラミングエラーを握りつぶさない
             $this->logger->warning('メール返信依頼の送信に失敗しました', [

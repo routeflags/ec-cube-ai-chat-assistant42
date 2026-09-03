@@ -72,7 +72,7 @@ class LogSyncService
             $payload = $this->anonymize($chatLog);
 
             try {
-                $this->httpClient->post($endpoint, [
+                $this->httpClient->request('POST', $endpoint, [
                     'json' => $payload,
                     'timeout' => 30,
                 ]);

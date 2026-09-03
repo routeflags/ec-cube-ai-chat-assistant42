@@ -14,6 +14,14 @@
     <!-- Coding Standard -->
     <rule ref="PSR12"/>
 
+    <!-- 行長: 120 まで許容、150 でエラー -->
+    <rule ref="Generic.Files.LineLength">
+        <properties>
+            <property name="lineLimit" value="120"/>
+            <property name="absoluteLineLimit" value="150"/>
+        </properties>
+    </rule>
+
     <!-- EC-CUBE plugin AiChatAssistant42 -->
     <file>Command</file>
     <file>Controller</file>

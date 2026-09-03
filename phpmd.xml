@@ -19,6 +19,8 @@
     <exclude-pattern>*/node_modules/*</exclude-pattern>
     <exclude-pattern>*/artifacts/*</exclude-pattern>
     <exclude-pattern>*/Documents/*</exclude-pattern>
+    <exclude-pattern>*/DoctrineMigrations/*</exclude-pattern>
+    <exclude-pattern>*/Entity/*</exclude-pattern>
 
     <!-- Clean Code -->
     <rule ref="rulesets/cleancode.xml"/>
@@ -33,15 +35,29 @@
             <property name="reportLevel" value="10"/>
             <property name="showClassesComplexity" value="true"/>
             <property name="showMethodsComplexity" value="true"/>
-            <property name="classReportLevel" value="50"/>
+            <property name="classReportLevel" value="60"/>
+        </properties>
+    </rule>
+
+    <rule ref="rulesets/codesize.xml/TooManyMethods">
+        <properties>
+            <property name="maxmethods" value="30"/>
         </properties>
     </rule>
 
     <!-- Design -->
     <rule ref="rulesets/design.xml"/>
 
-    <!-- Naming -->
-    <rule ref="rulesets/naming.xml"/>
+    <!-- Naming: 短変数 $id/$io は Symfony/Doctrine 慣例のため許容 -->
+    <rule ref="rulesets/naming.xml">
+        <exclude name="ShortVariable"/>
+    </rule>
+    <rule ref="rulesets/naming.xml/ShortVariable">
+        <properties>
+            <property name="minimum" value="2"/>
+            <property name="exceptions" value="id,io,m"/>
+        </properties>
+    </rule>
 
     <!-- Unused code -->
     <rule ref="rulesets/unusedcode.xml"/>

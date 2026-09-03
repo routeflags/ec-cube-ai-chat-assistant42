@@ -279,7 +279,7 @@ class DashboardController extends AbstractController
      *
      * CSRF と provider/model/max_tokens を検証し、不正なら保存せずリダイレクトする。
      */
-    private function handleSettingsPost(Request $request, Config $config, array $allModelIds, array $modelsByProvider): ?Response
+    private function handleSettingsPost(Request $request, Config $config, array $allModelIds, array $modelsByProvider): Response
     {
         if ($response = $this->validateCsrfOrRedirect()) {
             return $response;

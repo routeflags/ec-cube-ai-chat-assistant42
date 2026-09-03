@@ -18,7 +18,6 @@ namespace Plugin\AiChatAssistant42\Tests\Unit\Controller\Admin;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Plugin\AiChatAssistant42\Controller\Admin\DesignController;
-use Plugin\AiChatAssistant42\Repository\ConfigRepository;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
@@ -31,15 +30,11 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
  */
 class DesignControllerTest extends TestCase
 {
-    /** @var ConfigRepository&MockObject */
-    private ConfigRepository $configRepository;
-
     /** @var UrlGeneratorInterface&MockObject */
     private UrlGeneratorInterface $urlGenerator;
 
     protected function setUp(): void
     {
-        $this->configRepository = $this->createMock(ConfigRepository::class);
         $this->urlGenerator = $this->createMock(UrlGeneratorInterface::class);
     }
 
@@ -48,7 +43,7 @@ class DesignControllerTest extends TestCase
         /** @var DesignController&MockObject $controller */
         $controller = $this->getMockBuilder(DesignController::class)
             ->onlyMethods(['isTokenValid', 'addError', 'addSuccess', 'redirectToRoute'])
-            ->setConstructorArgs([$this->configRepository])
+            ->setConstructorArgs(['', null])
             ->getMock();
 
         return $controller;

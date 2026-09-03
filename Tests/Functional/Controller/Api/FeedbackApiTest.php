@@ -118,10 +118,13 @@ class FeedbackApiTest extends TestCase
         if ($throwUniqueOnFlush) {
             $uniqueEx = $this->createMock(\Doctrine\DBAL\Exception\UniqueConstraintViolationException::class);
             $em->method('flush')->willThrowException($uniqueEx);
-            $em->method('persist')->willReturnCallback(function () {});
+            $em->method('persist')->willReturnCallback(function () {
+            });
         } else {
-            $em->method('persist')->willReturnCallback(function () {});
-            $em->method('flush')->willReturnCallback(function () {});
+            $em->method('persist')->willReturnCallback(function () {
+            });
+            $em->method('flush')->willReturnCallback(function () {
+            });
         }
 
         // wrapInTransaction はクロージャを実行するモック（同一トランザクション化）

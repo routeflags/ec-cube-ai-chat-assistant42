@@ -163,14 +163,53 @@ class ProductRepository extends AbstractRepository
         // 相対パス生成で最低限動作する。
         return new ShopContextService(
             new class extends \Eccube\Repository\BaseInfoRepository {
-                public function __construct() {}
-                public function get() { return new class { public function getShopName(){return '';} public function getEmail01(){return '';} public function getEmail02(){return '';} public function getEmail03(){return '';} }; }
+                public function __construct()
+                {
+                }
+
+                public function get($id = 1)
+                {
+                    return new class {
+                        public function getShopName()
+                        {
+                            return '';
+                        }
+
+                        public function getEmail01()
+                        {
+                            return '';
+                        }
+
+                        public function getEmail02()
+                        {
+                            return '';
+                        }
+
+                        public function getEmail03()
+                        {
+                            return '';
+                        }
+                    };
+                }
             },
             new \Symfony\Component\HttpFoundation\RequestStack(),
             new class implements \Symfony\Component\Routing\Generator\UrlGeneratorInterface {
-                public function generate(string $name, array $parameters = [], int $referenceType = self::ABSOLUTE_PATH): string { throw new \Symfony\Component\Routing\Exception\RouteNotFoundException(); }
-                public function getContext(): \Symfony\Component\Routing\RequestContext { return new \Symfony\Component\Routing\RequestContext(); }
-                public function setContext(\Symfony\Component\Routing\RequestContext $context): void {}
+                public function generate(
+                    string $name,
+                    array $parameters = [],
+                    int $referenceType = self::ABSOLUTE_PATH
+                ): string {
+                    throw new \Symfony\Component\Routing\Exception\RouteNotFoundException();
+                }
+
+                public function getContext(): \Symfony\Component\Routing\RequestContext
+                {
+                    return new \Symfony\Component\Routing\RequestContext();
+                }
+
+                public function setContext(\Symfony\Component\Routing\RequestContext $context): void
+                {
+                }
             }
         );
     }

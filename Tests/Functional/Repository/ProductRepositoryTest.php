@@ -273,6 +273,4 @@ class ProductRepositoryTest extends AbstractWebTestCase
         $this->assertIsArray($result);
         $this->assertArrayHasKey('error', $result);
     }
-
-
 }

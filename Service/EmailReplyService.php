@@ -58,7 +58,7 @@ class EmailReplyService
 
         try {
             $this->sendUserConfirmation($sessionId, $userEmail, $history, $baseInfo);
-        } catch (TransportExceptionInterface|\InvalidArgumentException $e) {
+        } catch (TransportExceptionInterface | \InvalidArgumentException $e) {
             $this->logger->warning('ユーザー宛確認メールの送信に失敗しました', [
                 'session_id' => $sessionId,
                 'email' => $userEmail,
@@ -68,7 +68,7 @@ class EmailReplyService
 
         try {
             $this->sendAdminNotification($sessionId, $userEmail, $history, $baseInfo);
-        } catch (TransportExceptionInterface|\InvalidArgumentException $e) {
+        } catch (TransportExceptionInterface | \InvalidArgumentException $e) {
             $this->logger->warning('管理者宛通知メールの送信に失敗しました', [
                 'session_id' => $sessionId,
                 'email' => $userEmail,

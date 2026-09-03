@@ -56,7 +56,6 @@ class DesignController extends AbstractController
     ];
 
     public function __construct(
-        private ConfigRepository $configRepository,
         private string $projectDir = '',
         private ?\Plugin\AiChatAssistant42\Service\DesignSettingsSyncService $syncService = null,
     ) {
