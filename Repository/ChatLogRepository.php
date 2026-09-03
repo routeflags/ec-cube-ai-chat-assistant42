@@ -28,7 +28,6 @@ use DateTimeImmutable;
  * 本リポジトリに集約して Doctrine 形式（ORM QueryBuilder / DBAL QueryBuilder）で
  * データアクセスを一元管理する。
  *
- * @SuppressWarnings("PHPMD.TooManyPublicMethods")
  */
 class ChatLogRepository extends AbstractRepository
 {
@@ -295,12 +294,12 @@ class ChatLogRepository extends AbstractRepository
         $conn = $this->entityManager->getConnection();
         $platform = strtolower($conn->getDatabasePlatform()->getName());
 
+        $hourExpr = 'HOUR(created_at)';
         if (str_contains($platform, 'sqlite')) {
             $hourExpr = "CAST(strftime('%H', created_at) AS INTEGER)";
-        } elseif (str_contains($platform, 'pgsql') || str_contains($platform, 'postgres')) {
+        }
+        if (str_contains($platform, 'pgsql') || str_contains($platform, 'postgres')) {
             $hourExpr = 'CAST(EXTRACT(HOUR FROM created_at) AS INTEGER)';
-        } else {
-            $hourExpr = 'HOUR(created_at)';
         }
 
         $qb = $conn->createQueryBuilder()

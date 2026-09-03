@@ -34,8 +34,6 @@ use InvalidArgumentException;
  * EC-CUBE の商品テーブル群を検索し、AI ツールから呼び出されるための
  * フラットな配列データを返す。 Doctrine の QueryBuilder を使い、
  * 全パラメータはバインドパラメータで渡す（SQL インジェクション防止）。
- *
- * @SuppressWarnings("PHPMD.UnusedFormalParameter")
  */
 class ProductRepository extends AbstractRepository
 {

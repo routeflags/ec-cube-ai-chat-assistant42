@@ -47,10 +47,9 @@ class PluginManager extends AbstractPluginManager
     {
         $projectDir = $container->getParameter('kernel.project_dir');
         // PluginService と同等のパス解決
+        $pluginHtmlDir = $projectDir . '/html/plugin';
         if ($container->hasParameter('eccube.plugin_html_realdir')) {
             $pluginHtmlDir = rtrim($container->getParameter('eccube.plugin_html_realdir'), '/');
-        } else {
-            $pluginHtmlDir = $projectDir . '/html/plugin';
         }
 
         $source = $projectDir . '/app/Plugin/AiChatAssistant42/Resource/assets';

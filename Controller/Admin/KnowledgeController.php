@@ -49,26 +49,32 @@ class KnowledgeController extends AbstractController
         $keyword = $request->query->get('keyword', '');
         $category = $request->query->get('category', '');
 
-        if ($keyword !== '' || $category !== '') {
-            $entities = $this->knowledgeRepository->getQueryBuilder();
-
-            if ($category !== '') {
-                $entities->andWhere('k.category = :category')
-                    ->setParameter('category', $category);
-            }
-
-            if ($keyword !== '') {
-                $entities->andWhere($entities->expr()->orX(
-                    'k.title LIKE :keyword',
-                    'k.content LIKE :keyword'
-                ))
-                    ->setParameter('keyword', '%' . $keyword . '%');
-            }
-
-            $entities = $entities->getQuery()->getResult();
-        } else {
+        if ($keyword === '' && $category === '') {
             $entities = $this->knowledgeRepository->findAll();
+
+            return $this->render('@AiChatAssistant42/admin/knowledge.twig', [
+                'entities' => $entities,
+                'keyword' => $keyword,
+                'category' => $category,
+            ]);
         }
+
+        $entities = $this->knowledgeRepository->getQueryBuilder();
+
+        if ($category !== '') {
+            $entities->andWhere('k.category = :category')
+                ->setParameter('category', $category);
+        }
+
+        if ($keyword !== '') {
+            $entities->andWhere($entities->expr()->orX(
+                'k.title LIKE :keyword',
+                'k.content LIKE :keyword'
+            ))
+                ->setParameter('keyword', '%' . $keyword . '%');
+        }
+
+        $entities = $entities->getQuery()->getResult();
 
         return $this->render('@AiChatAssistant42/admin/knowledge.twig', [
             'entities' => $entities,

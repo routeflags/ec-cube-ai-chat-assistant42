@@ -105,8 +105,11 @@ class ChatWidgetListener implements EventSubscriberInterface
             return \Plugin\AiChatAssistant42\Service\DesignSettingsSyncService::DEFAULTS;
         }
 
-        $json = @file_get_contents($path);
-        $data = json_decode($json, true);
+        $raw = file_get_contents($path);
+        if ($raw === false) {
+            return \Plugin\AiChatAssistant42\Service\DesignSettingsSyncService::DEFAULTS;
+        }
+        $data = json_decode($raw, true);
         if (!is_array($data)) {
             return \Plugin\AiChatAssistant42\Service\DesignSettingsSyncService::DEFAULTS;
         }

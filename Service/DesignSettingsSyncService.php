@@ -246,7 +246,7 @@ class DesignSettingsSyncService extends AbstractPluginDataSyncService
         if (!file_exists($dataPath)) {
             return self::DEFAULTS;
         }
-        $raw = @file_get_contents($dataPath);
+        $raw = file_get_contents($dataPath);
         if ($raw === false) {
             return self::DEFAULTS;
         }

@@ -47,18 +47,23 @@ class ScenarioController extends AbstractController
     {
         $keyword = $request->query->get('keyword', '');
 
-        if ($keyword !== '') {
-            $entities = $this->scenarioRepository->getQueryBuilder()
-                ->andWhere($this->scenarioRepository->getQueryBuilder()->expr()->orX(
-                    's.trigger_keyword LIKE :keyword',
-                    's.response_text LIKE :keyword'
-                ))
-                ->setParameter('keyword', '%' . $keyword . '%')
-                ->getQuery()
-                ->getResult();
-        } else {
+        if ($keyword === '') {
             $entities = $this->scenarioRepository->findAll();
+
+            return $this->render('@AiChatAssistant42/admin/scenario.twig', [
+                'entities' => $entities,
+                'keyword' => $keyword,
+            ]);
         }
+
+        $entities = $this->scenarioRepository->getQueryBuilder()
+            ->andWhere($this->scenarioRepository->getQueryBuilder()->expr()->orX(
+                's.trigger_keyword LIKE :keyword',
+                's.response_text LIKE :keyword'
+            ))
+            ->setParameter('keyword', '%' . $keyword . '%')
+            ->getQuery()
+            ->getResult();
 
         return $this->render('@AiChatAssistant42/admin/scenario.twig', [
             'entities' => $entities,

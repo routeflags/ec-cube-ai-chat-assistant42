@@ -38,9 +38,6 @@ class AiModelSyncService extends AbstractPluginDataSyncService
     private const MAX_MODELS_PER_PROVIDER = 20;
     private const MAX_ID_LENGTH = 128;
 
-    /**
-     * @SuppressWarnings("PHPMD.Superglobals")
-     */
     protected function getRemoteUrl(): string
     {
         // $_ENV は Symfony Dotenv の正規取得口であり、getenv() と挙動差があるため Superglobals を許容する

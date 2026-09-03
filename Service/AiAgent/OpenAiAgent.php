@@ -312,10 +312,10 @@ class OpenAiAgent implements AiAgentInterface
         ];
 
         // gpt-5 / o1 / o3 系は max_tokens ではなく max_completion_tokens を使用（API の破壊的変更）
+        $payload['max_tokens'] = $this->maxTokens;
         if (str_starts_with($this->model, 'gpt-5') || str_starts_with($this->model, 'o1') || str_starts_with($this->model, 'o3')) {
             $payload['max_completion_tokens'] = $this->maxTokens;
-        } else {
-            $payload['max_tokens'] = $this->maxTokens;
+            unset($payload['max_tokens']);
         }
 
         // reasoning effort が設定されていれば付与（後段の capability チェックで必要に応じ除去）
@@ -401,7 +401,10 @@ class OpenAiAgent implements AiAgentInterface
             return true;
         }
 
-        $raw = @file_get_contents($configPath);
+        if (!is_file($configPath)) {
+            return true;
+        }
+        $raw = file_get_contents($configPath);
         if ($raw === false) {
             return true;
         }
