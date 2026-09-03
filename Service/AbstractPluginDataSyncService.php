@@ -17,6 +17,7 @@ namespace Plugin\AiChatAssistant42\Service;
 
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\TransferException;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use LogicException;
 
@@ -125,19 +126,52 @@ abstract class AbstractPluginDataSyncService
     protected function fetchRemote(): ?array
     {
         $meta = $this->loadMeta();
+        $headers = $this->buildRequest($meta);
+
+        $response = $this->executeRequest($headers);
+        if ($response === null) {
+            return null;
+        }
+
+        $body = $this->handleResponse($response, $meta);
+        if ($body === null) {
+            return null;
+        }
+
+        return $this->parseAndValidate($body, $response);
+    }
+
+    /**
+     * 条件付き GET 用ヘッダを構築する。
+     *
+     * @param array<string,mixed> $meta
+     * @return array<string,string>
+     */
+    private function buildRequest(array $meta): array
+    {
         $headers = [
             'User-Agent' => 'AiChatAssistant42/1.0 (+https://github.com/routeflags/ec-cube-ai-chat-assistant42)',
             'Accept' => 'application/json',
         ];
         if (!empty($meta['etag'])) {
-            $headers['If-None-Match'] = $meta['etag'];
+            $headers['If-None-Match'] = (string) $meta['etag'];
         }
         if (!empty($meta['last_modified'])) {
-            $headers['If-Modified-Since'] = $meta['last_modified'];
+            $headers['If-Modified-Since'] = (string) $meta['last_modified'];
         }
 
+        return $headers;
+    }
+
+    /**
+     * リモートへ HTTP リクエストを送信する。
+     *
+     * @param array<string,string> $headers
+     */
+    private function executeRequest(array $headers): ?ResponseInterface
+    {
         try {
-            $response = $this->httpClient->request('GET', $this->getRemoteUrl(), [
+            return $this->httpClient->request('GET', $this->getRemoteUrl(), [
                 'headers' => $headers,
                 'timeout' => 5.0,
                 'connect_timeout' => 2.0,
@@ -155,7 +189,15 @@ abstract class AbstractPluginDataSyncService
 
             return null;
         }
+    }
 
+    /**
+     * レスポンスのステータスとヘッダを検証し、ボディを返す。
+     *
+     * @param array<string,mixed> $meta
+     */
+    private function handleResponse(ResponseInterface $response, array $meta): ?string
+    {
         $status = $response->getStatusCode();
         if ($status === 304) {
             $this->updateMetaLastSyncedAt();
@@ -184,6 +226,16 @@ abstract class AbstractPluginDataSyncService
             return null;
         }
 
+        return $body;
+    }
+
+    /**
+     * JSON ボディをデコードし、ETag を一時保存する。
+     *
+     * @return array<string,mixed>|null
+     */
+    private function parseAndValidate(string $body, ResponseInterface $response): ?array
+    {
         $decoded = json_decode($body, true);
         if (!is_array($decoded)) {
             $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => 'Invalid JSON: ' . json_last_error_msg()]);
@@ -221,10 +273,18 @@ abstract class AbstractPluginDataSyncService
     protected function loadMeta(): array
     {
         $metaPath = $this->getMetaPath();
-        if (!file_exists($metaPath)) {
+        if (!is_file($metaPath)) {
             return [];
         }
-        $raw = @file_get_contents($metaPath);
+
+        try {
+            $raw = file_get_contents($metaPath);
+        } catch (\Throwable $e) {
+            $this->logger->debug('Failed to read meta file', ['path' => $metaPath, 'error' => $e->getMessage()]);
+
+            return [];
+        }
+
         if ($raw === false) {
             return [];
         }
