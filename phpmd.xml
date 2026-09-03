@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="AiChatAssistant42"
+         xmlns="http://pmd.sf.net/ruleset/1.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sf.net/ruleset/1.0.0 http://pmd.sf.net/ruleset_xml_schema.xsd"
+         xsi:noNamespaceSchemaLocation="http://pmd.sf.net/ruleset_xml_schema.xsd">
+
+    <description>
+        EC-CUBE plugin AiChatAssistant42 PHPMD ruleset —
+        商品リポジトリ / チャットAPI / MCP向けの
+        cleancode / codesize / design 検証
+    </description>
+
+    <!-- 除外 -->
+    <exclude-pattern>*/Test/*</exclude-pattern>
+    <exclude-pattern>*/Tests/*</exclude-pattern>
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+    <exclude-pattern>*/var/*</exclude-pattern>
+    <exclude-pattern>*/node_modules/*</exclude-pattern>
+    <exclude-pattern>*/artifacts/*</exclude-pattern>
+    <exclude-pattern>*/Documents/*</exclude-pattern>
+
+    <!-- Clean Code -->
+    <rule ref="rulesets/cleancode.xml"/>
+
+    <!-- Complexity / Size -->
+    <rule ref="rulesets/codesize.xml">
+        <exclude name="CyclomaticComplexity"/>
+    </rule>
+
+    <rule ref="rulesets/codesize.xml/CyclomaticComplexity">
+        <properties>
+            <property name="reportLevel" value="10"/>
+            <property name="showClassesComplexity" value="true"/>
+            <property name="showMethodsComplexity" value="true"/>
+            <property name="classReportLevel" value="50"/>
+        </properties>
+    </rule>
+
+    <!-- Design -->
+    <rule ref="rulesets/design.xml"/>
+
+    <!-- Naming -->
+    <rule ref="rulesets/naming.xml"/>
+
+    <!-- Unused code -->
+    <rule ref="rulesets/unusedcode.xml"/>
+
+    <!-- Controversial rules -->
+    <rule ref="rulesets/controversial.xml"/>
+
+</ruleset>

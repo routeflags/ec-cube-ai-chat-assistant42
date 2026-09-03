@@ -1,0 +1,55 @@
+parameters:
+    level: 5
+
+    phpVersion: 80200
+
+    paths:
+        - Command
+        - Controller
+        - DoctrineMigrations
+        - Entity
+        - EventListener
+        - Repository
+        - Service
+        - Twig
+        - Nav.php
+
+    excludePaths:
+        - Tests/*
+        - vendor/*
+        - var/*
+        - node_modules/*
+        - artifacts/*
+        - Documents/*
+
+    ignoreErrors:
+        # EC-CUBE / Doctrine の動的プロパティ
+        -
+            message: '#Access to an undefined property Eccube\\Entity\\.*\$.*#'
+            paths:
+                - Entity/*
+                - Repository/*
+                - Service/*
+
+        # EC-CUBE / Plugin Entity の動的プロパティ
+        -
+            message: '#Dynamic property on (Eccube\\Entity\\|Plugin\\).* is not supported in PHP 8\.2#'
+            paths:
+                - Entity/*
+
+        # Doctrine Proxy / Entity
+        -
+            message: '#class .* is not final#'
+            paths:
+                - Entity/*
+
+        # Twig 関連は暫定
+        -
+            message: '#Function twig_.* not found#'
+            paths:
+                - Twig/*
+
+        -
+            message: '#Call to an undefined method Twig\\.*#'
+            paths:
+                - Twig/*

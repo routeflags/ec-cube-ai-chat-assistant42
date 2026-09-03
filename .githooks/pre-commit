@@ -1,0 +1,144 @@
+#!/bin/sh
+#
+# pre-commit hook — PHP構文チェック + コード品質確認
+#
+
+# ============================================================
+#  1. code-review-graph (既存)
+# ============================================================
+if command -v code-review-graph >/dev/null 2>&1; then
+    code-review-graph update || true
+    code-review-graph detect-changes --brief || true
+fi
+
+# ============================================================
+#  2. PHP 構文チェック — ステージされた PHP ファイルだけ対象
+# ============================================================
+STAGED_PHP_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.php$')
+
+if [ -n "$STAGED_PHP_FILES" ]; then
+    echo "🔍 PHP syntax check..."
+    PHP_ERROR=0
+    for file in $STAGED_PHP_FILES; do
+        # ファイルが存在するか確認（削除されたファイルはスキップ）
+        if [ -f "$file" ]; then
+            OUTPUT=$(php -l "$file" 2>&1)
+            if [ $? -ne 0 ]; then
+                echo "  ❌ $file"
+                echo "     $OUTPUT"
+                PHP_ERROR=1
+            fi
+        fi
+    done
+
+    if [ $PHP_ERROR -ne 0 ]; then
+        echo ""
+        echo "❌ PHP syntax error があります。修正してから再度コミットしてください。"
+        exit 1
+    fi
+    echo "  ✅ All PHP files OK"
+fi
+
+# ============================================================
+#  2.1. PHPCS — ステージされた PHP ファイルだけ対象
+# ============================================================
+if [ -n "$STAGED_PHP_FILES" ] && [ -x "vendor/bin/phpcs" ]; then
+    echo ""
+    echo "🔍 Running PHPCS..."
+
+    PHPCS_OUTPUT=$(echo "$STAGED_PHP_FILES" | xargs vendor/bin/phpcs --standard=PSR12 2>&1)
+    PHPCS_EXIT=$?
+
+    if [ $PHPCS_EXIT -ne 0 ]; then
+        echo "$PHPCS_OUTPUT"
+        echo ""
+        echo "❌ PHPCS に失敗しました。修正してから再度コミットしてください。"
+        exit 1
+    fi
+
+    echo "  ✅ PHPCS passed"
+fi
+
+# ============================================================
+#  2.2. PHPStan — ステージされた PHP ファイルだけ対象
+# ============================================================
+if [ -n "$STAGED_PHP_FILES" ] && [ -x "vendor/bin/phpstan" ]; then
+    echo ""
+    echo "🔍 Running PHPStan..."
+
+    PHPSTAN_OUTPUT=$(echo "$STAGED_PHP_FILES" | \
+        xargs php -d memory_limit=512M vendor/bin/phpstan analyse --no-progress 2>&1)
+    PHPSTAN_EXIT=$?
+
+    if [ $PHPSTAN_EXIT -ne 0 ]; then
+        echo "$PHPSTAN_OUTPUT"
+        echo ""
+        echo "❌ PHPStan に失敗しました。修正してから再度コミットしてください。"
+        exit 1
+    fi
+
+    echo "  ✅ PHPStan passed"
+fi
+
+# ============================================================
+#  2.3. PHPMD — ステージされた PHP ファイルだけ対象
+# ============================================================
+if [ -n "$STAGED_PHP_FILES" ] && [ -x "vendor/bin/phpmd" ]; then
+    echo ""
+    echo "🔍 Running PHPMD..."
+
+    PHPMD_FILES=$(echo "$STAGED_PHP_FILES" | tr '\n' ',' | sed 's/,$//')
+
+    PHPMD_OUTPUT=$(php -d memory_limit=512M vendor/bin/phpmd \
+        "$PHPMD_FILES" \
+        text \
+        cleancode,codesize,controversial,design,naming,unusedcode \
+        2>&1)
+    PHPMD_EXIT=$?
+
+    if [ $PHPMD_EXIT -ne 0 ]; then
+        echo "$PHPMD_OUTPUT"
+        echo ""
+        echo "❌ PHPMD に失敗しました。修正してから再度コミットしてください。"
+        exit 1
+    fi
+
+    echo "  ✅ PHPMD passed"
+fi
+
+# ============================================================
+#  3. 大容量ファイルチェック (1MB超)
+# ============================================================
+LARGE_FILES=$(git diff --cached --name-only --diff-filter=ACM | while read file; do
+    if [ -f "$file" ]; then
+        SIZE=$(wc -c < "$file" 2>/dev/null)
+        if [ "$SIZE" -gt 1048576 ]; then
+            echo "$file ($(( SIZE / 1024 ))KB)"
+        fi
+    fi
+done)
+
+if [ -n "$LARGE_FILES" ]; then
+    echo ""
+    echo "⚠️  大容量ファイルが検出されました:"
+    echo "$LARGE_FILES"
+    echo ""
+    echo "意図的な場合は --no-verify でスキップしてください。"
+    exit 1
+fi
+
+# ============================================================
+#  4. デバッグコード残存チェック
+# ============================================================
+DEBUG_PATTERNS=$(git diff --cached --diff-filter=ACM -U0 | grep '^+' | grep -E '^\+\s*(dump\(|dd\(|var_dump\(|print_r\(|error_log\()' | head -5)
+
+if [ -n "$DEBUG_PATTERNS" ]; then
+    echo ""
+    echo "⚠️  デバッグコードが含まれている可能性があります:"
+    echo "$DEBUG_PATTERNS"
+    echo ""
+    echo "本番コミット前に削除してください。"
+    exit 1
+fi
+
+exit 0

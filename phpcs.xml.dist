@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/squizlabs/php_codesniffer/phpcs.xsd">
+
+    <description>EC-CUBE AiChatAssistant42 coding standard</description>
+
+    <!-- 実行設定 -->
+    <arg name="basepath" value="."/>
+    <arg name="cache" value=".phpcs-cache"/>
+    <arg name="colors"/>
+    <arg name="extensions" value="php"/>
+    <arg name="parallel" value="8"/>
+
+    <!-- Coding Standard -->
+    <rule ref="PSR12"/>
+
+    <!-- EC-CUBE plugin AiChatAssistant42 -->
+    <file>Command</file>
+    <file>Controller</file>
+    <file>DoctrineMigrations</file>
+    <file>Entity</file>
+    <file>EventListener</file>
+    <file>Repository</file>
+    <file>Service</file>
+    <file>Twig</file>
+    <file>Tests</file>
+    <file>bin</file>
+    <file>Nav.php</file>
+
+    <!-- 除外 -->
+    <exclude-pattern>vendor/*</exclude-pattern>
+    <exclude-pattern>var/*</exclude-pattern>
+    <exclude-pattern>node_modules/*</exclude-pattern>
+    <exclude-pattern>artifacts/*</exclude-pattern>
+    <exclude-pattern>Documents/*</exclude-pattern>
+
+</ruleset>
