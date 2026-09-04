@@ -105,6 +105,16 @@ class McpHttpController
             return $response;
         }
 
+        // 軽量 Content-Type 415: JSON 以外は 415 で拒否（MCP Inspector は JSON を送るため影響なし）
+        $contentType = $request->headers->get('Content-Type', '');
+        if ($contentType !== '' && stripos($contentType, 'application/json') === false) {
+            $error = $this->mcpHttpService->writeErrorResponse(null, -32700, 'Parse error: Content-Type must be application/json');
+            $resp = $this->jsonResponseWithCors($error, 415);
+            $resp->headers->set('Content-Type', 'application/json; charset=utf-8');
+
+            return $resp;
+        }
+
         $content = $request->getContent();
 
         if ($content === '') {
@@ -134,6 +144,12 @@ class McpHttpController
 
         $method = $data['method'] ?? null;
         $id = $data['id'] ?? null;
+
+        // 軽量 jsonrpc:"2.0" 検証 — 存在し 2.0 以外なら -32600
+        if (array_key_exists('jsonrpc', $data) && $data['jsonrpc'] !== '2.0') {
+            $error = $this->mcpHttpService->writeErrorResponse($id, -32600, 'Invalid Request: jsonrpc must be "2.0"');
+            return $this->jsonResponseWithCors($error, 200);
+        }
 
         // notifications/initialized は通知（id 無し）→ 204 で応答不要
         if ($method === 'notifications/initialized') {
@@ -242,6 +258,7 @@ class McpHttpController
     private function addCorsHeaders(Response $response): void
     {
         $response->headers->set('Access-Control-Allow-Origin', '*');
+        $response->headers->set('Vary', 'Origin');
         // Do not set Allow-Credentials with wildcard
     }
 

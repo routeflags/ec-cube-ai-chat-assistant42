@@ -187,8 +187,9 @@ class ProductRepository extends AbstractRepository
             ->setFirstResult(max(0, $offset));
 
         if ($keyword !== '') {
-            $likeKeyword = '%' . $keyword . '%';
-            $qb->andWhere('(p.name LIKE :kw OR p.search_word LIKE :kw_sw OR pc.product_code LIKE :kw_code)')
+            $escaped = $this->escapeLikeKeyword($keyword);
+            $likeKeyword = '%' . $escaped . '%';
+            $qb->andWhere('(p.name LIKE :kw ESCAPE \'\\\' OR p.search_word LIKE :kw_sw ESCAPE \'\\\' OR pc.product_code LIKE :kw_code ESCAPE \'\\\')')
                 ->setParameter('kw', $likeKeyword)
                 ->setParameter('kw_sw', $likeKeyword)
                 ->setParameter('kw_code', $likeKeyword);
@@ -278,6 +279,9 @@ class ProductRepository extends AbstractRepository
         foreach ($rows as &$row) {
             $row['class_id'] = (int) $row['class_id'];
             $row['stock_unlimited'] = (bool) $row['stock_unlimited'];
+            if ($row['stock_unlimited']) {
+                $row['stock'] = null;
+            }
         }
         unset($row);
 
@@ -579,6 +583,17 @@ class ProductRepository extends AbstractRepository
         return $this->textExtractor->extract($html);
     }
 
+    /**
+     * LIKE 検索用にワイルドカードをエスケープする。
+     *
+     * バインドパラメータで SQL インジェクションは防げるが、LIKE の %/_ は
+     * ワイルドカードとして解釈されるためエスケープが必要。
+     */
+    private function escapeLikeKeyword(string $keyword): string
+    {
+        return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $keyword);
+    }
+
     // ================================================================
     //  行キャスト共通ヘルパー（重複 foreach を排除して CC を削減）
     // ================================================================
@@ -600,8 +615,9 @@ class ProductRepository extends AbstractRepository
             $product['id'] = $productId;
             $product['url'] = $this->buildProductUrl($productId);
             $product['price'] = $product['price'] ?? null;
-            $product['stock'] = $product['stock'] ?? null;
             $product['stock_unlimited'] = (bool) $product['stock_unlimited'];
+            // stock_unlimited が true の場合は在庫数を曖昧化（null で返す）し数量推測を防ぐ
+            $product['stock'] = $product['stock_unlimited'] ? null : ($product['stock'] ?? null);
             $product['description_list'] = $product['description_list'] ?? null;
             $product['images'] = $imagesMap[$productId] ?? [];
 

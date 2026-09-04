@@ -190,6 +190,8 @@ rm -rf /tmp/eccube-verify
 | APIが 500 | `var/log/dev.log` と `docker compose logs eccube` を確認 |
 | チャットが表示されない | `Resource/config/services.yaml` の `ChatWidgetListener` が `kernel.event_subscriber` として登録されているか |
 | マイグレーション失敗 | `doctrine:migrations:migrate --dry-run` でSQLを確認 |
+| MCP が 429 誤爆 / 全員 127.0.0.1 扱い | `config/packages/framework.yaml` の `trusted_proxies: ['127.0.0.1','REMOTE_ADDR']` と `trusted_headers: ['x-forwarded-for','x-forwarded-proto']` を設定 — Cloudflare 環境で未設定だと `getClientIp()` が proxy IP を返し全ユーザが同一バケットを共有する |
+| MCP が http を返す / mixed content | 同上 `trusted_proxies` 未設定だと `getSchemeAndHttpHost()` が http を返し `/.well-known/mcp.json` の `transport.url` が http になる — 上記設定で https を正しく取得する |
 
 ---
 

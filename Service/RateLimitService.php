@@ -28,6 +28,7 @@ class RateLimitService
     /** ツール別レート制限（req/min） */
     public const LIMITS = [
         'get_stock' => 60,
+        'well_known' => 120,
         'default' => 120,
     ];
 
