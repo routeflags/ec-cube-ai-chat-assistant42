@@ -659,6 +659,6 @@ class DashboardController extends AbstractController
 
         return substr($plain, 0, 7) . '...' . substr($plain, -4);
     }
-}
 
-// TODO: DashboardDataProvider への委譲で根本解消
+    // TODO: DashboardDataProvider への委譲で根本解消
+}

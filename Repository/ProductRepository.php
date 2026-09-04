@@ -23,6 +23,8 @@ use Plugin\AiChatAssistant42\Service\ProductToolDefinition;
 use Plugin\AiChatAssistant42\Service\ProductToolExecutor;
 use Plugin\AiChatAssistant42\Service\ShopContextService;
 use Plugin\AiChatAssistant42\Service\TwigPlainTextExtractor;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Routing\Exception\RouteNotFoundException;
 use Symfony\Component\Routing\RequestContext;
@@ -34,6 +36,8 @@ use InvalidArgumentException;
  * EC-CUBE の商品テーブル群を検索し、AI ツールから呼び出されるための
  * フラットな配列データを返す。 Doctrine の QueryBuilder を使い、
  * 全パラメータはバインドパラメータで渡す（SQL インジェクション防止）。
+ *
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 class ProductRepository extends AbstractRepository
 {
@@ -41,17 +45,20 @@ class ProductRepository extends AbstractRepository
     private Connection $connection;
     private TwigPlainTextExtractor $textExtractor;
     private ShopContextService $shopContextService;
+    private LoggerInterface $logger;
 
     public function __construct(
         ManagerRegistry $registry,
         EntityManagerInterface $entityManager,
         ?TwigPlainTextExtractor $textExtractor = null,
-        ?ShopContextService $shopContextService = null
+        ?ShopContextService $shopContextService = null,
+        ?LoggerInterface $logger = null
     ) {
         parent::__construct($registry, \Eccube\Entity\Product::class);
         $this->entityManager = $entityManager;
         $this->connection = $entityManager->getConnection();
         $this->textExtractor = $textExtractor ?? new TwigPlainTextExtractor();
+        $this->logger = $logger ?? new NullLogger();
         // ShopContextService は EC-CUBE の DI から注入されるが、単体テスト時のフォールバックとして nullable とする
         $this->shopContextService = $shopContextService ?? $this->createFallbackShopContextService();
     }
@@ -60,17 +67,22 @@ class ProductRepository extends AbstractRepository
     {
         // テスト環境や CLI で RequestStack が無い場合のフォールバック。BaseInfo 由来のショップ名/URL は使えないが、
         // 相対パス生成で最低限動作する。
+        $fallbackLogger = $this->logger;
+
         return new ShopContextService(
-            new class extends \Eccube\Repository\BaseInfoRepository {
-                public function __construct()
+            new class ($fallbackLogger) extends \Eccube\Repository\BaseInfoRepository {
+                private LoggerInterface $fallbackLogger;
+
+                public function __construct(LoggerInterface $fallbackLogger)
                 {
+                    $this->fallbackLogger = $fallbackLogger;
                 }
 
                 public function get($id = 1)
                 {
                     // $id を検証して監査ログに残す（フォールバックでは id=1 のみが正規）
                     if ($id !== 1) {
-                        error_log(sprintf('[AiChatAssistant42] Fallback BaseInfoRepository::get unexpected id=%s', (string) $id));
+                        $this->fallbackLogger->debug(sprintf('[AiChatAssistant42] Fallback BaseInfoRepository::get unexpected id=%s', (string) $id));
                     }
 
                     return new class {
@@ -97,11 +109,13 @@ class ProductRepository extends AbstractRepository
                 }
             },
             new RequestStack(),
-            new class implements \Symfony\Component\Routing\Generator\UrlGeneratorInterface {
+            new class ($fallbackLogger) implements \Symfony\Component\Routing\Generator\UrlGeneratorInterface {
+                private LoggerInterface $fallbackLogger;
                 private RequestContext $storedContext;
 
-                public function __construct()
+                public function __construct(LoggerInterface $fallbackLogger)
                 {
+                    $this->fallbackLogger = $fallbackLogger;
                     $this->storedContext = new RequestContext();
                 }
 
@@ -112,7 +126,7 @@ class ProductRepository extends AbstractRepository
                 ): string {
                     // パラメータを例外メッセージに含め、デバッグ時の原因特定を容易にする
                     $paramJson = json_encode($parameters, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                    error_log(sprintf(
+                    $this->fallbackLogger->debug(sprintf(
                         '[AiChatAssistant42] Fallback UrlGenerator::generate route=%s params=%s referenceType=%d',
                         $name,
                         $paramJson !== false ? $paramJson : '[]',

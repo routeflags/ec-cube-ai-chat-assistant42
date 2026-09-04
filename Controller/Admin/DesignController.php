@@ -183,7 +183,7 @@ class DesignController extends AbstractController
         ];
 
         // バリデーション
-        $validation = DesignSettingsSyncService::validateInput($rawInput); // @phpstan-ignore class.notFound (use importで解決済みだが phpstan キャッシュ対策)
+        $validation = DesignSettingsSyncService::validateInput($rawInput);
         // 追加: widget 固有の検証（色・サイズ・位置）
         $extraErrors = $this->validateWidgetSettings($rawInput);
         $allErrors = array_merge($validation['errors'], $extraErrors);

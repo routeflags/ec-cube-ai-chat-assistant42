@@ -58,10 +58,12 @@ INCLUDE_FILES=(
     DoctrineMigrations
     Entity
     EventListener
+    EventSubscriber
     Nav.php
     Repository
     Resource
     Service
+    Twig
     composer.json
     eccube-plugin.yaml
     README.md
@@ -103,8 +105,9 @@ if [[ "${OUTPUT}" != /* ]]; then
 else
     OUTPUT_ABS="${OUTPUT}"
 fi
+# macOS の AppleDouble (._*) を除外するため COPYFILE_DISABLE=1 を設定
 # EC-CUBE の PharData 抽出は "./" エントリを嫌うため、ファイルリストを明示して prefix なしで固める
-tar -czf "${OUTPUT_ABS}" -C "${STAGE}" "${INCLUDE_FILES[@]}"
+COPYFILE_DISABLE=1 tar --no-xattrs -czf "${OUTPUT_ABS}" -C "${STAGE}" "${INCLUDE_FILES[@]}" 2>/dev/null || COPYFILE_DISABLE=1 tar -czf "${OUTPUT_ABS}" -C "${STAGE}" "${INCLUDE_FILES[@]}"
 # OUTPUT が相対だった場合は相対パスに戻す（後続の tar -tzf で利用するため）
 if [[ "${OUTPUT}" != /* ]]; then
     OUTPUT="${OUTPUT_ABS##${PLUGIN_DIR}/}"
@@ -125,6 +128,8 @@ fi
 # 除外対象がアーカイブに混入していないことを検証
 # 部分一致で誤検出しないようパス境界で判定
 FORBIDDEN_PATTERNS=(
+    "._"
+
     "vendor"
     ".git"
     "Tests"
@@ -147,7 +152,7 @@ FORBIDDEN_PATTERNS=(
 
 verification_failed=0
 for pattern in "${FORBIDDEN_PATTERNS[@]}"; do
-    if echo "${ARCHIVE_LIST}" | grep -q "${pattern}"; then
+    if echo "${ARCHIVE_LIST}" | grep -F -q "${pattern}"; then
         echo "[ERROR] 禁止ファイルがアーカイブに含まれています: ${pattern}" >&2
         verification_failed=1
     fi
