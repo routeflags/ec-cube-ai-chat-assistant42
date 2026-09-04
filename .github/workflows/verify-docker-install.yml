@@ -78,6 +78,10 @@ jobs:
             sleep 2
             if [ $i -eq 30 ]; then docker compose -f docker-compose.verify.yml logs --tail 50 eccube; exit 1; fi
           done
+      - name: Install EC-CUBE vendor (minimal)
+        working-directory: /tmp/eccube-verify
+        run: |
+          docker compose -f docker-compose.verify.yml exec -T eccube bash -c "curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer && composer install --no-interaction --prefer-dist" || true
       - name: eccube:install
         working-directory: /tmp/eccube-verify
         run: |
