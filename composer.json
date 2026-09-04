@@ -4,7 +4,15 @@
     "version": "1.0.1",
     "description": "EC-CUBE の商品情報に AI チャットで質問できるプラグインです。OpenAI / Anthropic / Google Gemini に対応しています。",
     "license": "GPL-2.0-only",
-    "keywords": ["ec-cube", "ai", "chat", "openai", "anthropic", "gemini", "mcp"],
+    "keywords": [
+        "ec-cube",
+        "ai",
+        "chat",
+        "openai",
+        "anthropic",
+        "gemini",
+        "mcp"
+    ],
     "require": {
         "php": ">=8.1",
         "guzzlehttp/guzzle": "^7.0"
@@ -14,17 +22,24 @@
         "squizlabs/php_codesniffer": "^4.0",
         "phpstan/phpstan": "^2.2",
         "phpmd/phpmd": "^2.15",
-        "phpmetrics/phpmetrics": "^2.11"
+        "phpmetrics/phpmetrics": "^2.11",
+        "symfony/mailer": "^6.4",
+        "symfony/mime": "^6.4",
+        "doctrine/orm": "^2.15",
+        "doctrine/dbal": "^3.6",
+        "symfony/http-foundation": "^6.4",
+        "symfony/http-kernel": "^6.4",
+        "symfony/routing": "^6.4"
     },
     "autoload": {
         "psr-4": {
-            "Plugin\\AiChatAssistant42\\": "./"
+            "Plugin\\AiChatAssistant42\\": "./",
+            "Eccube\\": "Tests/Stubs/Eccube",
+            "Psr\\Log\\Test\\": "Tests/Stubs/Psr/Log/Test"
         }
     },
     "autoload-dev": {
-        "psr-4": {
-            "Plugin\\AiChatAssistant42\\Tests\\": "Tests/"
-        }
+        "Plugin\\AiChatAssistant42\\Tests\\": "Tests/"
     },
     "extra": {
         "code": "AiChatAssistant42"
@@ -35,8 +50,15 @@
         "stan": "phpstan analyse -c phpstan.neon.dist --error-format=table",
         "md": "phpmd . text phpmd.xml",
         "metrics": "phpmetrics --exclude=\"vendor,Tests,artifacts,Documents\" --report-html=artifacts/phpmetrics --report-json=artifacts/phpmetrics/report.json .",
-        "quality": ["@lint", "@stan", "@md"],
-        "quality:ci": ["@quality", "@metrics"]
+        "quality": [
+            "@lint",
+            "@stan",
+            "@md"
+        ],
+        "quality:ci": [
+            "@quality",
+            "@metrics"
+        ]
     },
     "config": {
         "allow-plugins": {
