@@ -30,6 +30,7 @@
     <file>DoctrineMigrations</file>
     <file>Entity</file>
     <file>EventListener</file>
+    <file>EventSubscriber</file>
     <file>Repository</file>
     <file>Service</file>
     <file>Twig</file>

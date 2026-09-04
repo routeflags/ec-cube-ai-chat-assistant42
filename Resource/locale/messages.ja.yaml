@@ -1,0 +1,1 @@
+admin.store.plugin.enable.cache_warmup_required: "「%plugin_name%」のナビゲーションを反映するには、コンテンツ管理 > キャッシュ管理 からキャッシュクリアを実行してください。"

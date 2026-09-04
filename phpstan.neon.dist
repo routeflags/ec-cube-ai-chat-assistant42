@@ -11,6 +11,7 @@ parameters:
         - DoctrineMigrations
         - Entity
         - EventListener
+        - EventSubscriber
         - Repository
         - Service
         - Twig
@@ -51,7 +52,13 @@ parameters:
         - '#Offset .* does not exist on array.*#'
         - '#Cannot unset offset.*#'
         - '#If condition is always true#'
-        - '#PHPDoc tag @SuppressWarnings has invalid value#'
+        -
+            message: '#PHPDoc tag @SuppressWarnings has invalid value#'
+            paths:
+                - Controller/*
+                - Repository/*
+                - Service/*
+                - EventSubscriber/*
 
         # EC-CUBE / Plugin Entity の動的プロパティ（将来 EC-CUBE スタブ導入後に再有効化）
         -
@@ -75,3 +82,7 @@ parameters:
             message: '#Call to an undefined method Twig\\.*#'
             paths:
                 - Twig/*
+
+        # EventSubscriber の Symfony 互換フォールバック（isMasterRequest は 5.4 で deprecated だが存在）
+        - '#Call to an undefined method Symfony\\Component\\HttpFoundation\\Session\\SessionInterface::getFlashBag#'
+        - '#Call to an undefined method Symfony\\Component\\HttpKernel\\Event\\ResponseEvent::isMasterRequest#'
