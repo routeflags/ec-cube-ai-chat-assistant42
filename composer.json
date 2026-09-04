@@ -6,8 +6,7 @@
     "license": "GPL-2.0-only",
     "keywords": ["ec-cube", "ai", "chat", "openai", "anthropic", "gemini", "mcp"],
     "require": {
-        "php": ">=8.0",
-        "ec-cube/ec-cube": "^4.2",
+        "php": ">=8.1",
         "guzzlehttp/guzzle": "^7.0"
     },
     "require-dev": {

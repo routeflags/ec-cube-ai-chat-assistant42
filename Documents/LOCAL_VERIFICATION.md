@@ -1,7 +1,9 @@
-# ローカル検証手順（EC-CUBE 4.2 + Docker）
+# ローカル検証手順（EC-CUBE 4.2/4.3 + Docker）
 
 本プラグイン `AiChatAssistant42` をローカルの EC-CUBE 環境でインストール・有効化・動作確認する手順です。
-`cosme_eccube4` は PHP 7.4 のため要件（PHP >=8.0）を満たしません。PHP 8.1 の EC-CUBE 4.2 環境を新規に立ち上げることを推奨します。
+`cosme_eccube4` は PHP 7.4 のため要件（PHP >=8.1）を満たしません。PHP 8.1 (4.2) / 8.2 (4.3) の EC-CUBE 環境を新規に立ち上げることを推奨します。
+
+> **ワンコマンド**: `./bin/verify-docker-install.sh --version both` で 4.2 (8080) + 4.3 (8081) の両方を自動検証できます。審査 3607 の `dep-on-root` / `ContainerInterface` も事前にローカルゲートで検出します。詳細は `bin/verify-docker-install.sh --help` を参照。
 
 ---
 
@@ -9,7 +11,8 @@
 
 - Docker 27.x / Docker Compose v2.31+
 - 本リポジトリ `ec-cube-ai-chat-assistant42` がローカルにクローン済みであること（例: `../ec-cube-ai-chat-assistant42`）
-- ポート 8080 / 4430 が空いていること
+- ポート 8080 (4.2) / 8081 (4.3) / 4430 が空いていること
+- `PHP_IMAGE` / `ECCUBE_PORT` 環境変数で EC-CUBE 4.2/4.3 を切り替え可能 (`docker-compose.verify.yml` は `${PHP_IMAGE:-php:8.1-apache-bullseye}` / `${ECCUBE_PORT:-8080}`)
 
 EC-CUBE 本体は検証用に `/tmp/eccube-verify` にクローンします（既存の `cosme_eccube4` は利用しません）。
 
