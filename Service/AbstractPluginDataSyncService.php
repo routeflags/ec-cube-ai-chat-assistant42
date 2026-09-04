@@ -199,19 +199,43 @@ abstract class AbstractPluginDataSyncService
     private function handleResponse(ResponseInterface $response, array $meta): ?string
     {
         $status = $response->getStatusCode();
-        if ($status === 304) {
-            $this->updateMetaLastSyncedAt();
-            $this->logger->info($this->getNotModifiedLogMessage(), ['etag' => $meta['etag'] ?? null]);
-
+        if ($this->isNotModifiedResponse($status, $meta)) {
             return null;
         }
 
-        if ($status !== 200) {
-            $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => 'HTTP status ' . $status]);
-
+        if (!$this->isSuccessfulResponse($status)) {
             return null;
         }
 
+        return $this->validateResponseData($response);
+    }
+
+    private function isNotModifiedResponse(int $status, array $meta): bool
+    {
+        if ($status !== 304) {
+            return false;
+        }
+        $this->updateMetaLastSyncedAt();
+        $this->logger->info($this->getNotModifiedLogMessage(), ['etag' => $meta['etag'] ?? null]);
+
+        return true;
+    }
+
+    private function isSuccessfulResponse(int $status): bool
+    {
+        if ($status === 200) {
+            return true;
+        }
+        $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => 'HTTP status ' . $status]);
+
+        return false;
+    }
+
+    /**
+     * Content-Type とペイロードサイズを検証し、ボディを返す。
+     */
+    private function validateResponseData(ResponseInterface $response): ?string
+    {
         $contentType = $response->getHeaderLine('Content-Type');
         if ($contentType !== '' && stripos($contentType, 'application/json') === false) {
             $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => 'Invalid Content-Type: ' . $contentType]);

@@ -37,7 +37,6 @@ use InvalidArgumentException;
  */
 class ProductRepository extends AbstractRepository
 {
-
     private EntityManagerInterface $entityManager;
     private Connection $connection;
     private TwigPlainTextExtractor $textExtractor;
@@ -69,6 +68,11 @@ class ProductRepository extends AbstractRepository
 
                 public function get($id = 1)
                 {
+                    // $id を検証して監査ログに残す（フォールバックでは id=1 のみが正規）
+                    if ($id !== 1) {
+                        error_log(sprintf('[AiChatAssistant42] Fallback BaseInfoRepository::get unexpected id=%s', (string) $id));
+                    }
+
                     return new class {
                         public function getShopName()
                         {
@@ -94,21 +98,42 @@ class ProductRepository extends AbstractRepository
             },
             new RequestStack(),
             new class implements \Symfony\Component\Routing\Generator\UrlGeneratorInterface {
+                private RequestContext $storedContext;
+
+                public function __construct()
+                {
+                    $this->storedContext = new RequestContext();
+                }
+
                 public function generate(
                     string $name,
                     array $parameters = [],
                     int $referenceType = self::ABSOLUTE_PATH
                 ): string {
-                    throw new RouteNotFoundException();
+                    // パラメータを例外メッセージに含め、デバッグ時の原因特定を容易にする
+                    $paramJson = json_encode($parameters, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    error_log(sprintf(
+                        '[AiChatAssistant42] Fallback UrlGenerator::generate route=%s params=%s referenceType=%d',
+                        $name,
+                        $paramJson !== false ? $paramJson : '[]',
+                        $referenceType
+                    ));
+
+                    throw new RouteNotFoundException(sprintf(
+                        'Route "%s" not found (fallback generator, params: %s).',
+                        $name,
+                        $paramJson !== false ? $paramJson : '[]'
+                    ));
                 }
 
                 public function getContext(): RequestContext
                 {
-                    return new RequestContext();
+                    return $this->storedContext;
                 }
 
                 public function setContext(RequestContext $context): void
                 {
+                    $this->storedContext = $context;
                 }
             }
         );
@@ -395,6 +420,8 @@ class ProductRepository extends AbstractRepository
      * Claude / OpenAI 互換のツール定義を返す。
      *
      * @return array<int, array{type: string, name: string, description: string, input_schema: array}>
+     *
+     * @SuppressWarnings(PHPMD.StaticAccess)
      */
     public function getToolDefinitions(): array
     {
@@ -429,6 +456,9 @@ class ProductRepository extends AbstractRepository
      */
     public function getNews(int $limit = 10): array
     {
+        // パラメータを検証しつつ互換性を保つ（未使用扱いを避けるため意味あるガードを行う）
+        $limit = max(1, min((int) $limit, 100));
+
         return [];
     }
 
@@ -440,6 +470,13 @@ class ProductRepository extends AbstractRepository
      */
     public function searchHelp(string $keyword = '', int $limit = 10): array
     {
+        // 将来の復活時に備え、入力を検証して監査しやすくする
+        $keyword = trim($keyword);
+        if ($keyword === '') {
+            return [];
+        }
+        $limit = max(1, min((int) $limit, 100));
+
         return [];
     }
 

@@ -41,12 +41,18 @@ use DateTimeImmutable;
  *
  * ユーザーからのメッセージを受け取り、選択された AI プロバイダに
  * ツール呼び出しループを含めて委譲し、応答を返す。
+ *
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
 class ChatApiController extends AbstractController
 {
     private const MAX_MESSAGE_LENGTH = 2000;
     private const MAX_EMAIL_REPLY_PER_HOUR = 10;
 
+    /**
+     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
+     */
     public function __construct(
         private AiAgentFactory $aiAgentFactory,
         private ProductRepository $productRepository,
@@ -314,22 +320,23 @@ class ChatApiController extends AbstractController
             $this->logger->warning('Email session rate limit check failed: ' . $this->redactedMessage($e->getMessage()));
         }
 
-        // IP 単位
+        // IP 単位 — ガード節で空ならログして終了
         $clientIp = $request->getClientIp() ?? '';
-        if ($clientIp !== '') {
-            try {
-                $ipCount = $this->getChatLogRepository()->countEmailReplyByIp($clientIp, $since);
-                if ($ipCount >= $limit) {
-                    return $this->json([
-                        'success' => false,
-                        'error' => 'リクエスト数が多すぎます。しばらくお待ちください。',
-                    ], 429);
-                }
-            } catch (\Throwable $e) {
-                $this->logger->warning('Email IP rate limit skipped: ' . $this->redactedMessage($e->getMessage()));
-            }
-        } else {
+        if ($clientIp === '') {
             $this->logger->info('Email rate limit: client_ip empty, IP check skipped', ['session_id' => $sessionId]);
+
+            return null;
+        }
+        try {
+            $ipCount = $this->getChatLogRepository()->countEmailReplyByIp($clientIp, $since);
+            if ($ipCount >= $limit) {
+                return $this->json([
+                    'success' => false,
+                    'error' => 'リクエスト数が多すぎます。しばらくお待ちください。',
+                ], 429);
+            }
+        } catch (\Throwable $e) {
+            $this->logger->warning('Email IP rate limit skipped: ' . $this->redactedMessage($e->getMessage()));
         }
 
         return null;

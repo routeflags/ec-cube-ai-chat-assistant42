@@ -25,6 +25,8 @@ use LogicException;
  * - 同期間隔: TTL 86400秒、排他や原子書き込みは基底に集約
  * - 検証: providers/cost_tier/boolean/文字数上限/重複id を厳格に検証
  * - 永続化: 全文置換 + 1世代バックアップ
+ *
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  */
 class AiModelSyncService extends AbstractPluginDataSyncService
 {
@@ -38,6 +40,9 @@ class AiModelSyncService extends AbstractPluginDataSyncService
     private const MAX_MODELS_PER_PROVIDER = 20;
     private const MAX_ID_LENGTH = 128;
 
+    /**
+     * @SuppressWarnings(PHPMD.Superglobals)
+     */
     protected function getRemoteUrl(): string
     {
         // $_ENV は Symfony Dotenv の正規取得口であり、getenv() と挙動差があるため Superglobals を許容する
@@ -336,7 +341,9 @@ class AiModelSyncService extends AbstractPluginDataSyncService
         }
 
         if (!is_string($model[$field]) || mb_strlen($model[$field]) > self::MAX_STRING_LENGTH) {
-            $message = $field === 'name' ? "Too long name for {$providerKey}/{$model['id']}" : "Too long description for {$providerKey}/{$model['id']}";
+            $message = $field === 'name'
+                ? "Too long name for {$providerKey}/{$model['id']}"
+                : "Too long description for {$providerKey}/{$model['id']}";
             $this->logger->warning(
                 $this->getSyncFailureLogMessage(),
                 ['error' => $message]

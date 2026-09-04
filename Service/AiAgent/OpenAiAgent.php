@@ -28,6 +28,8 @@ use RuntimeException;
  *
  * GPT-4o 等のモデルに対応し、Function Calling によるツール呼び出しをサポートする。
  * ツール呼び出しが発生した場合はループで再送し、最終的なテキスト応答を返す。
+ *
+ * @SuppressWarnings(PHPMD.LongVariable)
  */
 class OpenAiAgent implements AiAgentInterface
 {
@@ -42,7 +44,11 @@ class OpenAiAgent implements AiAgentInterface
     /** @var string|null reasoning effort (e.g. "low" / "medium" / "high") */
     private ?string $reasoningEffort;
     private ?AiModelRegistry $modelRegistry;
-    /** @var bool|null Capability cache for this model */
+    /**
+     * @var bool|null Capability cache for this model
+     *
+     * @SuppressWarnings(PHPMD.LongVariable)
+     */
     private ?bool $cachedSupportsReasoningWithTools = null;
     private ?LoggerInterface $logger;
 

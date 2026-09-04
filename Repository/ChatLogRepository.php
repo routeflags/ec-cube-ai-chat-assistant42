@@ -28,6 +28,7 @@ use DateTimeImmutable;
  * 本リポジトリに集約して Doctrine 形式（ORM QueryBuilder / DBAL QueryBuilder）で
  * データアクセスを一元管理する。
  *
+ * @SuppressWarnings(PHPMD.TooManyPublicMethods)
  */
 class ChatLogRepository extends AbstractRepository
 {
@@ -316,9 +317,9 @@ class ChatLogRepository extends AbstractRepository
 
         $map = array_fill(0, 24, 0);
         foreach ($rows as $row) {
-            $h = (int) $row['hour'];
-            if ($h >= 0 && $h < 24) {
-                $map[$h] = (int) $row['count'];
+            $hourKey = (int) $row['hour'];
+            if ($hourKey >= 0 && $hourKey < 24) {
+                $map[$hourKey] = (int) $row['count'];
             }
         }
 

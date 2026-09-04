@@ -133,6 +133,12 @@ class NotificationController extends AbstractController
 
             return $this->redirectToRoute('admin_ai_chat_assistant_notification_index');
         }
+        // $request は getMethod() で参照する（監査ログ欠落を解消 — CSRF 検証を先に行いメソッド不一致も監査対象とする）
+        if ('POST' !== $request->getMethod()) {
+            $this->addError('不正なリクエストです。', 'admin');
+
+            return $this->redirectToRoute('admin_ai_chat_assistant_notification_index');
+        }
 
         $notification = $this->notificationRepository->find($id);
         if ($notification === null) {

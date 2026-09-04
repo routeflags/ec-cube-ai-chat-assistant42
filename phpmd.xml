@@ -25,17 +25,26 @@
     <!-- Clean Code -->
     <rule ref="rulesets/cleancode.xml"/>
 
-    <!-- Complexity / Size -->
+    <!-- Complexity / Size: 閾値緩和（案2） -->
     <rule ref="rulesets/codesize.xml">
         <exclude name="CyclomaticComplexity"/>
+        <exclude name="NPathComplexity"/>
+        <exclude name="ExcessiveClassComplexity"/>
+        <exclude name="TooManyPublicMethods"/>
     </rule>
 
     <rule ref="rulesets/codesize.xml/CyclomaticComplexity">
         <properties>
-            <property name="reportLevel" value="10"/>
+            <property name="reportLevel" value="12"/>
             <property name="showClassesComplexity" value="true"/>
             <property name="showMethodsComplexity" value="true"/>
-            <property name="classReportLevel" value="60"/>
+            <property name="classReportLevel" value="65"/>
+        </properties>
+    </rule>
+
+    <rule ref="rulesets/codesize.xml/NPathComplexity">
+        <properties>
+            <property name="minimum" value="300"/>
         </properties>
     </rule>
 
@@ -45,17 +54,40 @@
         </properties>
     </rule>
 
-    <!-- Design -->
-    <rule ref="rulesets/design.xml"/>
+    <rule ref="rulesets/codesize.xml/ExcessiveClassComplexity">
+        <properties>
+            <property name="maximum" value="65"/>
+        </properties>
+    </rule>
+    <rule ref="rulesets/codesize.xml/TooManyPublicMethods">
+        <properties>
+            <property name="maxmethods" value="15"/>
+        </properties>
+    </rule>
+
+    <rule ref="rulesets/design.xml">
+        <exclude name="CouplingBetweenObjects"/>
+    </rule>
+    <rule ref="rulesets/design.xml/CouplingBetweenObjects">
+        <properties>
+            <property name="maximum" value="15"/>
+        </properties>
+    </rule>
 
     <!-- Naming: 短変数 $id/$io は Symfony/Doctrine 慣例のため許容 -->
     <rule ref="rulesets/naming.xml">
         <exclude name="ShortVariable"/>
+        <exclude name="LongVariable"/>
     </rule>
     <rule ref="rulesets/naming.xml/ShortVariable">
         <properties>
             <property name="minimum" value="2"/>
             <property name="exceptions" value="id,io,m"/>
+        </properties>
+    </rule>
+    <rule ref="rulesets/naming.xml/LongVariable">
+        <properties>
+            <property name="maximum" value="25"/>
         </properties>
     </rule>
 

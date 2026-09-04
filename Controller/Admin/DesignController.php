@@ -17,6 +17,7 @@ namespace Plugin\AiChatAssistant42\Controller\Admin;
 
 use Eccube\Controller\AbstractController;
 use Plugin\AiChatAssistant42\Repository\ConfigRepository;
+use Plugin\AiChatAssistant42\Service\DesignSettingsSyncService;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -86,6 +87,7 @@ class DesignController extends AbstractController
     public function index(): Response
     {
         // 管理画面アクセス時に1日1回だけリモート同期（失敗しても表示は継続）
+        $syncMeta = ['last_synced_at' => null, 'etag' => null, 'last_modified' => null];
         if ($this->syncService !== null) {
             try {
                 $this->syncService->trySyncIfStale();
@@ -93,8 +95,6 @@ class DesignController extends AbstractController
                 // 同期失敗はログのみで画面表示を継続（フロントは DEFAULTS + PluginData でフォールバック）
             }
             $syncMeta = $this->syncService->getSyncMeta();
-        } else {
-            $syncMeta = ['last_synced_at' => null, 'etag' => null, 'last_modified' => null];
         }
 
         $designSettings = $this->loadDesignSettings();
@@ -108,8 +108,10 @@ class DesignController extends AbstractController
 
     /**
      * デザイン設定を保存する。
+     *
+     * @SuppressWarnings(PHPMD.StaticAccess)
      */
-    public function save(Request $request, UrlGeneratorInterface $urlGenerator): RedirectResponse
+    public function save(Request $request): RedirectResponse
     {
         try {
             $this->isTokenValid();
@@ -181,7 +183,7 @@ class DesignController extends AbstractController
         ];
 
         // バリデーション
-        $validation = \Plugin\AiChatAssistant42\Service\DesignSettingsSyncService::validateInput($rawInput);
+        $validation = DesignSettingsSyncService::validateInput($rawInput); // @phpstan-ignore class.notFound (use importで解決済みだが phpstan キャッシュ対策)
         // 追加: widget 固有の検証（色・サイズ・位置）
         $extraErrors = $this->validateWidgetSettings($rawInput);
         $allErrors = array_merge($validation['errors'], $extraErrors);

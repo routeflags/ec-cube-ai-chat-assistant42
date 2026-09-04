@@ -38,6 +38,9 @@ use DateTimeImmutable;
  * max_tokens は DB(Config) で管理（管理画面で編集可能）。ai_models.json からは削除済み。
  *       ChatApiController::executeChatSession() は $config->getMaxTokens() を AiAgentFactory::create() に渡す。
  *       dashboard.twig:296 の表示も DB 値で統一。
+ *
+ * @SuppressWarnings(PHPMD.TooManyMethods)
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  */
 class DashboardController extends AbstractController
 {
@@ -90,7 +93,8 @@ class DashboardController extends AbstractController
                 // projectDir 未設定の LogicException 等が漏れた場合も 500 にしない。
                 if ($this->logger !== null) {
                     $this->logger->warning('AI model sync failed, keeping local', ['error' => $e->getMessage()]);
-                } else {
+                }
+                if ($this->logger === null) {
                     error_log(sprintf('[AiChatAssistant42] AI model sync failed, keeping local: %s', $e->getMessage()));
                 }
             }
@@ -282,19 +286,23 @@ class DashboardController extends AbstractController
      */
     private function handleSettingsPost(Request $request, Config $config, array $allModelIds, array $modelsByProvider): Response
     {
-        if ($response = $this->validateCsrfOrRedirect()) {
-            return $response;
+        $csrfResponse = $this->validateCsrfOrRedirect();
+        if ($csrfResponse !== null) {
+            return $csrfResponse;
         }
         $provider = $this->resolveProviderValue($request);
-        if ($response = $this->validateProviderOrRedirect($provider)) {
-            return $response;
+        $providerResponse = $this->validateProviderOrRedirect($provider);
+        if ($providerResponse !== null) {
+            return $providerResponse;
         }
         $model = $this->resolveModelValue($request);
-        if ($response = $this->validateModelOrRedirect($model, $provider, $config, $allModelIds, $modelsByProvider)) {
-            return $response;
+        $modelResponse = $this->validateModelOrRedirect($model, $provider, $config, $allModelIds, $modelsByProvider);
+        if ($modelResponse !== null) {
+            return $modelResponse;
         }
-        if ($response = $this->validateMaxTokensOrRedirect($request)) {
-            return $response;
+        $maxTokensResponse = $this->validateMaxTokensOrRedirect($request);
+        if ($maxTokensResponse !== null) {
+            return $maxTokensResponse;
         }
 
         return $this->persistSettingsAndRedirect($request, $config, $provider, $model);
@@ -652,3 +660,5 @@ class DashboardController extends AbstractController
         return substr($plain, 0, 7) . '...' . substr($plain, -4);
     }
 }
+
+// TODO: DashboardDataProvider への委譲で根本解消

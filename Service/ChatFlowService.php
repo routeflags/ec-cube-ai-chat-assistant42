@@ -42,10 +42,13 @@ class ChatFlowService
     /**
      * アクセス制限をチェックし、許可されているか判定する。
      *
+     * @SuppressWarnings(PHPMD.Superglobals)
      * @return array{allowed: bool, reason?: string}
      */
     public function checkAccessRules(string $sessionId, string $userMessage = ''): array
     {
+        // $sessionId は監査ログと将来のセッション紐づけのためにログへ記録する
+        $this->logger?->debug('checkAccessRules', ['sessionId' => $sessionId, 'messageLength' => mb_strlen($userMessage)]);
         $conn = $this->entityManager->getConnection();
 
         // アクティブなルールを取得

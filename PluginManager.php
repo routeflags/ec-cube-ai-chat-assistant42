@@ -14,7 +14,8 @@
 namespace Plugin\AiChatAssistant42;
 
 use Eccube\Plugin\AbstractPluginManager;
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use Psr\Container\ContainerInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface as SymfonyContainerInterface;
 use Symfony\Component\Filesystem\Filesystem;
 
 /**
@@ -30,26 +31,70 @@ class PluginManager extends AbstractPluginManager
 {
     public function enable(array $meta, ContainerInterface $container)
     {
+        $pluginCode = $this->resolvePluginCode($meta);
+        $this->logPluginAction('enable', $pluginCode, $container);
         $this->copyAssets($container);
     }
 
     public function update(array $meta, ContainerInterface $container)
     {
+        $pluginCode = $this->resolvePluginCode($meta);
+        $this->logPluginAction('update', $pluginCode, $container);
         $this->copyAssets($container);
     }
 
     public function disable(array $meta, ContainerInterface $container)
     {
+        $pluginCode = $this->resolvePluginCode($meta);
+        $this->logPluginAction('disable', $pluginCode, $container);
+        $projectDir = '';
+        if ($container instanceof SymfonyContainerInterface && $container->hasParameter('kernel.project_dir')) {
+            $projectDir = (string) $container->getParameter('kernel.project_dir');
+        }
+        if ($pluginCode === '' && $projectDir === '') {
+            return;
+        }
         // アセットは残す（再有効化で再利用）。削除する場合は removeAssets() を呼ぶ。
+    }
+
+    private function resolvePluginCode(array $meta): string
+    {
+        $pluginCode = $meta['code'] ?? 'AiChatAssistant42';
+        if (!is_string($pluginCode) || $pluginCode === '') {
+            return 'AiChatAssistant42';
+        }
+
+        return $pluginCode;
+    }
+
+    private function logPluginAction(string $action, string $pluginCode, ContainerInterface $container): void
+    {
+        if (!$container->has('logger')) {
+            return;
+        }
+        try {
+            $logger = $container->get('logger');
+            if ($logger instanceof \Psr\Log\LoggerInterface) {
+                $logger->info(sprintf('AiChatAssistant42 plugin %s', $action), ['code' => $pluginCode]);
+            }
+        } catch (\Throwable $e) {
+            // ログ取得失敗は無視（プラグイン有効化を妨げない）
+        }
     }
 
     private function copyAssets(ContainerInterface $container): void
     {
-        $projectDir = $container->getParameter('kernel.project_dir');
+        $projectDir = '';
+        if ($container instanceof SymfonyContainerInterface && $container->hasParameter('kernel.project_dir')) {
+            $projectDir = (string) $container->getParameter('kernel.project_dir');
+        }
+        if ($projectDir === '') {
+            return;
+        }
         // PluginService と同等のパス解決
         $pluginHtmlDir = $projectDir . '/html/plugin';
-        if ($container->hasParameter('eccube.plugin_html_realdir')) {
-            $pluginHtmlDir = rtrim($container->getParameter('eccube.plugin_html_realdir'), '/');
+        if ($container instanceof SymfonyContainerInterface && $container->hasParameter('eccube.plugin_html_realdir')) {
+            $pluginHtmlDir = rtrim((string) $container->getParameter('eccube.plugin_html_realdir'), '/');
         }
 
         $source = $projectDir . '/app/Plugin/AiChatAssistant42/Resource/assets';
