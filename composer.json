@@ -1,7 +1,7 @@
 {
     "name": "ec-cube/aichatassistant42",
     "type": "eccube-plugin",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "EC-CUBE の商品情報に AI チャットで質問できるプラグインです。OpenAI / Anthropic / Google Gemini に対応しています。",
     "license": "GPL-2.0-only",
     "keywords": ["ec-cube", "ai", "chat", "openai", "anthropic", "gemini", "mcp"],
