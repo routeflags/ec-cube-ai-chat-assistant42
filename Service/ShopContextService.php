@@ -86,6 +86,11 @@ class ShopContextService
 
     /**
      * 絶対URLのベースを返す。
+     *
+     * 注意: getSchemeAndHttpHost() は framework.trusted_proxies / trusted_headers が
+     * 正しく設定されている前提で X-Forwarded-Proto を信頼し https を返す。
+     * Cloudflare 環境では framework.yaml で trusted_proxies: ['127.0.0.1', 'REMOTE_ADDR']
+     * と trusted_headers: ['x-forwarded-for','x-forwarded-proto'] を設定すること。
      */
     public function getBaseUrl(): string
     {

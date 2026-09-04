@@ -167,15 +167,62 @@ class McpHttpService
     /**
      * エラーメッセージをサニタイズし情報漏洩を防ぐ。
      *
-     * SQL キーワードやテーブル名を含む場合は Internal error に置換する。
+     * SQL キーワードやテーブル名、パス、スタックトレースを含む場合は Internal error に置換する。
+     * ChatApiController::redactedMessage() と同等の水準で漏洩を防止する。
      */
     public function sanitizeErrorMessage(string $message): string
     {
-        if (preg_match('/SQLSTATE|Doctrine|plg_|dtb_|SELECT|FROM/i', $message)) {
+        $pattern = '/SQLSTATE|Doctrine|PDO|plg_|dtb_|SELECT|INSERT|UPDATE|DELETE|FROM|TABLE|column|syntax'
+            . '|Duplicate|Unknown database|Connection|\/var\/www|\.php:/i';
+        if (preg_match($pattern, $message)) {
             return 'Internal error';
         }
 
-        return mb_substr($message, 0, 200);
+        $clean = preg_replace('/[\x00-\x1F\x7F]/u', '', $message);
+
+        return mb_substr($clean, 0, 200);
+    }
+
+    /**
+     * wellKnown Discovery 用のペイロードを構築する（DRY 共用化）。
+     *
+     * Controller と handleToolsList で重複していた name/description/inputSchema マッピングを
+     * 本メソッドに集約し、将来のキー名変更時の片方だけ壊れるリスクを防ぐ。
+     *
+     * @return array<string, mixed>
+     */
+    public function buildWellKnownPayload(string $baseUrl): array
+    {
+        $toolDefinitions = $this->productRepository->getToolDefinitions();
+
+        $mcpTools = array_map(
+            fn (array $tool): array => [
+                'name' => $tool['name'],
+                'description' => $tool['description'],
+                'inputSchema' => $tool['input_schema'],
+            ],
+            $toolDefinitions
+        );
+
+        $mcpUrl = rtrim($baseUrl, '/') . '/mcp';
+
+        return [
+            'name' => 'EC-CUBE MCP',
+            'protocolVersion' => self::PROTOCOL_VERSION,
+            'serverInfo' => [
+                'name' => self::SERVER_NAME,
+                'version' => self::SERVER_VERSION,
+            ],
+            'transport' => [
+                'type' => 'streamable-http',
+                'url' => $mcpUrl,
+            ],
+            'capabilities' => [
+                'tools' => ['listChanged' => false],
+            ],
+            'baseUrl' => $baseUrl,
+            'tools' => $mcpTools,
+        ];
     }
 
     /**

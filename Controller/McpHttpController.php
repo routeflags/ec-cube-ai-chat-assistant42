@@ -29,7 +29,7 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * Streamable HTTP (POST /mcp) と Discovery (GET /.well-known/mcp.json) を提供する。
  * CORS は Controller 直付与方式で付与し、EventListener 新設はしない。
- * RateLimit は CacheInterface (cache.app) で mcp:ratelimit:{ip}:{tool}:{minute} キー管理。
+ * RateLimit は CacheInterface (cache.app) で mcp.ratelimit.{ip}.{tool}.{minute} キー管理（PSR-6 合法、IP は ":" "." "/" を "_" にサニタイズ）。
  */
 class McpHttpController
 {
@@ -49,44 +49,19 @@ class McpHttpController
      */
     public function wellKnown(Request $request): JsonResponse
     {
+        // trusted_proxies が正しく設定されている前提で getClientIp() は X-Forwarded-For を信頼する。
+        // 未設定時は全ユーザが同一バケット (127.0.0.1) を共有し誤爆するため framework.yaml で設定すること。
         $ip = $request->getClientIp() ?? 'unknown';
         try {
             $this->rateLimitService->enforce($ip, 'well_known');
         } catch (RateLimitExceededException $e) {
-            return $this->rateLimitResponse(null, $e);
+            return $this->wellKnownRateLimitResponse($e);
         }
 
-        $toolDefinitions = $this->productRepository->getToolDefinitions();
-        $mcpTools = array_map(
-            fn (array $tool): array => [
-                'name' => $tool['name'],
-                'description' => $tool['description'],
-                'inputSchema' => $tool['input_schema'],
-            ],
-            $toolDefinitions
-        );
-
         $baseUrl = $this->resolveBaseUrl($request);
-        $mcpUrl = rtrim($baseUrl, '/') . '/mcp';
-
-        $data = [
-            'name' => 'EC-CUBE MCP',
-            'protocolVersion' => McpHttpService::PROTOCOL_VERSION,
-            'serverInfo' => [
-                'name' => McpHttpService::SERVER_NAME,
-                'version' => McpHttpService::SERVER_VERSION,
-            ],
-            'transport' => [
-                'type' => 'streamable-http',
-                'url' => $mcpUrl,
-            ],
-            'capabilities' => [
-                'tools' => ['listChanged' => false],
-            ],
-            'baseUrl' => $baseUrl,
-            'tools' => $mcpTools,
-            // TODO: 残5ツール (get_news 等) は本PRスコープ外。将来的に ProductToolDefinition に追記されたら自動で含まれる。
-        ];
+        // DRY: ツールマッピングは McpHttpService::buildWellKnownPayload() に集約
+        $data = $this->mcpHttpService->buildWellKnownPayload($baseUrl);
+        // TODO: 残5ツール (get_news 等) は本PRスコープ外。将来的に ProductToolDefinition に追記されたら自動で含まれる。
 
         $response = new JsonResponse($data, 200, [], false);
         $response->headers->set('Content-Type', 'application/json; charset=utf-8');
@@ -94,8 +69,6 @@ class McpHttpController
         // Cache-Control は setPublic()/setMaxAge() で付与し private との不整合を避ける
         $response->setPublic();
         $response->setMaxAge(300);
-        // JsonResponse はデフォルトで private/no-cache を付けるため上記で上書き
-        $response->headers->set('Content-Type', 'application/json; charset=utf-8');
 
         return $response;
     }
@@ -147,7 +120,9 @@ class McpHttpController
         }
 
         // batch リクエスト（配列）は未対応 → -32600
-        if (is_array($data) && array_is_list($data)) {
+        // json_decode('{}', true) は [] を返すため array_is_list だけでは空オブジェクトを batch と誤判定する。
+        // 元の JSON テキストが "[" で始まる場合のみ batch とみなす。
+        if (str_starts_with(ltrim($content), '[') && is_array($data) && array_is_list($data)) {
             $error = $this->mcpHttpService->writeErrorResponse(null, -32600, 'Invalid Request: batch not supported');
             return $this->jsonResponseWithCors($error, 200);
         }
@@ -238,6 +213,21 @@ class McpHttpController
         return $response;
     }
 
+    private function wellKnownRateLimitResponse(RateLimitExceededException $e): JsonResponse
+    {
+        // Discovery (GET /.well-known/mcp.json) は REST なので JSON-RPC ラップせず REST 形式で返す
+        $response = new JsonResponse(['error' => 'Too Many Requests'], 429, [], false);
+        $response->headers->set('Retry-After', (string) $e->getRetryAfterSeconds());
+        $response->headers->set('X-RateLimit-Limit', (string) $e->getLimit());
+        $response->headers->set('X-RateLimit-Remaining', '0');
+        $this->addCorsHeaders($response);
+        $response->headers->set('Content-Type', 'application/json; charset=utf-8');
+        $response->setPrivate();
+        $response->headers->addCacheControlDirective('no-store', true);
+
+        return $response;
+    }
+
     private function optionsResponse(): Response
     {
         $response = new Response('', 204);
@@ -257,17 +247,37 @@ class McpHttpController
 
     private function resolveBaseUrl(Request $request): string
     {
+        // 正本は ShopContextService::getBaseUrl()。fallback は https を優先する。
+        // Cloudflare 等で X-Forwarded-Proto: https が付与される環境では
+        // framework.trusted_proxies / trusted_headers が正しく設定されている必要がある。
+        // 未設定時は getSchemeAndHttpHost() が http を返し transport.url が http になるため
+        // mixed content で接続失敗する。framework.yaml で以下を設定すること:
+        //   framework:
+        //     trusted_proxies: ['127.0.0.1', 'REMOTE_ADDR']
+        //     trusted_headers: ['x-forwarded-for', 'x-forwarded-proto']
         if ($this->shopContextService !== null) {
             $baseUrl = $this->shopContextService->getBaseUrl();
             if ($baseUrl !== '') {
+                // ShopContextService も trusted_proxies 未設定時は http を返す可能性があるため
+                // https 強制: X-Forwarded-Proto が https なら http:// を https:// に置換
+                if (str_starts_with($baseUrl, 'http://') && $request->headers->get('X-Forwarded-Proto') === 'https') {
+                    $baseUrl = 'https://' . substr($baseUrl, 7);
+                }
+
                 return $baseUrl;
             }
         }
 
-        // Fallback to request scheme+host
+        // Fallback to request scheme+host — trusted_proxies 設定時は https を正しく得られる
         $schemeAndHost = $request->getSchemeAndHttpHost();
         if ($schemeAndHost !== '') {
-            return rtrim($schemeAndHost . $request->getBaseUrl(), '/');
+            $baseUrl = rtrim($schemeAndHost . $request->getBaseUrl(), '/');
+            // https 強制: X-Forwarded-Proto が https なら置換（trusted_proxies 未設定時の保険）
+            if (str_starts_with($baseUrl, 'http://') && $request->headers->get('X-Forwarded-Proto') === 'https') {
+                $baseUrl = 'https://' . substr($baseUrl, 7);
+            }
+
+            return $baseUrl;
         }
 
         return '';
