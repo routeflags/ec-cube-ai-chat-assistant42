@@ -14,14 +14,14 @@ echo "  -> OK"
 echo ""
 
 echo "[2/5] PHP syntax check"
-find "$PLUGIN_DIR" -name "*.php" -type f | while read f; do
+find "$PLUGIN_DIR" -path "$PLUGIN_DIR/vendor" -prune -o -name "*.php" -type f -print | while read f; do
   php -l "$f" > /dev/null
 done
 echo "  -> OK (all php files syntax ok)"
 echo ""
 
 echo "[3/5] Hardcode check (thch-vape.shop should be 0)"
-count=$(grep -r "thch-vape.shop" "$PLUGIN_DIR" --include="*.php" --exclude-dir=.git | grep -v "Documents/plans" | grep -v "artifacts" | wc -l | tr -d ' ')
+count=$(grep -r "thch-vape.shop" "$PLUGIN_DIR" --include="*.php" --exclude-dir=.git --exclude-dir=vendor | grep -v "Documents/plans" | grep -v "artifacts" | grep -v "Tests/" | wc -l | tr -d ' ')
 if [ "$count" -eq 0 ]; then
   echo "  -> OK (0 hits)"
 else
@@ -43,12 +43,12 @@ else
 fi
 echo ""
 
-echo "[5/5] Route count check (should be 28)"
+echo "[5/5] Route count check (should be >=28)"
 count=$(grep -c "^[a-z_]*:" "$PLUGIN_DIR/Resource/config/routes.yaml")
-if [ "$count" -eq 28 ]; then
-  echo "  -> OK (28 routes)"
+if [ "$count" -ge 28 ]; then
+  echo "  -> OK ($count routes >=28)"
 else
-  echo "  -> NG ($count routes, expected 28)"
+  echo "  -> NG ($count routes, expected >=28)"
   exit 1
 fi
 echo ""

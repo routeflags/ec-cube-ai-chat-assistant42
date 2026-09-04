@@ -181,3 +181,21 @@ admin_ai_chat_assistant_settings:
     methods: [GET, POST]
     defaults:
         _controller: Plugin\AiChatAssistant42\Controller\Admin\DashboardController::settings
+
+mcp_well_known:
+    path: /.well-known/mcp.json
+    methods: [GET]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\McpHttpController::wellKnown
+
+mcp_well_known_alias:
+    path: /.well-known/mcp
+    methods: [GET]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\McpHttpController::wellKnown
+
+mcp_http:
+    path: /mcp
+    methods: [GET, POST, OPTIONS]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\McpHttpController::handle
