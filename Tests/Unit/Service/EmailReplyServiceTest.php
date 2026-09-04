@@ -18,7 +18,9 @@ namespace Plugin\AiChatAssistant42\Tests\Unit\Service;
 use Eccube\Entity\BaseInfo;
 use Eccube\Repository\BaseInfoRepository;
 use PHPUnit\Framework\TestCase;
+use Plugin\AiChatAssistant42\Repository\ChatLogRepository;
 use Plugin\AiChatAssistant42\Service\ChatLogger;
+use Plugin\AiChatAssistant42\Service\EmailHashService;
 use Plugin\AiChatAssistant42\Service\EmailReplyService;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
@@ -352,6 +354,82 @@ class EmailReplyServiceTest extends TestCase
         } catch (\Throwable $e) {
             $this->fail('InvalidArgumentException は握りつぶされるべき: ' . $e->getMessage());
         }
+    }
+
+    // ================================================================
+    //  I-30: EmailHashService 経由の復号経路
+    // ================================================================
+
+    public function testSendBothUsesDecryptedEmailWhenHashServicePresent(): void
+    {
+        $sessionId = 'hash-decrypt-test';
+        $fallbackEmail = 'fallback@example.com';
+        $decryptedEmail = 'decrypted@example.com';
+        $encValue = 'enc_dummy_value_not_email';
+        $baseInfo = $this->createBaseInfo('shop@example.com', 'support@example.com', 'noreply@example.com', 'thch-vape.shop');
+
+        $this->baseInfoRepository->method('get')->willReturn($baseInfo);
+        $this->chatLogger->method('fetchSessionHistory')->willReturn([]);
+
+        $chatLogRepo = $this->createMock(ChatLogRepository::class);
+        $chatLogRepo->method('fetchLatestEmailEnc')
+            ->with($sessionId)
+            ->willReturn($encValue);
+
+        $hashService = $this->createMock(EmailHashService::class);
+        $hashService->method('decrypt')
+            ->with($encValue)
+            ->willReturn($decryptedEmail);
+
+        $this->service = new EmailReplyService(
+            $this->mailer,
+            $this->baseInfoRepository,
+            $this->chatLogger,
+            $this->logger,
+            null,
+            $hashService,
+            $chatLogRepo,
+        );
+
+        $this->service->sendBoth($sessionId, $fallbackEmail);
+
+        $this->assertCount(2, $this->sentEmails);
+        // 復号されたメールが To / ReplyTo に使われること
+        $this->assertEquals([$decryptedEmail], $this->extractToAddresses($this->sentEmails[0]));
+        $this->assertEquals($decryptedEmail, $this->sentEmails[1]->getReplyTo()[0]->getAddress());
+    }
+
+    public function testSendBothFallsBackWhenDecryptFails(): void
+    {
+        $sessionId = 'hash-decrypt-fail-test';
+        $fallbackEmail = 'fallback@example.com';
+        $encValue = 'enc_invalid';
+        $baseInfo = $this->createBaseInfo('shop@example.com', 'support@example.com', 'noreply@example.com', 'thch-vape.shop');
+
+        $this->baseInfoRepository->method('get')->willReturn($baseInfo);
+        $this->chatLogger->method('fetchSessionHistory')->willReturn([]);
+
+        $chatLogRepo = $this->createMock(ChatLogRepository::class);
+        $chatLogRepo->method('fetchLatestEmailEnc')->willReturn($encValue);
+
+        $hashService = $this->createMock(EmailHashService::class);
+        $hashService->method('decrypt')->willThrowException(new \RuntimeException('decrypt failed'));
+
+        $this->service = new EmailReplyService(
+            $this->mailer,
+            $this->baseInfoRepository,
+            $this->chatLogger,
+            $this->logger,
+            null,
+            $hashService,
+            $chatLogRepo,
+        );
+
+        $this->service->sendBoth($sessionId, $fallbackEmail);
+
+        $this->assertCount(2, $this->sentEmails);
+        // 復号失敗時は fallback が使われる
+        $this->assertEquals([$fallbackEmail], $this->extractToAddresses($this->sentEmails[0]));
     }
 
     // ================================================================
