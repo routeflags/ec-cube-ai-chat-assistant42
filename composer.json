@@ -23,18 +23,23 @@
         "phpstan/phpstan": "^2.2",
         "phpmd/phpmd": "^2.15",
         "phpmetrics/phpmetrics": "^2.11",
-        "symfony/yaml": "^6.4",
-        "ec-cube/ec-cube": "*"
+        "symfony/mailer": "^6.4",
+        "symfony/mime": "^6.4",
+        "doctrine/orm": "^2.15",
+        "doctrine/dbal": "^3.6",
+        "symfony/http-foundation": "^6.4",
+        "symfony/http-kernel": "^6.4",
+        "symfony/routing": "^6.4"
     },
     "autoload": {
         "psr-4": {
-            "Plugin\\AiChatAssistant42\\": "./"
+            "Plugin\\AiChatAssistant42\\": "./",
+            "Eccube\\": "Tests/Stubs/Eccube",
+            "Psr\\Log\\Test\\": "Tests/Stubs/Psr/Log/Test"
         }
     },
     "autoload-dev": {
-        "psr-4": {
-            "Plugin\\AiChatAssistant42\\Tests\\": "Tests/"
-        }
+        "Plugin\\AiChatAssistant42\\Tests\\": "Tests/"
     },
     "extra": {
         "code": "AiChatAssistant42"

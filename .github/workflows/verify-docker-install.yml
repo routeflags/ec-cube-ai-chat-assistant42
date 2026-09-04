@@ -25,7 +25,7 @@ jobs:
         run: composer install --no-interaction --prefer-dist
       - name: composer validate (dep-on-root gate)
         run: |
-          php -r 'if (isset(json_decode(file_get_contents("composer.json"), true)["require"]["ec-cube/ec-cube"])) { echo "ec-cube/ec-cube found in require (dep-on-root)\n"; exit(1); } echo "composer.json OK (no ec-cube/ec-cube in require)\n";'
+          grep -q '"ec-cube/ec-cube"' composer.json && { echo "ec-cube/ec-cube found in composer.json (dep-on-root)"; exit 1; } || echo "composer.json OK (no ec-cube/ec-cube)"
           composer validate --no-check-publish
           composer validate --strict || true
       - name: services.yaml ContainerInterface bind gate
@@ -36,7 +36,8 @@ jobs:
         run: find . -name "*.php" -type f -not -path "./vendor/*" | xargs -n1 php -l
       - name: yaml lint
         run: |
-          php -r "require 'vendor/autoload.php'; use Symfony\Component\Yaml\Yaml; Yaml::parseFile('Resource/config/services.yaml'); echo \"yaml OK\n\";"
+          pip install pyyaml -q
+          python3 -c "import yaml; yaml.safe_load(open('Resource/config/services.yaml')); print('yaml OK')"
       - name: unit tests
         run: vendor/bin/phpunit --testsuite unit
 
