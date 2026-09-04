@@ -26,6 +26,7 @@ use Plugin\AiChatAssistant42\Service\ApiKeyEncryptor;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use DateTimeImmutable;
 
 /**
  * AI チャットアシスタントの管理画面ダッシュボード。
@@ -37,6 +38,9 @@ use Symfony\Component\HttpFoundation\Response;
  * max_tokens は DB(Config) で管理（管理画面で編集可能）。ai_models.json からは削除済み。
  *       ChatApiController::executeChatSession() は $config->getMaxTokens() を AiAgentFactory::create() に渡す。
  *       dashboard.twig:296 の表示も DB 値で統一。
+ *
+ * @SuppressWarnings(PHPMD.TooManyMethods)
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  */
 class DashboardController extends AbstractController
 {
@@ -89,13 +93,14 @@ class DashboardController extends AbstractController
                 // projectDir 未設定の LogicException 等が漏れた場合も 500 にしない。
                 if ($this->logger !== null) {
                     $this->logger->warning('AI model sync failed, keeping local', ['error' => $e->getMessage()]);
-                } else {
+                }
+                if ($this->logger === null) {
                     error_log(sprintf('[AiChatAssistant42] AI model sync failed, keeping local: %s', $e->getMessage()));
                 }
             }
         }
 
-        $now = new \DateTimeImmutable();
+        $now = new DateTimeImmutable();
         $periodEnd = $now;
         $periodStart = $now->modify('-30 days');
         $prevPeriodEnd = $periodStart;
@@ -131,7 +136,7 @@ class DashboardController extends AbstractController
      *
      * @return array{total: int, resolved: int, errors: int, avg_response_ms: float, resolution_rate: float, error_rate: float}
      */
-    private function fetchKpi(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    private function fetchKpi(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
         return $this->getChatLogRepository()->fetchKpi($start, $end);
     }
@@ -151,7 +156,7 @@ class DashboardController extends AbstractController
      *
      * @return array<array{provider: string, count: int, avg_response_ms: float, error_count: int}>
      */
-    private function fetchProviderStats(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    private function fetchProviderStats(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
         return $this->getChatLogRepository()->fetchProviderStats($start, $end);
     }
@@ -161,7 +166,7 @@ class DashboardController extends AbstractController
      *
      * @return array<array{model: string, count: int, avg_response_ms: float, avg_token_input: float, avg_token_output: float, error_count: int}>
      */
-    private function fetchModelStats(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    private function fetchModelStats(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
         return $this->getChatLogRepository()->fetchModelStats($start, $end);
     }
@@ -171,7 +176,7 @@ class DashboardController extends AbstractController
      *
      * @return array<array{error_type: string, count: int, latest_message: string}>
      */
-    private function fetchErrorBreakdown(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    private function fetchErrorBreakdown(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
         return $this->getChatLogRepository()->fetchErrorBreakdown($start, $end);
     }
@@ -193,7 +198,7 @@ class DashboardController extends AbstractController
      *
      * @return array<int, array{hour: int, count: int}>
      */
-    private function fetchHourlyDistribution(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    private function fetchHourlyDistribution(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
         return $this->getChatLogRepository()->fetchHourlyDistribution($start, $end);
     }
@@ -279,21 +284,25 @@ class DashboardController extends AbstractController
      *
      * CSRF と provider/model/max_tokens を検証し、不正なら保存せずリダイレクトする。
      */
-    private function handleSettingsPost(Request $request, Config $config, array $allModelIds, array $modelsByProvider): ?Response
+    private function handleSettingsPost(Request $request, Config $config, array $allModelIds, array $modelsByProvider): Response
     {
-        if ($response = $this->validateCsrfOrRedirect()) {
-            return $response;
+        $csrfResponse = $this->validateCsrfOrRedirect();
+        if ($csrfResponse !== null) {
+            return $csrfResponse;
         }
         $provider = $this->resolveProviderValue($request);
-        if ($response = $this->validateProviderOrRedirect($provider)) {
-            return $response;
+        $providerResponse = $this->validateProviderOrRedirect($provider);
+        if ($providerResponse !== null) {
+            return $providerResponse;
         }
         $model = $this->resolveModelValue($request);
-        if ($response = $this->validateModelOrRedirect($model, $provider, $config, $allModelIds, $modelsByProvider)) {
-            return $response;
+        $modelResponse = $this->validateModelOrRedirect($model, $provider, $config, $allModelIds, $modelsByProvider);
+        if ($modelResponse !== null) {
+            return $modelResponse;
         }
-        if ($response = $this->validateMaxTokensOrRedirect($request)) {
-            return $response;
+        $maxTokensResponse = $this->validateMaxTokensOrRedirect($request);
+        if ($maxTokensResponse !== null) {
+            return $maxTokensResponse;
         }
 
         return $this->persistSettingsAndRedirect($request, $config, $provider, $model);
@@ -532,7 +541,9 @@ class DashboardController extends AbstractController
      * AiModelRegistry を優先して再利用し、二重実装を解消。
      * フォールバックとして従来の file_get_contents 経由も維持（Registry 未注入やテスト時の後方互換）。
      *
-     * @return array<string, array{name: string, api_base: string, models: array<int, array{id: string, name: string, description: string, supports_tools: bool, cost_tier: string, is_default: bool}>}>
+     * @return array<string, array{name: string, api_base: string, models: array<int, array{
+     *               id: string, name: string, description: string, supports_tools: bool,
+     *               cost_tier: string, is_default: bool}>}>
      */
     private function loadAiModels(): array
     {
@@ -648,4 +659,6 @@ class DashboardController extends AbstractController
 
         return substr($plain, 0, 7) . '...' . substr($plain, -4);
     }
+
+    // TODO: DashboardDataProvider への委譲で根本解消
 }

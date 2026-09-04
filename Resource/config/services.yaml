@@ -3,15 +3,23 @@ services:
         autowire: true
         autoconfigure: true
         public: false
+        bind:
+            Psr\Container\ContainerInterface: '@service_container'
 
     GuzzleHttp\ClientInterface:
         class: GuzzleHttp\Client
         public: false
 
+    Plugin\AiChatAssistant42\Controller\:
+        resource: '../../Controller/*'
+        public: true
+        tags: ['controller.service_arguments']
+
     Plugin\AiChatAssistant42\:
         resource: '../../*'
         exclude:
             - '../../Tests/'
+            - '../../Controller/'
 
     Plugin\AiChatAssistant42\Service\McpServerService:
         arguments:
@@ -23,6 +31,11 @@ services:
         arguments:
             - '%kernel.secret%'
             - '@logger'
+
+    Plugin\AiChatAssistant42\Service\EmailHashService:
+        arguments:
+            - '%kernel.secret%'
+            - '@Plugin\AiChatAssistant42\Service\ApiKeyEncryptor'
 
     Plugin\AiChatAssistant42\Service\AiModelRegistry:
         arguments:
@@ -40,11 +53,9 @@ services:
             - '@GuzzleHttp\ClientInterface'
             - '@logger'
 
-    Plugin\AiChatAssistant42\Controller\Api\ChatApiController:
-        public: true
-        autowire: true
-
     Plugin\AiChatAssistant42\Controller\Api\ModelApiController:
+        public: true
+        tags: ['controller.service_arguments']
         arguments:
             - '@Plugin\AiChatAssistant42\Service\AiModelRegistry'
 
@@ -57,6 +68,9 @@ services:
         tags: ['console.command']
 
     Plugin\AiChatAssistant42\Command\SyncChatLogsCommand:
+        tags: ['console.command']
+
+    Plugin\AiChatAssistant42\Command\CleanupEmailCommand:
         tags: ['console.command']
 
     Plugin\AiChatAssistant42\Service\NotificationService:
@@ -84,20 +98,27 @@ services:
             $projectDir: '%kernel.project_dir%'
 
     Plugin\AiChatAssistant42\Controller\Admin\DashboardController:
+        public: true
+        tags: ['controller.service_arguments']
         arguments:
             $syncService: '@Plugin\AiChatAssistant42\Service\AiModelSyncService'
 
     Plugin\AiChatAssistant42\Controller\Admin\DesignController:
+        public: true
+        tags: ['controller.service_arguments']
         arguments:
-            - '@Plugin\AiChatAssistant42\Repository\ConfigRepository'
-            - '%kernel.project_dir%'
-            - '@Plugin\AiChatAssistant42\Service\DesignSettingsSyncService'
+            $projectDir: '%kernel.project_dir%'
+            $syncService: '@Plugin\AiChatAssistant42\Service\DesignSettingsSyncService'
 
     Plugin\AiChatAssistant42\Controller\Admin\NotificationController:
+        public: true
+        tags: ['controller.service_arguments']
         arguments:
             - '@Plugin\AiChatAssistant42\Repository\NotificationRepository'
             - '@Plugin\AiChatAssistant42\Service\ApiKeyEncryptor'
 
     Plugin\AiChatAssistant42\Controller\Admin\AccessRuleController:
+        public: true
+        tags: ['controller.service_arguments']
         arguments:
             - '@Plugin\AiChatAssistant42\Repository\AccessRuleRepository'

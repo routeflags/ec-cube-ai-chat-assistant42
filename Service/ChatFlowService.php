@@ -1,5 +1,16 @@
 <?php
 
+/*
+ * This file is part of EC-CUBE
+ *
+ * Copyright(c) EC-CUBE CO.,LTD. All Rights Reserved.
+ *
+ * http://www.ec-cube.co.jp/
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
 declare(strict_types=1);
 
 namespace Plugin\AiChatAssistant42\Service;
@@ -31,10 +42,13 @@ class ChatFlowService
     /**
      * アクセス制限をチェックし、許可されているか判定する。
      *
+     * @SuppressWarnings(PHPMD.Superglobals)
      * @return array{allowed: bool, reason?: string}
      */
     public function checkAccessRules(string $sessionId, string $userMessage = ''): array
     {
+        // $sessionId は監査ログと将来のセッション紐づけのためにログへ記録する
+        $this->logger?->debug('checkAccessRules', ['sessionId' => $sessionId, 'messageLength' => mb_strlen($userMessage)]);
         $conn = $this->entityManager->getConnection();
 
         // アクティブなルールを取得
@@ -177,7 +191,7 @@ class ChatFlowService
                     $matched = mb_strpos(mb_strtolower($userMessage), mb_strtolower($scenario['trigger_keyword'])) !== false;
                     break;
                 case 'regex':
-                    $matched = @preg_match($scenario['trigger_keyword'], $userMessage) === 1;
+                    $matched = $this->matchesRegex($scenario['trigger_keyword'], $userMessage);
                     break;
             }
 
@@ -291,23 +305,34 @@ class ChatFlowService
         // 汎用化: ナレッジのみを注入（ヘルプ/ニュース/記事は参照しない）
         $combinedContext = $knowledgeContext;
 
-        if ($combinedContext !== '') {
-            if ($responseMode === 'knowledge_only') {
-                // 厳格モード: ナレッジにない場合は回答しない
-                $combinedContext .= "\n\n上記のナレッジベースのみを根拠に回答してください。"
-                    . "該当する情報がない場合は「申し訳ございません。該当する情報がございません。"
-                    . "メールにてお問い合わせください。」と回答してください。";
-            } else {
-                // ハイブリッド: ナレッジを参照しつつ、一般的知識も許可
-                $combinedContext .= "\n\n上記のナレッジベースを参照して回答してください。"
-                    . "該当する情報がない場合は、一般的な知識で回答してください。";
-            }
-        } elseif ($responseMode === 'knowledge_only') {
+        if ($combinedContext !== '' && $responseMode === 'knowledge_only') {
+            // 厳格モード: ナレッジにない場合は回答しない
+            $combinedContext .= "\n\n上記のナレッジベースのみを根拠に回答してください。"
+                . "該当する情報がない場合は「申し訳ございません。該当する情報がございません。"
+                . "メールにてお問い合わせください。」と回答してください。";
+        }
+        if ($combinedContext !== '' && $responseMode !== 'knowledge_only') {
+            // ハイブリッド: ナレッジを参照しつつ、一般的知識も許可
+            $combinedContext .= "\n\n上記のナレッジベースを参照して回答してください。"
+                . "該当する情報がない場合は、一般的な知識で回答してください。";
+        }
+        if ($combinedContext === '' && $responseMode === 'knowledge_only') {
             // コンテキストが空でも knowledge_only モードなら制限を維持
             $combinedContext .= "\n\n現在ナレッジが登録されていません。"
                 . "申し訳ございません。該当する情報がございません。メールにてお問い合わせください。";
         }
 
         return $basePrompt . $combinedContext;
+    }
+
+    private function matchesRegex(string $pattern, string $input): bool
+    {
+        try {
+            $result = preg_match($pattern, $input);
+        } catch (\Throwable $e) {
+            return false;
+        }
+
+        return $result === 1;
     }
 }

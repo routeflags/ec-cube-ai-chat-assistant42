@@ -87,10 +87,11 @@ class ScenarioRepository extends AbstractRepository
         $matched = [];
 
         foreach ($allActive as $scenario) {
+            $pattern = $scenario->getTriggerKeyword();
             $isMatch = match ($scenario->getTriggerType()) {
-                'exact' => mb_strtolower($input) === mb_strtolower($scenario->getTriggerKeyword()),
-                'contains' => mb_strpos(mb_strtolower($input), mb_strtolower($scenario->getTriggerKeyword())) !== false,
-                'regex' => @preg_match($scenario->getTriggerKeyword(), $input) === 1,
+                'exact' => mb_strtolower($input) === mb_strtolower($pattern),
+                'contains' => mb_strpos(mb_strtolower($input), mb_strtolower($pattern)) !== false,
+                'regex' => $this->matchesRegex($pattern, $input),
                 default => false,
             };
 
@@ -128,5 +129,17 @@ class ScenarioRepository extends AbstractRepository
     {
         $this->entityManager->remove($entity);
         $this->entityManager->flush();
+    }
+
+    private function matchesRegex(string $pattern, string $input): bool
+    {
+        // 不正な正規表現は false 扱い（@ を使わず try/catch で握りつぶし意図を明示）
+        try {
+            $result = preg_match($pattern, $input);
+        } catch (\Throwable $e) {
+            return false;
+        }
+
+        return $result === 1;
     }
 }

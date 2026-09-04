@@ -62,8 +62,10 @@
 
                         <dt class="col-sm-3">メール返信先</dt>
                         <dd class="col-sm-9">
-                            {% if log.emailReplyAddress %}
-                                <a href="mailto:{{ log.emailReplyAddress }}">{{ log.emailReplyAddress }}</a>
+                            {% if log.emailReplyAddressHash %}
+                                <code>{{ log.emailReplyAddressHash|slice(0, 8) }}***@***</code> <span class="text-muted small">（ハッシュ化済・平文は保存していません）</span>
+                            {% elseif log.emailReplyAddress %}
+                                <span class="text-muted">{{ log.emailReplyAddress|slice(0, 3) }}***@***</span> <span class="badge badge-ec-glay">旧形式</span>
                             {% else %}
                                 -
                             {% endif %}

@@ -1,0 +1,67 @@
+#!/bin/sh
+#
+# pre-push hook — デプロイ前に全テストを実行
+#
+# 開発ブランチ (development) から main への push や、SalesReport42 関連の変更時に
+# 重点的にテストを実行する。失敗時は push を中止する。
+#
+
+echo "🚀 pre-push: Running full test suite..."
+
+# PHPUnit の実行ファイルを探す
+PHPUNIT=""
+if [ -f "/tmp/phpunit.phar" ]; then
+    PHPUNIT="php -d memory_limit=512M /tmp/phpunit.phar"
+elif [ -f "vendor/bin/phpunit" ]; then
+    PHPUNIT="php -d memory_limit=512M vendor/bin/phpunit"
+else
+    # ダウンロードを試みる
+    echo "  ⏳ Downloading phpunit.phar..."
+    curl -sL https://phar.phpunit.de/phpunit-9.phar -o /tmp/phpunit.phar 2>/dev/null
+    if [ -f "/tmp/phpunit.phar" ]; then
+        chmod +x /tmp/phpunit.phar
+        PHPUNIT="php -d memory_limit=512M /tmp/phpunit.phar"
+    fi
+fi
+
+if [ -z "$PHPUNIT" ]; then
+    echo "  ⏭️  PHPUnit not found, skipping pre-push tests"
+    exit 0
+fi
+
+# 常に全テストを実行（全テスト - SalesReport42 + その他すべて）
+echo "  🧪 Running all tests (always)..."
+TEST_FILES=$(find tests -name "*Test.php" -type f | tr '\n' ' ')
+if [ -z "$TEST_FILES" ]; then
+    TEST_FILES="tests/Plugin/SalesReport42/Tests/Unit/Controller/SeoDataApiControllerTest.php"
+fi
+TEST_OUTPUT=$($PHPUNIT --bootstrap vendor/autoload.php $TEST_FILES 2>&1)
+TEST_EXIT=$?
+if [ $TEST_EXIT -ne 0 ]; then
+    echo "$TEST_OUTPUT" | tail -60
+    echo ""
+    echo "❌ pre-push: tests failed. Push aborted."
+    echo "   修正してから再度 push してください。"
+    exit 1
+fi
+echo "  ✅ All tests passed" 
+
+# 全体の軽量チェック: PHP 構文チェック（差分のみ）
+STAGED_PHP_FILES=$(git diff --name-only origin/development...HEAD 2>/dev/null | grep '\.php$' | head -20)
+if [ -n "$STAGED_PHP_FILES" ]; then
+    echo "  🔍 PHP syntax check (pre-push)..."
+    for file in $STAGED_PHP_FILES; do
+        if [ -f "$file" ]; then
+            php -l "$file" >/dev/null 2>&1
+            if [ $? -ne 0 ]; then
+                echo "  ❌ $file"
+                php -l "$file"
+                exit 1
+            fi
+        fi
+    done
+    echo "  ✅ PHP syntax OK"
+fi
+
+echo "  ✅ pre-push: All checks passed"
+exit 0

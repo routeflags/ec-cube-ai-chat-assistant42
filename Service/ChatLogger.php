@@ -18,6 +18,7 @@ namespace Plugin\AiChatAssistant42\Service;
 use Doctrine\ORM\EntityManagerInterface;
 use Plugin\AiChatAssistant42\Entity\ChatLog;
 use Plugin\AiChatAssistant42\Repository\ChatLogRepository;
+use DateTimeImmutable;
 
 /**
  * AI チャットのやり取りを DB に記録するサービス。
@@ -82,7 +83,7 @@ class ChatLogger
         $chatLog->setErrorMessage($data['error_message'] ?? null);
         $chatLog->setProductId($data['product_id'] ?? null);
         $chatLog->setOrderId($data['order_id'] ?? null);
-        $chatLog->setCreatedAt(new \DateTimeImmutable());
+        $chatLog->setCreatedAt(new DateTimeImmutable());
 
         $this->entityManager->persist($chatLog);
         $this->entityManager->flush();

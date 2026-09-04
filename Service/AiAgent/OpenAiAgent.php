@@ -20,12 +20,16 @@ use Plugin\AiChatAssistant42\Service\AiModelRegistry;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use Psr\Log\LoggerInterface;
+use stdClass;
+use RuntimeException;
 
 /**
  * OpenAI API を利用する AI エージェント実装。
  *
  * GPT-4o 等のモデルに対応し、Function Calling によるツール呼び出しをサポートする。
  * ツール呼び出しが発生した場合はループで再送し、最終的なテキスト応答を返す。
+ *
+ * @SuppressWarnings(PHPMD.LongVariable)
  */
 class OpenAiAgent implements AiAgentInterface
 {
@@ -40,7 +44,11 @@ class OpenAiAgent implements AiAgentInterface
     /** @var string|null reasoning effort (e.g. "low" / "medium" / "high") */
     private ?string $reasoningEffort;
     private ?AiModelRegistry $modelRegistry;
-    /** @var bool|null Capability cache for this model */
+    /**
+     * @var bool|null Capability cache for this model
+     *
+     * @SuppressWarnings(PHPMD.LongVariable)
+     */
     private ?bool $cachedSupportsReasoningWithTools = null;
     private ?LoggerInterface $logger;
 
@@ -273,11 +281,11 @@ class OpenAiAgent implements AiAgentInterface
         foreach ($mcpTools as $tool) {
             $schema = $tool['inputSchema'] ?? $tool['input_schema'] ?? $tool['parameters'] ?? [
                 'type' => 'object',
-                'properties' => new \stdClass(),
+                'properties' => new stdClass(),
             ];
             // 空配列 [] は JSON で [] になるため、空オブジェクト {} に変換
             if (isset($schema['properties']) && $schema['properties'] === []) {
-                $schema['properties'] = new \stdClass();
+                $schema['properties'] = new stdClass();
             }
             $converted[] = [
                 'type' => 'function',
@@ -310,10 +318,10 @@ class OpenAiAgent implements AiAgentInterface
         ];
 
         // gpt-5 / o1 / o3 系は max_tokens ではなく max_completion_tokens を使用（API の破壊的変更）
+        $payload['max_tokens'] = $this->maxTokens;
         if (str_starts_with($this->model, 'gpt-5') || str_starts_with($this->model, 'o1') || str_starts_with($this->model, 'o3')) {
             $payload['max_completion_tokens'] = $this->maxTokens;
-        } else {
-            $payload['max_tokens'] = $this->maxTokens;
+            unset($payload['max_tokens']);
         }
 
         // reasoning effort が設定されていれば付与（後段の capability チェックで必要に応じ除去）
@@ -399,7 +407,10 @@ class OpenAiAgent implements AiAgentInterface
             return true;
         }
 
-        $raw = @file_get_contents($configPath);
+        if (!is_file($configPath)) {
+            return true;
+        }
+        $raw = file_get_contents($configPath);
         if ($raw === false) {
             return true;
         }
@@ -429,7 +440,7 @@ class OpenAiAgent implements AiAgentInterface
      *
      * @return array<string, mixed> API レスポンス（JSON パース済み）
      *
-     * @throws \RuntimeException API 呼び出しが失敗した場合
+     * @throws RuntimeException API 呼び出しが失敗した場合
      */
     private function sendRequest(array $payload): array
     {
@@ -446,12 +457,12 @@ class OpenAiAgent implements AiAgentInterface
             $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
 
             if (!is_array($decoded)) {
-                throw new \RuntimeException('OpenAI API returned non-array response');
+                throw new RuntimeException('OpenAI API returned non-array response');
             }
 
             return $decoded;
         } catch (GuzzleException $e) {
-            throw new \RuntimeException(
+            throw new RuntimeException(
                 sprintf('OpenAI API request failed: %s', $e->getMessage()),
                 0,
                 $e

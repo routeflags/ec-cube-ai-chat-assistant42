@@ -17,6 +17,7 @@ namespace Plugin\AiChatAssistant42\Controller\Admin;
 
 use Eccube\Controller\AbstractController;
 use Plugin\AiChatAssistant42\Repository\ConfigRepository;
+use Plugin\AiChatAssistant42\Service\DesignSettingsSyncService;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -46,17 +47,25 @@ class DesignController extends AbstractController
         'assistant_display_name' => '商品アドバイザー',
         'license_footer_label' => 'ライセンスについて',
         'license_title' => 'ソフトウェアライセンスについて',
-        'license_lead' => 'AiChatAssistant42（チャットソフトウェア）の著作権は <a href="https://blog.routeflags.com/%e5%88%a9%e7%94%a8%e8%a6%8f%e7%b4%84/" target="_blank" rel="noopener">ROUTE FLAGS Co., Ltd.</a> に帰属し、GNU General Public License v2 (GPL-2.0-only) に基づき提供されています。',
+        'license_lead' => 'AiChatAssistant42（チャットソフトウェア）の著作権は '
+            . '<a href="https://blog.routeflags.com/%e5%88%a9%e7%94%a8%e8%a6%8f%e7%b4%84/"'
+            . ' target="_blank" rel="noopener">ROUTE FLAGS Co., Ltd.</a> に帰属し、'
+            . 'GNU General Public License v2 (GPL-2.0-only) に基づき提供されています。',
         'license_item1_heading' => '著作権',
         'license_item1_body' => '© 2024-2026 ROUTE FLAGS Co., Ltd. All Rights Reserved.',
         'license_item2_heading' => 'ライセンス (GPL-2.0-only)',
-        'license_item2_body' => '本ソフトウェアのソースコードは GPL-2.0-only で提供されています。複製・改変・再配布する際は GPL-2.0 の条件（著作権表示とライセンス条文の保持、改変時の変更明示、ソースコードの提供等）を遵守してください。',
+        'license_item2_body' => '本ソフトウェアのソースコードは GPL-2.0-only で提供されています。'
+            . '複製・改変・再配布する際は GPL-2.0 の条件（著作権表示とライセンス条文の保持、'
+            . '改変時の変更明示、ソースコードの提供等）を遵守してください。',
         'license_item3_heading' => 'オープンソースソフトウェアの利用',
-        'license_item3_body' => '本ソフトウェアは以下のOSSを利用しています: EC-CUBE 4.2 (GPL-2.0-only)、Symfony 5.4 (MIT)、Doctrine ORM/DBAL (MIT)、Twig 2.x (BSD-3-Clause)、GuzzleHTTP (MIT)、Monolog (MIT)、KnpPaginatorBundle (MIT) ほか composer.json 記載のライブラリ。各OSSのライセンス詳細は各プロジェクトの配布物をご参照ください。',
+        'license_item3_body' => '本ソフトウェアは以下のOSSを利用しています: EC-CUBE 4.2 (GPL-2.0-only)、'
+            . 'Symfony 5.4 (MIT)、Doctrine ORM/DBAL (MIT)、Twig 2.x (BSD-3-Clause)、'
+            . 'GuzzleHTTP (MIT)、Monolog (MIT)、KnpPaginatorBundle (MIT) ほか '
+            . 'composer.json 記載のライブラリ。各OSSのライセンス詳細は各プロジェクトの配布物を'
+            . 'ご参照ください。',
     ];
 
     public function __construct(
-        private ConfigRepository $configRepository,
         private string $projectDir = '',
         private ?\Plugin\AiChatAssistant42\Service\DesignSettingsSyncService $syncService = null,
     ) {
@@ -78,6 +87,7 @@ class DesignController extends AbstractController
     public function index(): Response
     {
         // 管理画面アクセス時に1日1回だけリモート同期（失敗しても表示は継続）
+        $syncMeta = ['last_synced_at' => null, 'etag' => null, 'last_modified' => null];
         if ($this->syncService !== null) {
             try {
                 $this->syncService->trySyncIfStale();
@@ -85,8 +95,6 @@ class DesignController extends AbstractController
                 // 同期失敗はログのみで画面表示を継続（フロントは DEFAULTS + PluginData でフォールバック）
             }
             $syncMeta = $this->syncService->getSyncMeta();
-        } else {
-            $syncMeta = ['last_synced_at' => null, 'etag' => null, 'last_modified' => null];
         }
 
         $designSettings = $this->loadDesignSettings();
@@ -100,8 +108,10 @@ class DesignController extends AbstractController
 
     /**
      * デザイン設定を保存する。
+     *
+     * @SuppressWarnings(PHPMD.StaticAccess)
      */
-    public function save(Request $request, UrlGeneratorInterface $urlGenerator): RedirectResponse
+    public function save(Request $request): RedirectResponse
     {
         try {
             $this->isTokenValid();
@@ -111,24 +121,82 @@ class DesignController extends AbstractController
             return $this->redirectToRoute('admin_ai_chat_assistant_design_index');
         }
 
-        // ライセンス設定UIは削除したため、license_* は既存値を保持（リモート同期が正本）
+        // I-15/I-22: 入力バリデーション + ライセンスHTMLサニタイズ（ガイドライン §2-2）
         $existing = $this->loadDesignSettings();
-        $designSettings = [
-            'widget_color' => $request->request->get('widget_color', $existing['widget_color'] ?? self::DEFAULTS['widget_color']),
-            'widget_size' => $request->request->get('widget_size', $existing['widget_size'] ?? self::DEFAULTS['widget_size']),
-            'position' => $request->request->get('position', $existing['position'] ?? self::DEFAULTS['position']),
-            'greeting_message' => $request->request->get('greeting_message', $existing['greeting_message'] ?? self::DEFAULTS['greeting_message']),
-            'assistant_display_name' => $request->request->get('assistant_display_name', $existing['assistant_display_name'] ?? self::DEFAULTS['assistant_display_name']),
-            'license_footer_label' => $request->request->get('license_footer_label', $existing['license_footer_label'] ?? self::DEFAULTS['license_footer_label']),
-            'license_title' => $request->request->get('license_title', $existing['license_title'] ?? self::DEFAULTS['license_title']),
-            'license_lead' => $request->request->get('license_lead', $existing['license_lead'] ?? self::DEFAULTS['license_lead']),
-            'license_item1_heading' => $request->request->get('license_item1_heading', $existing['license_item1_heading'] ?? self::DEFAULTS['license_item1_heading']),
-            'license_item1_body' => $request->request->get('license_item1_body', $existing['license_item1_body'] ?? self::DEFAULTS['license_item1_body']),
-            'license_item2_heading' => $request->request->get('license_item2_heading', $existing['license_item2_heading'] ?? self::DEFAULTS['license_item2_heading']),
-            'license_item2_body' => $request->request->get('license_item2_body', $existing['license_item2_body'] ?? self::DEFAULTS['license_item2_body']),
-            'license_item3_heading' => $request->request->get('license_item3_heading', $existing['license_item3_heading'] ?? self::DEFAULTS['license_item3_heading']),
-            'license_item3_body' => $request->request->get('license_item3_body', $existing['license_item3_body'] ?? self::DEFAULTS['license_item3_body']),
+        $rawInput = [
+            'widget_color' => $request->request->get(
+                'widget_color',
+                $existing['widget_color'] ?? self::DEFAULTS['widget_color']
+            ),
+            'widget_size' => $request->request->get(
+                'widget_size',
+                $existing['widget_size'] ?? self::DEFAULTS['widget_size']
+            ),
+            'position' => $request->request->get(
+                'position',
+                $existing['position'] ?? self::DEFAULTS['position']
+            ),
+            'greeting_message' => $request->request->get(
+                'greeting_message',
+                $existing['greeting_message'] ?? self::DEFAULTS['greeting_message']
+            ),
+            'assistant_display_name' => $request->request->get(
+                'assistant_display_name',
+                $existing['assistant_display_name'] ?? self::DEFAULTS['assistant_display_name']
+            ),
+            'license_footer_label' => $request->request->get(
+                'license_footer_label',
+                $existing['license_footer_label'] ?? self::DEFAULTS['license_footer_label']
+            ),
+            'license_title' => $request->request->get(
+                'license_title',
+                $existing['license_title'] ?? self::DEFAULTS['license_title']
+            ),
+            'license_lead' => $request->request->get(
+                'license_lead',
+                $existing['license_lead'] ?? self::DEFAULTS['license_lead']
+            ),
+            'license_item1_heading' => $request->request->get(
+                'license_item1_heading',
+                $existing['license_item1_heading'] ?? self::DEFAULTS['license_item1_heading']
+            ),
+            'license_item1_body' => $request->request->get(
+                'license_item1_body',
+                $existing['license_item1_body'] ?? self::DEFAULTS['license_item1_body']
+            ),
+            'license_item2_heading' => $request->request->get(
+                'license_item2_heading',
+                $existing['license_item2_heading'] ?? self::DEFAULTS['license_item2_heading']
+            ),
+            'license_item2_body' => $request->request->get(
+                'license_item2_body',
+                $existing['license_item2_body'] ?? self::DEFAULTS['license_item2_body']
+            ),
+            'license_item3_heading' => $request->request->get(
+                'license_item3_heading',
+                $existing['license_item3_heading'] ?? self::DEFAULTS['license_item3_heading']
+            ),
+            'license_item3_body' => $request->request->get(
+                'license_item3_body',
+                $existing['license_item3_body'] ?? self::DEFAULTS['license_item3_body']
+            ),
         ];
+
+        // バリデーション
+        $validation = DesignSettingsSyncService::validateInput($rawInput);
+        // 追加: widget 固有の検証（色・サイズ・位置）
+        $extraErrors = $this->validateWidgetSettings($rawInput);
+        $allErrors = array_merge($validation['errors'], $extraErrors);
+        if (!empty($allErrors)) {
+            foreach ($allErrors as $msg) {
+                $this->addError($msg, 'admin');
+            }
+
+            return $this->redirectToRoute('admin_ai_chat_assistant_design_index');
+        }
+
+        // ライセンス系はサニタイズ（HTMLタグは除去しプレーンに — I-22）
+        $designSettings = $this->sanitizeLicenseFields($validation['sanitized']);
 
         $this->saveDesignSettings($designSettings);
 
@@ -168,7 +236,83 @@ class DesignController extends AbstractController
     }
 
     /**
-     * デザイン設定を JSON ファイルに保存する。
+     * widget 固有フィールドを追加検証する（I-15）。
+     *
+     * @param array<string,mixed> $input
+     * @return string[]
+     */
+    private function validateWidgetSettings(array $input): array
+    {
+        $errors = [];
+        if (isset($input['widget_color']) && !preg_match('/^#[0-9a-fA-F]{6}$/', (string) $input['widget_color'])) {
+            $errors[] = 'ウィジェットカラーは #RRGGBB 形式で入力してください。';
+        }
+        if (isset($input['widget_size']) && !in_array($input['widget_size'], ['small', 'medium', 'large'], true)) {
+            $errors[] = 'ウィジェットサイズは small / medium / large のいずれかで指定してください。';
+        }
+        if (isset($input['position']) && !in_array($input['position'], ['bottom-right', 'bottom-left'], true)) {
+            $errors[] = '表示位置は bottom-right / bottom-left のいずれかで指定してください。';
+        }
+        if (isset($input['greeting_message']) && mb_strlen((string) $input['greeting_message']) > 500) {
+            $errors[] = '挨拶メッセージは500文字以内で入力してください。';
+        }
+        if (isset($input['assistant_display_name']) && mb_strlen((string) $input['assistant_display_name']) > 64) {
+            $errors[] = 'アシスタント表示名は64文字以内で入力してください。';
+        }
+
+        return $errors;
+    }
+
+    /**
+     * ライセンス系フィールドをサニタイズする（I-22: license_html でリンクのみ許可）。
+     *
+     * JSON は配信者が正本だが、テンプレ側の license_html フィルタと二重で防御する。
+     * <a> 以外は除去し、<a> の href は許可URLのみ通す。
+     *
+     * @param array<string,string> $sanitized
+     * @return array<string,string>
+     */
+    private function sanitizeLicenseFields(array $sanitized): array
+    {
+        $allowedHref = 'https://blog.routeflags.com/%e5%88%a9%e7%94%a8%e8%a6%8f%e7%b4%84/';
+        $licenseKeys = [
+            'license_footer_label', 'license_title', 'license_lead',
+            'license_item1_heading', 'license_item1_body',
+            'license_item2_heading', 'license_item2_body',
+            'license_item3_heading', 'license_item3_body',
+        ];
+        foreach ($licenseKeys as $k) {
+            if (!isset($sanitized[$k])) {
+                continue;
+            }
+            $html = trim($sanitized[$k]);
+            // <a> 以外除去
+            $html = strip_tags($html, '<a>');
+            // <a> の href を検証 — 許可 href 以外はテキスト化
+            $html = (string) preg_replace_callback(
+                '/<a\s+[^>]*href\s*=\s*(["\'])(.*?)\1[^>]*>(.*?)<\/a>/is',
+                static function (array $m) use ($allowedHref): string {
+                    $href = html_entity_decode($m[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    $text = $m[3];
+                    if ($href !== $allowedHref) {
+                        return htmlspecialchars($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    }
+                    $safeText = htmlspecialchars($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    $safeHref = htmlspecialchars($allowedHref, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+                    return sprintf('<a href="%s" target="_blank" rel="noopener">%s</a>', $safeHref, $safeText);
+                },
+                $html
+            );
+            // 残った <a> 以外の < > はエスケープ済み（strip_tags で除去済み）
+            $sanitized[$k] = $html;
+        }
+
+        return $sanitized;
+    }
+
+    /**
+     * デザイン設定を JSON ファイルに保存する.
      *
      * @param array<string, string> $settings 設定配列
      */

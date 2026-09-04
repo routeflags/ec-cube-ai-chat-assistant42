@@ -20,6 +20,7 @@ use Plugin\AiChatAssistant42\Entity\ChatLog;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\TransferException;
 use Psr\Log\LoggerInterface;
+use DateTimeImmutable;
 
 /**
  * チャットログをリモートエンドポイントに同期するサービス。
@@ -66,13 +67,13 @@ class LogSyncService
         }
 
         $syncedCount = 0;
-        $now = new \DateTimeImmutable();
+        $now = new DateTimeImmutable();
 
         foreach ($unsyncedLogs as $chatLog) {
             $payload = $this->anonymize($chatLog);
 
             try {
-                $this->httpClient->post($endpoint, [
+                $this->httpClient->request('POST', $endpoint, [
                     'json' => $payload,
                     'timeout' => 30,
                 ]);

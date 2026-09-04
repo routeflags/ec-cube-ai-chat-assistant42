@@ -27,6 +27,8 @@ use Symfony\Component\Mime\Email;
  *
  * トリガーイベントが発生した際、有効な通知ルールを取得し、
  * 設定されたチャネル経由で通知を送信する。
+ *
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  */
 class NotificationService
 {
@@ -269,6 +271,7 @@ class NotificationService
         ];
         $eventLabel = $eventLabels[$event] ?? $event;
         $message = $config['message'] ?? sprintf('【AIチャットアシスタント】%sが発生しました。', $eventLabel);
+        $this->logger->debug('sendLine context', $context);
 
         try {
             $client = new HttpClient();
@@ -402,73 +405,92 @@ class NotificationService
         if ($parsed === false || !isset($parsed['scheme'], $parsed['host'])) {
             return false;
         }
-
-        // HTTPS のみ許可
-        if ($parsed['scheme'] !== 'https') {
+        if (!$this->isHttpsUrl($parsed)) {
             return false;
         }
-
-        // M3: ブラケットを除去（例: https://[::1]/hook → ::1） — parse_url によってはブラケット付きで返る
-        $rawHost = $parsed['host'];
-        $host = strtolower(trim($rawHost, '[]'));
-
-        // 明らかな 16進/10進の迂回表記を事前に拒否
-        // 例: 0x7f.0x0.0x0.0x1 や 2130706433（10進）は filter_var で弾かれるが明示的にログを残す
-        if (preg_match('/^0x[0-9a-f]+/i', $host) === 1 || preg_match('/^[0-9]+$/', $host) === 1) {
-            // 純粋な 10進 IP（2130706433 等）は SSRF 迂回の可能性があるため拒否
-            // ただし数字ドメイン（例: 123example.com）はホスト名なので、ドットなしの純数字のみ拒否
-            if (filter_var($host, FILTER_VALIDATE_IP) === false) {
-                // ドットなしの純数字は IP として解釈できないが、迂回狙いの可能性が高いため拒否
-                // 10進表記でドット区切り（2130706433 形式）はここで拒否、0x 形式も拒否
-                // ドットを含む 10進/16進は後段の filter_var で処理
-                if (preg_match('/^0x/i', $host) === 1) {
-                    return false;
-                }
-                // 純数字ホストは許可しない（filter_var で IP として無効だが意図的な迂回とみなす）
-                // ただしホスト名が純数字の正当なケースは極めて稀なため安全側に倒す
-                if (ctype_digit($host)) {
-                    return false;
-                }
-            }
-        }
-
-        // 16進文字列を含むホスト（例: 0x7f.0.0.1）を拒否
-        if (strpos($host, '0x') !== false || strpos($host, '0X') !== false) {
+        $host = $this->normalizeWebhookHost((string) $parsed['host']);
+        if ($this->isHexBypassHost($host)) {
             return false;
         }
-
-        // ローカルホスト禁止（ブラケット除去後の正規化済み host で判定）
-        if (in_array($host, ['localhost', '127.0.0.1', '::1', '0.0.0.0', '::', '::ffff:127.0.0.1'], true)) {
+        if ($this->isLocalHost($host)) {
             return false;
         }
-
-        // host 自体が IP リテラルの場合、直接プライベートレンジを検証
-        if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
-            if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
-                return false;
-            }
-            // IP リテラル自体がプライベートでなければ許可（DNS 解決不要）
-            return true;
+        $ipLiteralResult = $this->checkIpLiteralHost($host);
+        if ($ipLiteralResult !== null) {
+            return $ipLiteralResult;
         }
-
-        // プライベートIP / link-local の禁止 — DNS 解決後の IP を検証
-        // gethostbyname は IPv4 のみ解決するため、失敗時はホスト名のまま返る
-        $resolvedIp = gethostbyname($host);
-        if ($resolvedIp !== $host) {
-            // ホスト名が解決できた場合、IP 範囲をチェック
-            if (filter_var($resolvedIp, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
-                return false;
-            }
-            // 16進/10進の迂回で解決された IP も再検証（例: 0x7f.0.0.1 → 127.0.0.1）
-            // 解決後の IP がプライベートなら上記で既に弾かれる
-        } else {
-            // DNS 解決できなかったホスト名は一旦許可 — ただし 10/16進のドット区切りを事前に拒否済み
-            // 追加で host に 0x や純数字ドット区切りが含まれていないか再チェック
-            if (preg_match('/(?:^|\.)0x[0-9a-f]+/i', $host) === 1) {
-                return false;
-            }
+        if ($this->isDnsResolvedPrivateHost($host)) {
+            return false;
+        }
+        if ($this->hasDotHexSegment($host)) {
+            return false;
         }
 
         return true;
+    }
+
+    private function isHttpsUrl(array $parsed): bool
+    {
+        return ($parsed['scheme'] ?? '') === 'https';
+    }
+
+    private function normalizeWebhookHost(string $rawHost): string
+    {
+        return strtolower(trim($rawHost, '[]'));
+    }
+
+    private function isHexBypassHost(string $host): bool
+    {
+        if (preg_match('/^0x[0-9a-f]+/i', $host) === 1 || preg_match('/^[0-9]+$/', $host) === 1) {
+            if (filter_var($host, FILTER_VALIDATE_IP) === false) {
+                if (preg_match('/^0x/i', $host) === 1) {
+                    return true;
+                }
+                if (ctype_digit($host)) {
+                    return true;
+                }
+            }
+        }
+        if (strpos($host, '0x') !== false || strpos($host, '0X') !== false) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function isLocalHost(string $host): bool
+    {
+        return in_array($host, ['localhost', '127.0.0.1', '::1', '0.0.0.0', '::', '::ffff:127.0.0.1'], true);
+    }
+
+    /**
+     * IP リテラルホストを検証する。
+     *
+     * @return bool|null ブロックなら false、許可なら true、IPでなければ null
+     */
+    private function checkIpLiteralHost(string $host): ?bool
+    {
+        if (filter_var($host, FILTER_VALIDATE_IP) === false) {
+            return null;
+        }
+        if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function isDnsResolvedPrivateHost(string $host): bool
+    {
+        $resolvedIp = gethostbyname($host);
+        if ($resolvedIp === $host) {
+            return false;
+        }
+        return filter_var($resolvedIp, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false;
+    }
+
+    private function hasDotHexSegment(string $host): bool
+    {
+        return preg_match('/(?:^|\.)0x[0-9a-f]+/i', $host) === 1;
     }
 }

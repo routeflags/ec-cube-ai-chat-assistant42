@@ -78,8 +78,10 @@ class DashboardControllerTest extends TestCase
                             dirname(__DIR__, 5),
                         ];
                         foreach ($candidates as $candidate) {
-                            if (is_file($candidate . '/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json')
-                                || is_file($candidate . '/Resource/config/ai_models.json')) {
+                            if (
+                                is_file($candidate . '/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json')
+                                || is_file($candidate . '/Resource/config/ai_models.json')
+                            ) {
                                 return $candidate;
                             }
                         }

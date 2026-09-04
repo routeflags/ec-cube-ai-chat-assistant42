@@ -7,3 +7,6 @@
 /Documents/plans
 /vendor
 /.phpunit.result.cache
+/AiChatAssistant42-*
+/.phpcs-cache
+/composer.lock

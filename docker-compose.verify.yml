@@ -1,8 +1,8 @@
 services:
   eccube:
-    image: php:8.1-apache-bullseye
+    image: ${PHP_IMAGE:-php:8.1-apache-bullseye}
     ports:
-      - "8080:80"
+      - "${ECCUBE_PORT:-8080}:80"
     volumes:
       - ./:/var/www/html
       # PLUGIN_DIR はホスト側のプラグイン配置パス。デフォルトは EC-CUBE の sibling にある想定

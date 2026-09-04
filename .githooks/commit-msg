@@ -1,0 +1,46 @@
+#!/bin/sh
+#
+# commit-msg hook — Conventional Commits 形式のバリデーション
+#
+# 形式: <type>(<scope>): <subject>
+# type: feat, fix, docs, style, refactor, test, chore, perf, ci, build
+#
+
+COMMIT_MSG_FILE=$1
+COMMIT_MSG=$(head -1 "$COMMIT_MSG_FILE")
+
+# マージコミットはスキップ
+if echo "$COMMIT_MSG" | grep -qE '^Merge (pull request|branch|remote)'; then
+    exit 0
+fi
+
+# スクワッシュコミットはスキップ
+if echo "$COMMIT_MSG" | grep -qE '^[0-9a-f]{7,40} '; then
+    exit 0
+fi
+
+# Conventional Commits パターン照合
+if ! echo "$COMMIT_MSG" | grep -qE '^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\([a-zA-Z0-9_/-]+\))?!?: .{1,}'; then
+    echo ""
+    echo "⚠️  コミットメッセージが Conventional Commits 形式ではありません。"
+    echo ""
+    echo "  有効な形式:"
+    echo "    feat: 新機能の追加"
+    echo "    fix: バグ修正"
+    echo "    docs: ドキュメントのみの変更"
+    echo "    refactor: リファクタリング"
+    echo "    test: テストの追加・修正"
+    echo "    chore: ビルドプロセスや補助ツールの変更"
+    echo "    perf: パフォーマンス改善"
+    echo "    ci: CI/CD 関連の変更"
+    echo ""
+    echo "  例:"
+    echo "    feat(chat): チャットウィジェットにモーションを追加"
+    echo "    fix(api): レート制限のIP検証を修正"
+    echo "    docs: README のURL表記を統一"
+    echo ""
+    echo "  --no-verify でスキップできます。"
+    exit 1
+fi
+
+exit 0

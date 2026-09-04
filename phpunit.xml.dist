@@ -14,6 +14,9 @@
         <testsuite name="functional">
             <directory>Tests/Functional</directory>
         </testsuite>
+        <testsuite name="integration">
+            <directory>Tests/Integration</directory>
+        </testsuite>
     </testsuites>
     <php>
         <ini name="error_reporting" value="-1"/>

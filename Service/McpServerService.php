@@ -38,7 +38,7 @@ class McpServerService
     private const SERVER_NAME = 'ec-product-mcp';
 
     /** サーバーバージョン */
-    private const SERVER_VERSION = '1.0.0';
+    private const SERVER_VERSION = '1.0.1';
 
     public function __construct(
         private ProductRepository $productRepository,

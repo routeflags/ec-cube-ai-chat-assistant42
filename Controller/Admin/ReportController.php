@@ -20,6 +20,7 @@ use Eccube\Controller\AbstractController;
 use Plugin\AiChatAssistant42\Entity\ChatLog;
 use Plugin\AiChatAssistant42\Repository\ChatLogRepository;
 use Symfony\Component\HttpFoundation\Response;
+use DateTimeImmutable;
 
 /**
  * AI チャットアシスタントのレポート画面。
@@ -53,7 +54,7 @@ class ReportController extends AbstractController
      */
     public function index(): Response
     {
-        $periodEnd = new \DateTimeImmutable();
+        $periodEnd = new DateTimeImmutable();
         $periodStart = $periodEnd->modify('-30 days');
 
         $providerStats = $this->fetchProviderStats($periodStart, $periodEnd);
@@ -77,7 +78,7 @@ class ReportController extends AbstractController
      *
      * @return array<array{provider: string, count: int, avg_response_ms: float, error_count: int}>
      */
-    private function fetchProviderStats(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    private function fetchProviderStats(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
         return $this->getChatLogRepository()->fetchProviderStats($start, $end);
     }
@@ -85,9 +86,10 @@ class ReportController extends AbstractController
     /**
      * モデル別のパフォーマンス統計を取得する。
      *
-     * @return array<array{model: string, provider: string, count: int, avg_response_ms: float, avg_token_input: float, avg_token_output: float, error_count: int}>
+     * @return array<array{model: string, provider: string, count: int, avg_response_ms: float,
+     *               avg_token_input: float, avg_token_output: float, error_count: int}>
      */
-    private function fetchModelStats(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    private function fetchModelStats(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
         return $this->getChatLogRepository()->fetchModelStats($start, $end);
     }
@@ -97,7 +99,7 @@ class ReportController extends AbstractController
      *
      * @return array<array{hour: int, count: int}>
      */
-    private function fetchHourlyDistribution(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    private function fetchHourlyDistribution(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
         return $this->getChatLogRepository()->fetchHourlyDistribution($start, $end);
     }
@@ -107,7 +109,7 @@ class ReportController extends AbstractController
      *
      * @return array<array{error_type: string, count: int, latest_message: string}>
      */
-    private function fetchErrorBreakdown(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    private function fetchErrorBreakdown(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
         return $this->getChatLogRepository()->fetchErrorBreakdown($start, $end);
     }

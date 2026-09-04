@@ -19,6 +19,8 @@ use Plugin\AiChatAssistant42\Service\AiAgentInterface;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use Psr\Log\LoggerInterface;
+use stdClass;
+use RuntimeException;
 
 /**
  * Anthropic Claude API を利用する AI エージェント実装。
@@ -108,7 +110,7 @@ class AnthropicAgent implements AiAgentInterface
             // アシスタントメッセージを履歴に追加（tool_use.input が [] の場合は {} に正規化）
             $normalizedBlocks = array_map(function (array $block): array {
                 if (($block['type'] ?? '') === 'tool_use' && isset($block['input']) && $block['input'] === []) {
-                    $block['input'] = new \stdClass();
+                    $block['input'] = new stdClass();
                 }
                 return $block;
             }, $contentBlocks);
@@ -241,10 +243,10 @@ class AnthropicAgent implements AiAgentInterface
         foreach ($mcpTools as $tool) {
             $schema = $tool['inputSchema'] ?? $tool['input_schema'] ?? $tool['parameters'] ?? [
                 'type' => 'object',
-                'properties' => new \stdClass(),
+                'properties' => new stdClass(),
             ];
             if (isset($schema['properties']) && $schema['properties'] === []) {
-                $schema['properties'] = new \stdClass();
+                $schema['properties'] = new stdClass();
             }
             $converted[] = [
                 'name' => $tool['name'],
@@ -302,7 +304,7 @@ class AnthropicAgent implements AiAgentInterface
      *
      * @return array<string, mixed> API レスポンス（JSON パース済み）
      *
-     * @throws \RuntimeException API 呼び出しが失敗した場合
+     * @throws RuntimeException API 呼び出しが失敗した場合
      */
     private function sendRequest(array $payload): array
     {
@@ -320,12 +322,12 @@ class AnthropicAgent implements AiAgentInterface
             $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
 
             if (!is_array($decoded)) {
-                throw new \RuntimeException('Anthropic API returned non-array response');
+                throw new RuntimeException('Anthropic API returned non-array response');
             }
 
             return $decoded;
         } catch (GuzzleException $e) {
-            throw new \RuntimeException(
+            throw new RuntimeException(
                 sprintf('Anthropic API request failed: %s', $e->getMessage()),
                 0,
                 $e

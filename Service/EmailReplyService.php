@@ -16,11 +16,13 @@ declare(strict_types=1);
 namespace Plugin\AiChatAssistant42\Service;
 
 use Eccube\Repository\BaseInfoRepository;
+use Plugin\AiChatAssistant42\Repository\ChatLogRepository;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
+use DateTime;
 
 /**
  * AIチャットの「メールで返信依頼」2通送信を担うサービス.
@@ -42,6 +44,8 @@ class EmailReplyService
         private ChatLogger $chatLogger,
         private LoggerInterface $logger,
         private ?ShopContextService $shopContextService = null,
+        private ?EmailHashService $emailHashService = null,
+        private ?ChatLogRepository $chatLogRepository = null,
     ) {
     }
 
@@ -49,31 +53,72 @@ class EmailReplyService
      * ユーザー宛と管理者宛の2通を送信する.
      *
      * 1通失敗してももう1通は試行し、例外は再スローせず warning に留める。
+     * EmailHashService 注入時は DB の enc を復号して送信先を解決し、
+     * 復号失敗時は引数の平文にフォールバックする（I-30 対応）。
      */
     public function sendBoth(string $sessionId, string $userEmail): void
     {
         $history = $this->chatLogger->fetchSessionHistory($sessionId, 10);
         $baseInfo = $this->baseInfoRepository->get();
+        $effectiveEmail = $this->resolveEffectiveEmail($sessionId, $userEmail);
 
         try {
-            $this->sendUserConfirmation($sessionId, $userEmail, $history, $baseInfo);
-        } catch (TransportExceptionInterface|\InvalidArgumentException $e) {
+            $this->sendUserConfirmation($sessionId, $effectiveEmail, $history, $baseInfo);
+        } catch (TransportExceptionInterface | \InvalidArgumentException $e) {
             $this->logger->warning('ユーザー宛確認メールの送信に失敗しました', [
                 'session_id' => $sessionId,
-                'email' => $userEmail,
+                'email' => $effectiveEmail,
                 'error' => $e->getMessage(),
             ]);
         }
 
         try {
-            $this->sendAdminNotification($sessionId, $userEmail, $history, $baseInfo);
-        } catch (TransportExceptionInterface|\InvalidArgumentException $e) {
+            $this->sendAdminNotification($sessionId, $effectiveEmail, $history, $baseInfo);
+        } catch (TransportExceptionInterface | \InvalidArgumentException $e) {
             $this->logger->warning('管理者宛通知メールの送信に失敗しました', [
                 'session_id' => $sessionId,
-                'email' => $userEmail,
+                'email' => $effectiveEmail,
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * 送信に使うメールアドレスを解決する.
+     *
+     * EmailHashService + ChatLogRepository がある場合は DB の enc を
+     * 優先的に復号して使う。復号結果が不正なメール形式の場合は
+     * 引数の平文にフォールバックする。
+     */
+    private function resolveEffectiveEmail(string $sessionId, string $fallbackEmail): string
+    {
+        if ($this->emailHashService === null || $this->chatLogRepository === null) {
+            return $fallbackEmail;
+        }
+
+        try {
+            $encOrPlain = $this->chatLogRepository->fetchLatestEmailEnc($sessionId);
+            if ($encOrPlain === null || $encOrPlain === '') {
+                return $fallbackEmail;
+            }
+
+            // enc が平文（旧データ）の場合はそのまま返す
+            if (filter_var($encOrPlain, FILTER_VALIDATE_EMAIL) !== false) {
+                return $encOrPlain;
+            }
+
+            $decrypted = $this->emailHashService->decrypt($encOrPlain);
+            if (filter_var($decrypted, FILTER_VALIDATE_EMAIL) !== false) {
+                return $decrypted;
+            }
+        } catch (\Throwable $e) {
+            $this->logger->warning('メール復号に失敗しフォールバックします', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $fallbackEmail;
     }
 
     /**
@@ -191,7 +236,7 @@ class EmailReplyService
 
     private function buildUserBody(string $sessionId, string $userEmail, array $history, string $shopName): string
     {
-        $now = (new \DateTime())->format('Y-m-d H:i');
+        $now = (new DateTime())->format('Y-m-d H:i');
         $historyText = $this->formatHistory($history);
 
         return <<<BODY
@@ -216,7 +261,7 @@ BODY;
 
     private function buildAdminBody(string $sessionId, string $userEmail, array $history): string
     {
-        $now = (new \DateTime())->format('Y-m-d H:i');
+        $now = (new DateTime())->format('Y-m-d H:i');
         $historyText = $this->formatHistory($history);
 
         return <<<BODY

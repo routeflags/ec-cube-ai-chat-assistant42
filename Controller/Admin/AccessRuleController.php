@@ -21,6 +21,7 @@ use Plugin\AiChatAssistant42\Repository\AccessRuleRepository;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use DateTimeImmutable;
 
 /**
  * アクセスルールの CRUD を管理するコントローラ。
@@ -79,8 +80,8 @@ class AccessRuleController extends AbstractController
         $rule->setRuleValue($ruleValue);
         $rule->setAction($request->request->get('action', 'deny'));
         $rule->setIsActive(1);
-        $rule->setCreateDate(new \DateTimeImmutable());
-        $rule->setUpdateDate(new \DateTimeImmutable());
+        $rule->setCreateDate(new DateTimeImmutable());
+        $rule->setUpdateDate(new DateTimeImmutable());
 
         $this->accessRuleRepository->save($rule);
 
@@ -118,7 +119,7 @@ class AccessRuleController extends AbstractController
         $rule->setRuleValue($ruleValue);
         $rule->setAction($request->request->get('action', $rule->getAction()));
         $rule->setIsActive((int) $request->request->get('is_active', $rule->getIsActive()));
-        $rule->setUpdateDate(new \DateTimeImmutable());
+        $rule->setUpdateDate(new DateTimeImmutable());
 
         $this->accessRuleRepository->save($rule);
 
@@ -136,6 +137,12 @@ class AccessRuleController extends AbstractController
             $this->isTokenValid();
         } catch (\Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException $e) {
             $this->addError('CSRFトークンが無効です。', 'admin');
+
+            return $this->redirectToRoute('admin_ai_chat_assistant_access_index');
+        }
+        // $request は getMethod() で参照する（監査ログ欠落を解消 — CSRF 検証を先に行いメソッド不一致も監査対象とする）
+        if ('POST' !== $request->getMethod()) {
+            $this->addError('不正なリクエストです。', 'admin');
 
             return $this->redirectToRoute('admin_ai_chat_assistant_access_index');
         }

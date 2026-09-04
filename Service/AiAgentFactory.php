@@ -19,6 +19,7 @@ use Plugin\AiChatAssistant42\Service\AiAgent\AnthropicAgent;
 use Plugin\AiChatAssistant42\Service\AiAgent\GeminiAgent;
 use Plugin\AiChatAssistant42\Service\AiAgent\OpenAiAgent;
 use Psr\Log\LoggerInterface;
+use InvalidArgumentException;
 
 /**
  * AI エージェントのファクトリ。
@@ -41,7 +42,7 @@ class AiAgentFactory
      * @param string $model      モデル ID
      * @param int    $maxTokens  最大出力トークン数
      *
-     * @throws \InvalidArgumentException サポートされていないプロバイダが指定された場合
+     * @throws InvalidArgumentException サポートされていないプロバイダが指定された場合
      */
     public function create(
         string $provider,
@@ -51,10 +52,33 @@ class AiAgentFactory
         string $systemPrompt = ''
     ): AiAgentInterface {
         return match ($provider) {
-            'openai' => new OpenAiAgent($apiKey, $model, $maxTokens, $systemPrompt, 'https://api.openai.com/v1', null, null, $this->logger),
-            'anthropic' => new AnthropicAgent($apiKey, $model, $maxTokens, $systemPrompt, 'https://api.anthropic.com/v1', $this->logger),
-            'gemini' => new GeminiAgent($apiKey, $model, $maxTokens, $systemPrompt, 'https://generativelanguage.googleapis.com/v1beta', $this->logger),
-            default => throw new \InvalidArgumentException(
+            'openai' => new OpenAiAgent(
+                $apiKey,
+                $model,
+                $maxTokens,
+                $systemPrompt,
+                'https://api.openai.com/v1',
+                null,
+                null,
+                $this->logger
+            ),
+            'anthropic' => new AnthropicAgent(
+                $apiKey,
+                $model,
+                $maxTokens,
+                $systemPrompt,
+                'https://api.anthropic.com/v1',
+                $this->logger
+            ),
+            'gemini' => new GeminiAgent(
+                $apiKey,
+                $model,
+                $maxTokens,
+                $systemPrompt,
+                'https://generativelanguage.googleapis.com/v1beta',
+                $this->logger
+            ),
+            default => throw new InvalidArgumentException(
                 sprintf('Unknown AI provider: %s', $provider)
             ),
         };

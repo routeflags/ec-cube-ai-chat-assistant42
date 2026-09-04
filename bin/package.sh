@@ -58,10 +58,12 @@ INCLUDE_FILES=(
     DoctrineMigrations
     Entity
     EventListener
+    EventSubscriber
     Nav.php
     Repository
     Resource
     Service
+    Twig
     composer.json
     eccube-plugin.yaml
     README.md
@@ -87,14 +89,15 @@ echo "Source  : ${PLUGIN_DIR}"
 echo ""
 
 echo "[1/2] Creating archive..."
-# EC-CUBE プラグイン規約: アーカイブ内に AiChatAssistant42/ プレフィックスを付与する
+# EC-CUBE オーナーズストア規約: アーカイブ直下に composer.json を置く（prefix なし）
+# 手動設置時は mkdir -p app/Plugin/AiChatAssistant42 && tar -xzf -C app/Plugin/AiChatAssistant42 で展開する
 # GNU/BSD tar の --transform 非互換を避けるため staging 方式を採用
 STAGE="$(mktemp -d)"
 # shellcheck disable=SC2064
 trap "rm -rf \"$STAGE\"" EXIT
-mkdir -p "${STAGE}/AiChatAssistant42"
+mkdir -p "${STAGE}"
 for file in "${INCLUDE_FILES[@]}"; do
-    cp -a "${file}" "${STAGE}/AiChatAssistant42/"
+    cp -a "${file}" "${STAGE}/"
 done
 # OUTPUT が相対パスの場合は PLUGIN_DIR 基準に解決する
 if [[ "${OUTPUT}" != /* ]]; then
@@ -102,7 +105,9 @@ if [[ "${OUTPUT}" != /* ]]; then
 else
     OUTPUT_ABS="${OUTPUT}"
 fi
-tar -czf "${OUTPUT_ABS}" -C "${STAGE}" AiChatAssistant42
+# macOS の AppleDouble (._*) を除外するため COPYFILE_DISABLE=1 を設定
+# EC-CUBE の PharData 抽出は "./" エントリを嫌うため、ファイルリストを明示して prefix なしで固める
+COPYFILE_DISABLE=1 tar --no-xattrs -czf "${OUTPUT_ABS}" -C "${STAGE}" "${INCLUDE_FILES[@]}" 2>/dev/null || COPYFILE_DISABLE=1 tar -czf "${OUTPUT_ABS}" -C "${STAGE}" "${INCLUDE_FILES[@]}"
 # OUTPUT が相対だった場合は相対パスに戻す（後続の tar -tzf で利用するため）
 if [[ "${OUTPUT}" != /* ]]; then
     OUTPUT="${OUTPUT_ABS##${PLUGIN_DIR}/}"
@@ -123,6 +128,8 @@ fi
 # 除外対象がアーカイブに混入していないことを検証
 # 部分一致で誤検出しないようパス境界で判定
 FORBIDDEN_PATTERNS=(
+    "._"
+
     "vendor"
     ".git"
     "Tests"
@@ -145,7 +152,7 @@ FORBIDDEN_PATTERNS=(
 
 verification_failed=0
 for pattern in "${FORBIDDEN_PATTERNS[@]}"; do
-    if echo "${ARCHIVE_LIST}" | grep -q "${pattern}"; then
+    if echo "${ARCHIVE_LIST}" | grep -F -q "${pattern}"; then
         echo "[ERROR] 禁止ファイルがアーカイブに含まれています: ${pattern}" >&2
         verification_failed=1
     fi
@@ -157,12 +164,12 @@ if [[ ${verification_failed} -ne 0 ]]; then
     exit 1
 fi
 
-# 必須ファイルが含まれていることを検証（prefix 付き）
+# 必須ファイルが含まれていることを検証（オーナーズストア規約: 直下配置）
 REQUIRED_IN_ARCHIVE=(
-    "AiChatAssistant42/composer.json"
-    "AiChatAssistant42/eccube-plugin.yaml"
-    "AiChatAssistant42/Resource/config/services.yaml"
-    "AiChatAssistant42/README.md"
+    "composer.json"
+    "eccube-plugin.yaml"
+    "Resource/config/services.yaml"
+    "README.md"
 )
 for required in "${REQUIRED_IN_ARCHIVE[@]}"; do
     if ! echo "${ARCHIVE_LIST}" | grep -q "${required}"; then
@@ -179,5 +186,6 @@ fi
 echo "  -> OK (excluded files not present, required files present)"
 echo ""
 echo "=== Packaging succeeded: ${OUTPUT} ==="
-echo "Install: tar -xzf ${OUTPUT} -C /path/to/ec-cube/app/Plugin/"
+echo "Install (manual): mkdir -p /path/to/ec-cube/app/Plugin/AiChatAssistant42 && tar -xzf ${OUTPUT} -C /path/to/ec-cube/app/Plugin/AiChatAssistant42"
 echo "         bin/console eccube:plugin:install --code=AiChatAssistant42"
+echo "Install (store): upload ${OUTPUT} via admin Store > Plugin install"

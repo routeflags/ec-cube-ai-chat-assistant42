@@ -19,6 +19,8 @@ use Plugin\AiChatAssistant42\Service\AiAgentInterface;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use Psr\Log\LoggerInterface;
+use stdClass;
+use RuntimeException;
 
 /**
  * Google Gemini API を利用する AI エージェント実装。
@@ -120,7 +122,7 @@ class GeminiAgent implements AiAgentInterface
             // parts 全体（thought, thoughtSignature 含む）を落とさず round-trip する。args が [] の場合は {} に正規化するのみ。
             $normalizedParts = array_map(function (array $part): array {
                 if (isset($part['functionCall']['args']) && $part['functionCall']['args'] === []) {
-                    $part['functionCall']['args'] = new \stdClass();
+                    $part['functionCall']['args'] = new stdClass();
                 }
                 return $part;
             }, $contentParts);
@@ -142,7 +144,7 @@ class GeminiAgent implements AiAgentInterface
      * @param array<int, array{name: string, args: mixed}> $functionCalls
      * @param array<string, int>                             $allowedToolNames  name => index のフリップ配列
      *
-     * @throws \RuntimeException 未知ツールが含まれている場合
+     * @throws RuntimeException 未知ツールが含まれている場合
      */
     private function validateFunctionCalls(array $functionCalls, array $allowedToolNames): void
     {
@@ -151,7 +153,7 @@ class GeminiAgent implements AiAgentInterface
             if ($toolName === '' || !isset($allowedToolNames[$toolName])) {
                 $message = sprintf('未知のツールが呼び出されました: %s', $toolName !== '' ? $toolName : '(空)');
                 $this->logger?->warning($message, ['tool_name' => $toolName]);
-                throw new \RuntimeException($message);
+                throw new RuntimeException($message);
             }
         }
     }
@@ -297,7 +299,7 @@ class GeminiAgent implements AiAgentInterface
 
             $schema = $tool['inputSchema'] ?? $tool['input_schema'] ?? $tool['parameters'] ?? [
                 'type' => 'OBJECT',
-                'properties' => new \stdClass(),
+                'properties' => new stdClass(),
             ];
 
             // 入れ子で functionDeclaration を含むケース（例: inputSchema が {functionDeclaration: {parameters: ...}}）も解消
@@ -308,7 +310,7 @@ class GeminiAgent implements AiAgentInterface
             }
 
             if (isset($schema['properties']) && $schema['properties'] === []) {
-                $schema['properties'] = new \stdClass();
+                $schema['properties'] = new stdClass();
             }
             $converted[] = [
                 'name' => $tool['name'],
@@ -406,7 +408,7 @@ class GeminiAgent implements AiAgentInterface
      *
      * @return array<string, mixed> API レスポンス（JSON パース済み）
      *
-     * @throws \RuntimeException API 呼び出しが失敗した場合
+     * @throws RuntimeException API 呼び出しが失敗した場合
      */
     /**
      * API キー等の機微情報をメッセージから除去する。
@@ -440,14 +442,14 @@ class GeminiAgent implements AiAgentInterface
             $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
 
             if (!is_array($decoded)) {
-                throw new \RuntimeException('Gemini API returned non-array response');
+                throw new RuntimeException('Gemini API returned non-array response');
             }
 
             return $decoded;
         } catch (GuzzleException $e) {
             $safeMessage = $this->redactSensitive($e->getMessage());
             $this->logger?->warning('Gemini API request failed', ['error' => $safeMessage]);
-            throw new \RuntimeException(
+            throw new RuntimeException(
                 sprintf('Gemini API request failed: %s', $safeMessage),
                 0,
                 $e
