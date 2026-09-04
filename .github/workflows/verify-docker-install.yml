@@ -25,7 +25,7 @@ jobs:
         run: composer install --no-interaction --prefer-dist
       - name: composer validate (dep-on-root gate)
         run: |
-          grep -q '"ec-cube/ec-cube"' composer.json && { echo "ec-cube/ec-cube found in composer.json (dep-on-root)"; exit 1; } || echo "composer.json OK (no ec-cube/ec-cube)"
+          php -r 'if (isset(json_decode(file_get_contents("composer.json"), true)["require"]["ec-cube/ec-cube"])) { echo "ec-cube/ec-cube found in require (dep-on-root)\n"; exit(1); } echo "composer.json OK (no ec-cube/ec-cube in require)\n";'
           composer validate --no-check-publish
           composer validate --strict || true
       - name: services.yaml ContainerInterface bind gate
