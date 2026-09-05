@@ -34,7 +34,7 @@ class McpHttpService
     public const SERVER_NAME = 'ec-mcp';
 
     /** サーバーバージョン — eccube-plugin.yaml と同期 */
-    public const SERVER_VERSION = '1.0.1';
+    public const SERVER_VERSION = '1.1.0';
 
     public function __construct(
         private ProductRepository $productRepository,

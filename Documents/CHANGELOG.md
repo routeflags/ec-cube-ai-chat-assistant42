@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.1.0] - 2026-09-05
+
+### Added
+- Web MCP 対応（Streamable HTTP） — `POST /mcp`（initialize / tools/list / tools/call x7）+ `GET /.well-known/mcp.json`（Discovery, transport: streamable-http）
+- MCP HTTP コントローラ `McpHttpController` / サービス `McpHttpService` / `RateLimitService`（`cache.app` で IP別 120/min, `get_stock` 60/min, PSR-6準拠キー）
+- CORS（`ACAO: *` + `Vary: Origin` + `OPTIONS 204`）、`415` + `jsonrpc:"2.0"` 検証、サニタイズ（SQL漏洩防止）
+- Playwright e2e `e2e/mcp.spec.ts` 33 tests（T-01〜T-08）+ `playwright.config.ts` + Docker 試験（`eccube-e2e-test-42:8085` で 33 passed）
+
+### Fixed
+- `LIKE` ワイルドカード `\%\_` エスケープ + `ESCAPE '\'`、在庫 `stock_unlimited=true` 時 `stock:null` 曖昧化
+- RateLimit flaky（YmdHi 分跨ぎ）を上限 240 + 分跨ぎ警告で harden
+- `verify-plugin.sh` の `routes >=28` 緩和、hardcode 除外
+
+### Security
+- `sanitizeErrorMessage` で `SQLSTATE/Doctrine/plg_/dtb_/INSERT/DELETE/TABLE/.php` を `Internal error` に置換
+
+## [1.0.1] - 2026-09-04
+
+### Fixed
+- `ServiceWiring` 統合テスト追加、DI 不整合修正（DesignController）、イベントサブスクライバ改善
+
 ## [1.0.0] - 2026-08-15
 
 ### Added
