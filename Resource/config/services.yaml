@@ -24,6 +24,24 @@ services:
     Plugin\AiChatAssistant42\Service\McpServerService:
         arguments:
             - '@Plugin\AiChatAssistant42\Repository\ProductRepository'
+            - '@Plugin\AiChatAssistant42\Service\McpHttpService'
+
+    Plugin\AiChatAssistant42\Service\McpHttpService:
+        arguments:
+            - '@Plugin\AiChatAssistant42\Repository\ProductRepository'
+
+    Plugin\AiChatAssistant42\Service\RateLimitService:
+        arguments:
+            - '@cache.app'
+
+    Plugin\AiChatAssistant42\Controller\McpHttpController:
+        public: true
+        tags: ['controller.service_arguments']
+        arguments:
+            - '@Plugin\AiChatAssistant42\Repository\ProductRepository'
+            - '@Plugin\AiChatAssistant42\Service\McpHttpService'
+            - '@Plugin\AiChatAssistant42\Service\RateLimitService'
+            - '@Plugin\AiChatAssistant42\Service\ShopContextService'
 
     Plugin\AiChatAssistant42\Service\AiAgentFactory: ~
 

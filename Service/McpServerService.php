@@ -31,18 +31,22 @@ use Plugin\AiChatAssistant42\Repository\ProductRepository;
  */
 class McpServerService
 {
-    /** MCP プロトコルバージョン */
-    private const PROTOCOL_VERSION = '2024-11-05';
+    /** MCP プロトコルバージョン — 正本は McpHttpService */
+    private const PROTOCOL_VERSION = McpHttpService::PROTOCOL_VERSION;
 
-    /** サーバー名 */
-    private const SERVER_NAME = 'ec-product-mcp';
+    /** サーバー名 — 正本は McpHttpService */
+    private const SERVER_NAME = McpHttpService::SERVER_NAME;
 
-    /** サーバーバージョン */
-    private const SERVER_VERSION = '1.0.1';
+    /** サーバーバージョン — 正本は McpHttpService */
+    private const SERVER_VERSION = McpHttpService::SERVER_VERSION;
+
+    private McpHttpService $mcpHttpService;
 
     public function __construct(
         private ProductRepository $productRepository,
+        ?McpHttpService $mcpHttpService = null,
     ) {
+        $this->mcpHttpService = $mcpHttpService ?? new McpHttpService($productRepository);
     }
 
     /**
@@ -104,20 +108,8 @@ class McpServerService
      */
     private function handleInitialize(mixed $id): void
     {
-        $this->writeResponse([
-            'jsonrpc' => '2.0',
-            'id' => $id,
-            'result' => [
-                'protocolVersion' => self::PROTOCOL_VERSION,
-                'capabilities' => [
-                    'tools' => ['listChanged' => false],
-                ],
-                'serverInfo' => [
-                    'name' => self::SERVER_NAME,
-                    'version' => self::SERVER_VERSION,
-                ],
-            ],
-        ]);
+        $response = $this->mcpHttpService->handleInitialize($id);
+        $this->writeResponse($response);
     }
 
     /**
@@ -131,22 +123,8 @@ class McpServerService
      */
     private function handleToolsList(mixed $id): void
     {
-        $toolDefinitions = $this->productRepository->getToolDefinitions();
-
-        $mcpTools = array_map(
-            fn(array $tool): array => [
-                'name' => $tool['name'],
-                'description' => $tool['description'],
-                'inputSchema' => $tool['input_schema'],
-            ],
-            $toolDefinitions
-        );
-
-        $this->writeResponse([
-            'jsonrpc' => '2.0',
-            'id' => $id,
-            'result' => ['tools' => $mcpTools],
-        ]);
+        $response = $this->mcpHttpService->handleToolsList($id);
+        $this->writeResponse($response);
     }
 
     /**
@@ -161,40 +139,8 @@ class McpServerService
      */
     private function handleToolsCall(array $request, mixed $id): void
     {
-        $params = $request['params'] ?? [];
-        $toolName = $params['name'] ?? '';
-        $toolArgs = $params['arguments'] ?? [];
-
-        try {
-            $result = $this->productRepository->executeTool($toolName, $toolArgs);
-
-            $this->writeResponse([
-                'jsonrpc' => '2.0',
-                'id' => $id,
-                'result' => [
-                    'content' => [
-                        [
-                            'type' => 'text',
-                            'text' => json_encode($result, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
-                        ],
-                    ],
-                ],
-            ]);
-        } catch (\Throwable $e) {
-            $this->writeResponse([
-                'jsonrpc' => '2.0',
-                'id' => $id,
-                'result' => [
-                    'content' => [
-                        [
-                            'type' => 'text',
-                            'text' => json_encode(['error' => $e->getMessage()]),
-                        ],
-                    ],
-                    'isError' => true,
-                ],
-            ]);
-        }
+        $response = $this->mcpHttpService->handleToolsCall($request, $id);
+        $this->writeResponse($response);
     }
 
     /**
@@ -218,13 +164,7 @@ class McpServerService
      */
     private function writeErrorResponse(mixed $id, int $code, string $message): void
     {
-        $this->writeResponse([
-            'jsonrpc' => '2.0',
-            'id' => $id,
-            'error' => [
-                'code' => $code,
-                'message' => $message,
-            ],
-        ]);
+        $response = $this->mcpHttpService->writeErrorResponse($id, $code, $message);
+        $this->writeResponse($response);
     }
 }

@@ -32,7 +32,7 @@ class ServiceWiringTest extends TestCase
 
     public function testAllControllersAreCovered(): void
     {
-        // 10件を期待 — 新規 Controller 追加時にテストが落ち、漏れを検知できる
+        // 11件を期待 — 新規 Controller 追加時にテストが落ち、漏れを検知できる
         $expected = [
             'Plugin\AiChatAssistant42\Controller\Admin\AccessRuleController',
             'Plugin\AiChatAssistant42\Controller\Admin\ChatHistoryController',
@@ -44,6 +44,7 @@ class ServiceWiringTest extends TestCase
             'Plugin\AiChatAssistant42\Controller\Admin\ScenarioController',
             'Plugin\AiChatAssistant42\Controller\Api\ChatApiController',
             'Plugin\AiChatAssistant42\Controller\Api\ModelApiController',
+            'Plugin\AiChatAssistant42\Controller\McpHttpController',
         ];
 
         sort($expected);

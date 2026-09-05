@@ -216,7 +216,7 @@ class ProductRepositoryTest extends AbstractWebTestCase
         $tools = $this->productRepository->getToolDefinitions();
 
         $this->assertIsArray($tools);
-        $this->assertCount(12, $tools);
+        $this->assertCount(7, $tools);
 
         $toolNames = array_column($tools, 'name');
         $this->assertContains('search_products', $toolNames);

@@ -1,0 +1,19 @@
+{
+  "name": "ec-cube-ai-chat-assistant42-e2e",
+  "private": true,
+  "version": "1.0.1",
+  "description": "E2E tests for Web MCP (Streamable HTTP) — Playwright over docker-compose.verify.yml",
+  "type": "module",
+  "scripts": {
+    "test:e2e": "playwright test --config=playwright.config.ts",
+    "test:e2e:install": "playwright install --with-deps chromium",
+    "test:e2e:docker": "E2E_BASE_URL=http://localhost:8080 playwright test --config=playwright.config.ts --reporter=list",
+    "test:e2e:debug": "PWDEBUG=1 playwright test --config=playwright.config.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

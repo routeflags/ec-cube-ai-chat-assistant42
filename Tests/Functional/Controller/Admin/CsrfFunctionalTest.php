@@ -15,7 +15,8 @@ use PHPUnit\Framework\TestCase;
  */
 class CsrfFunctionalTest extends TestCase
 {
-    private const TEMPLATE_DIR = __DIR__ . '/../../../../../../../app/Plugin/AiChatAssistant42/Resource/template/admin';
+    private const TEMPLATE_DIR = __DIR__ . '/../../../../Resource/template/admin';
+    private const TEMPLATE_DIR_FALLBACK = __DIR__ . '/../../../../../../../app/Plugin/AiChatAssistant42/Resource/template/admin';
 
     /**
      * 全管理画面 Twig が正しい CSRF トークンIDを使用していることを検証。
@@ -27,6 +28,9 @@ class CsrfFunctionalTest extends TestCase
     public function testAllAdminTemplatesUseCorrectCsrfTokenId(): void
     {
         $templates = glob(self::TEMPLATE_DIR . '/*.twig');
+        if (empty($templates)) {
+            $templates = glob(self::TEMPLATE_DIR_FALLBACK . '/*.twig');
+        }
         $this->assertNotEmpty($templates, 'admin templates not found');
 
         $errors = [];
@@ -63,7 +67,8 @@ class CsrfFunctionalTest extends TestCase
      */
     public function testSettingsTemplateUsesCorrectToken(): void
     {
-        $content = file_get_contents(self::TEMPLATE_DIR . '/settings.twig');
+        $path = is_file(self::TEMPLATE_DIR . '/settings.twig') ? self::TEMPLATE_DIR . '/settings.twig' : self::TEMPLATE_DIR_FALLBACK . '/settings.twig';
+        $content = file_get_contents($path);
         $this->assertStringContainsString(
             'Constant::TOKEN_NAME',
             $content,
@@ -81,7 +86,8 @@ class CsrfFunctionalTest extends TestCase
      */
     public function testDesignTemplateUsesCorrectToken(): void
     {
-        $content = file_get_contents(self::TEMPLATE_DIR . '/design.twig');
+        $path = is_file(self::TEMPLATE_DIR . '/design.twig') ? self::TEMPLATE_DIR . '/design.twig' : self::TEMPLATE_DIR_FALLBACK . '/design.twig';
+        $content = file_get_contents($path);
         $this->assertStringContainsString(
             'Constant::TOKEN_NAME',
             $content
@@ -109,7 +115,8 @@ class CsrfFunctionalTest extends TestCase
 
         $errors = [];
         foreach ($controllers as $file => $route) {
-            $path = __DIR__ . '/../../../../../../../app/Plugin/AiChatAssistant42/Controller/Admin/' . $file;
+            $base = __DIR__ . '/../../../../Controller/Admin/' . $file;
+            $path = is_file($base) ? $base : __DIR__ . '/../../../../../../../app/Plugin/AiChatAssistant42/Controller/Admin/' . $file;
             $content = file_get_contents($path);
             $hasTryCatch = strpos($content, 'try {') !== false
                 && strpos($content, 'isTokenValid()') !== false
@@ -128,7 +135,8 @@ class CsrfFunctionalTest extends TestCase
     public function testKnowledgeAndScenarioDeleteUseIsCsrfTokenValid(): void
     {
         foreach (['KnowledgeController.php', 'ScenarioController.php'] as $file) {
-            $path = __DIR__ . '/../../../../../../../app/Plugin/AiChatAssistant42/Controller/Admin/' . $file;
+            $base = __DIR__ . '/../../../../Controller/Admin/' . $file;
+            $path = is_file($base) ? $base : __DIR__ . '/../../../../../../../app/Plugin/AiChatAssistant42/Controller/Admin/' . $file;
             $content = file_get_contents($path);
             $this->assertStringContainsString(
                 'isCsrfTokenValid',

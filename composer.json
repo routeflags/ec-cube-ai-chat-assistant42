@@ -1,7 +1,7 @@
 {
     "name": "ec-cube/aichatassistant42",
     "type": "eccube-plugin",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "description": "EC-CUBE の商品情報に AI チャットで質問できるプラグインです。OpenAI / Anthropic / Google Gemini に対応しています。",
     "license": "GPL-2.0-only",
     "keywords": [
@@ -25,11 +25,13 @@
         "phpmetrics/phpmetrics": "^2.11",
         "symfony/mailer": "^6.4",
         "symfony/mime": "^6.4",
+        "symfony/yaml": "^6.4||^7.0",
         "doctrine/orm": "^2.15",
         "doctrine/dbal": "^3.6",
         "symfony/http-foundation": "^6.4",
         "symfony/http-kernel": "^6.4",
-        "symfony/routing": "^6.4"
+        "symfony/routing": "^6.4",
+        "symfony/cache": "^6.4||^7.0"
     },
     "autoload": {
         "psr-4": {
