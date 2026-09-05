@@ -2,6 +2,13 @@
 
 ![AIチャットアシスタント for EC-CUBE 4.2 - ヒーローイメージ](Resource/images/readme-hero.png)
 
+![Version](https://img.shields.io/badge/version-1.1.0-blue)
+![EC-CUBE](https://img.shields.io/badge/EC--CUBE-4.2-orange)
+![PHP](https://img.shields.io/badge/PHP-%3E%3D8.0-777BB4)
+![License](https://img.shields.io/badge/license-GPL--2.0--only-green)
+![Web MCP](https://img.shields.io/badge/Web%20MCP-Streamable%20HTTP-2ec9bb)
+![E2E](https://img.shields.io/badge/e2e-Playwright%2033%20passed-brightgreen)
+
 EC-CUBEの商品情報をもとに、AIが購入者からの質問に回答するチャットアシスタントプラグインです。
 
 「この商品は在庫がありますか？」
@@ -429,7 +436,47 @@ AiChatAssistant42/
 
 ## MCPサーバー
 
-商品データはMCPサーバーとして利用することもできます。
+商品データは MCP サーバーとして利用できます。**STDIO** と **Web MCP（Streamable HTTP）** の 2 transport に対応しています。
+
+### Web MCP（Streamable HTTP）— 推奨
+
+`https://www.thch-vape.shop` で Web MCP として公開。Claude Desktop（`mcp-remote`）/ Cursor / VS Code から HTTP で接続できます。
+
+```bash
+# Discovery
+curl https://www.thch-vape.shop/.well-known/mcp.json | jq '.tools | length' # → 7
+
+# Streamable HTTP
+curl -X POST https://www.thch-vape.shop/mcp \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{}}}'
+```
+
+| エンドポイント | メソッド | 説明 |
+|--------------|----------|------|
+| `GET /.well-known/mcp.json` | GET | Discovery。`transport: streamable-http` + 7 tools の inputSchema |
+| `GET /.well-known/mcp` | GET | 同上（alias） |
+| `POST /mcp` | POST | JSON-RPC 2.0（`initialize` / `tools/list` / `tools/call x7`） |
+| `OPTIONS /mcp` | OPTIONS | CORS preflight（`204 + ACAO: *`） |
+
+**7 tools:** `search_products` / `get_product_detail` / `get_stock` / `get_categories` / `get_category_products` / `get_tags` / `search_by_tag`（全て read-only、匿名 `ACAO: *`、RateLimit `120/min` / `get_stock 60/min`）
+
+Claude Desktop 設定例：
+
+```json
+{
+  "mcpServers": {
+    "thch-vape": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://www.thch-vape.shop/mcp"]
+    }
+  }
+}
+```
+
+E2E: `e2e/mcp.spec.ts` 33 tests（Playwright + `docker-compose.verify.yml`）で `E2E_BASE_URL=http://localhost:8085 npx playwright test` → `33 passed` を検証。
+
+### STDIO（ローカル）
 
 ```bash
 php bin/console app:ai-chat-assistant
