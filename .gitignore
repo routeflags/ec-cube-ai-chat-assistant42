@@ -10,3 +10,7 @@
 /AiChatAssistant42-*
 /.phpcs-cache
 /composer.lock
+/playwright-report
+/test-results
+/playwright/.cache
+/node_modules
