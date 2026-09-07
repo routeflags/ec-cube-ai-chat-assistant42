@@ -625,7 +625,14 @@
   });
 
   // Enter to send (Shift+Enter for newline — single-line input so just Enter)
+  // IME 変換中は送信しない（日本語の変換確定Enterでの誤送信を防止）
+  var isComposing = false;
+  input.addEventListener('compositionstart', function () { isComposing = true; });
+  input.addEventListener('compositionend', function () { isComposing = false; });
   input.addEventListener('keydown', function (e) {
+    if (isComposing || e.isComposing || e.keyCode === 229) {
+      return;
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       // Enter 由来の submit でも白オーバーレイ抑止を担保
       e.preventDefault();
