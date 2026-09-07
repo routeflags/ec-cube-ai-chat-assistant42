@@ -189,7 +189,7 @@ class ProductRepository extends AbstractRepository
         if ($keyword !== '') {
             $escaped = $this->escapeLikeKeyword($keyword);
             $likeKeyword = '%' . $escaped . '%';
-            $qb->andWhere('(p.name LIKE :kw ESCAPE \'\\\' OR p.search_word LIKE :kw_sw ESCAPE \'\\\' OR pc.product_code LIKE :kw_code ESCAPE \'\\\')')
+            $qb->andWhere('(p.name LIKE :kw ESCAPE \'\\\\\' OR p.search_word LIKE :kw_sw ESCAPE \'\\\\\' OR pc.product_code LIKE :kw_code ESCAPE \'\\\\\')')
                 ->setParameter('kw', $likeKeyword)
                 ->setParameter('kw_sw', $likeKeyword)
                 ->setParameter('kw_code', $likeKeyword);
