@@ -1,8 +1,8 @@
 {
     "name": "ec-cube/aichatassistant42",
     "type": "eccube-plugin",
-    "version": "1.1.1",
-    "description": "EC-CUBE の商品情報に AI チャットで質問できるプラグインです。OpenAI / Anthropic / Google Gemini に対応しています。",
+    "version": "1.1.2",
+    "description": "AIチャットアシスタント",
     "license": "GPL-2.0-only",
     "keywords": [
         "ec-cube",
@@ -15,6 +15,7 @@
     ],
     "require": {
         "php": ">=8.1",
+        "ec-cube/plugin-installer": "^2.0",
         "guzzlehttp/guzzle": "^7.0"
     },
     "require-dev": {

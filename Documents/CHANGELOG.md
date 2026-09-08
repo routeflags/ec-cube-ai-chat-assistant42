@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2] - 2026-09-08
+
+### Fixed
+- オーナーズストア審査指摘に対応: `composer.json` の `description` をプラグイン名称「AIチャットアシスタント」に変更（[プラグイン仕様](https://doc4.ec-cube.net/plugin_spec) に準拠）
+- `composer.json` の `require` に `ec-cube/plugin-installer: ^2.0` を追加（4.2系以降の仕様に準拠）
+- 商品名・文書内の表記を「for EC-CUBE 4.2/4.3」に更新（4.3対応を明示）
+
 ## [1.1.1] - 2026-09-07
 
 ### Fixed
