@@ -186,6 +186,8 @@
   </div>
 </div>
 
+{# WebMCP discovery: exposes the MCP endpoint to browser agents (RFC 8288 link-tag style) #}
+<link rel="mcp" href="/mcp">
 {# アセット読込: dev(app.debug)は可読版、prodはmin版。min版は npm run build:assets の生成物 #}
 {% set chat_widget_css = app.debug ? 'AiChatAssistant42/assets/css/chat-widget.css' : 'AiChatAssistant42/assets/css/chat-widget.min.css' %}
 {% set chat_widget_js = app.debug ? 'AiChatAssistant42/assets/js/chat-widget.js' : 'AiChatAssistant42/assets/js/chat-widget.min.js' %}

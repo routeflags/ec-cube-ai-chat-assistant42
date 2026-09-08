@@ -15,6 +15,7 @@ declare(strict_types=1);
 
 namespace Plugin\AiChatAssistant42\Service;
 
+use Plugin\AiChatAssistant42\Repository\McpAuditRepository;
 use Plugin\AiChatAssistant42\Repository\ProductRepository;
 
 /**
@@ -38,6 +39,7 @@ class McpHttpService
 
     public function __construct(
         private ProductRepository $productRepository,
+        private ?McpAuditRepository $mcpAuditRepository = null,
     ) {
     }
 
@@ -96,12 +98,15 @@ class McpHttpService
     /**
      * tools/call リクエストに応答する配列を返す。
      *
-     * @param array $request JSON-RPC リクエスト配列
-     * @param mixed $id      JSON-RPC リクエスト ID
+     * 監査ログを記録する（失敗しても本処理に影響させない）。
+     *
+     * @param array       $request   JSON-RPC リクエスト配列
+     * @param mixed       $id        JSON-RPC リクエスト ID
+     * @param string|null $clientIp  呼び出し元IP（ハッシュ化して記録、null可）
      *
      * @return array{jsonrpc: string, id: mixed, result: array}
      */
-    public function handleToolsCall(array $request, mixed $id): array
+    public function handleToolsCall(array $request, mixed $id, ?string $clientIp = null): array
     {
         $params = $request['params'] ?? [];
         $toolName = $params['name'] ?? '';
@@ -111,8 +116,10 @@ class McpHttpService
             $toolArgs = [];
         }
 
+        $startedAt = (int) (microtime(true) * 1000);
         try {
             $result = $this->productRepository->executeTool($toolName, $toolArgs);
+            $this->recordAudit((string) $toolName, 'ok', null, $startedAt, $clientIp);
 
             return [
                 'jsonrpc' => '2.0',
@@ -127,6 +134,7 @@ class McpHttpService
                 ],
             ];
         } catch (\Throwable $e) {
+            $this->recordAudit((string) $toolName, 'error', get_class($e), $startedAt, $clientIp);
             return [
                 'jsonrpc' => '2.0',
                 'id' => $id,
@@ -140,6 +148,23 @@ class McpHttpService
                     'isError' => true,
                 ],
             ];
+        }
+    }
+
+    /**
+     * MCP 監査1行を記録する。記録失敗は握りつぶす。
+     */
+    private function recordAudit(string $toolName, string $result, ?string $errorCode, int $startedAtMs, ?string $clientIp): void
+    {
+        if ($this->mcpAuditRepository === null) {
+            return;
+        }
+        try {
+            $durationMs = (int) (microtime(true) * 1000) - $startedAtMs;
+            $ipHash = $clientIp !== null && $clientIp !== '' ? hash('sha256', $clientIp) : null;
+            $this->mcpAuditRepository->record($toolName !== '' ? $toolName : '(unknown)', $result, $errorCode, $durationMs, $ipHash);
+        } catch (\Throwable $e) {
+            // 監査失敗は本処理に影響させない
         }
     }
 
