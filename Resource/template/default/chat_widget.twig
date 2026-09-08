@@ -186,6 +186,9 @@
   </div>
 </div>
 
-<link rel="stylesheet" href="{{ asset('AiChatAssistant42/assets/css/chat-widget.css', 'plugin') }}" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="{{ asset('AiChatAssistant42/assets/css/chat-widget.css', 'plugin') }}"></noscript>
-<script src="{{ asset('AiChatAssistant42/assets/js/chat-widget.js', 'plugin') }}" defer></script>
+{# アセット読込: dev(app.debug)は可読版、prodはmin版。min版は npm run build:assets の生成物 #}
+{% set chat_widget_css = app.debug ? 'AiChatAssistant42/assets/css/chat-widget.css' : 'AiChatAssistant42/assets/css/chat-widget.min.css' %}
+{% set chat_widget_js = app.debug ? 'AiChatAssistant42/assets/js/chat-widget.js' : 'AiChatAssistant42/assets/js/chat-widget.min.js' %}
+<link rel="stylesheet" href="{{ asset(chat_widget_css, 'plugin') }}" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="{{ asset(chat_widget_css, 'plugin') }}"></noscript>
+<script src="{{ asset(chat_widget_js, 'plugin') }}" defer></script>
