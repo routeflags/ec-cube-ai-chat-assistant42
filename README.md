@@ -1,4 +1,4 @@
-# AI チャットアシスタント for EC-CUBE 4.2
+# AI チャットアシスタント for EC-CUBE 4.2/4.3
 
 ![AIチャットアシスタント for EC-CUBE 4.2/4.3 - ヒーローイメージ](Resource/images/readme-hero.png)
 
@@ -350,7 +350,7 @@ AIだけで処理せず、人による対応が必要な問い合わせを店舗
 
 ## 必要要件
 
-* EC-CUBE 4.2
+* EC-CUBE 4.2/4.3
 * PHP 8.0+
 * データベース
   * MySQL 5.7+ / 8.0+（本番推奨）
