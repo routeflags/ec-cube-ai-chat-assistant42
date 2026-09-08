@@ -198,7 +198,16 @@ class OpenAiAgent implements AiAgentInterface
             $toolCallId = $toolCall['id'] ?? '';
 
             $toolsUsed[] = $toolName;
-            $toolResult = $toolExecutor($toolName, is_array($toolArgs) ? $toolArgs : []);
+            try {
+                $toolResult = $toolExecutor($toolName, is_array($toolArgs) ? $toolArgs : []);
+            } catch (\Throwable $toolError) {
+                // 1つのツールの失敗でターン全体を殺さない。エラー内容を結果として返し、AI が継続できるようにする
+                $this->logger?->warning('Tool execution failed, continuing without result', [
+                    'tool' => $toolName,
+                    'error' => $toolError->getMessage(),
+                ]);
+                $toolResult = ['error' => 'ツール実行中にエラーが発生しました。別の方法で回答してください。'];
+            }
 
             $resultMessages[] = [
                 'role' => 'tool',

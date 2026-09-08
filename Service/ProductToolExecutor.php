@@ -94,6 +94,10 @@ class ProductToolExecutor
 
     private function executeSearchByTag(array $args): array
     {
+        if (!isset($args['tag_id'])) {
+            return ['error' => 'tag_id is required. Call get_tags first to obtain available tag IDs.'];
+        }
+
         return $this->productRepository->searchByTag(
             (int) $args['tag_id'],
             (int) ($args['limit'] ?? 20),

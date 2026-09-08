@@ -46,6 +46,7 @@ EXCLUDE_ARGS=(
     --exclude=composer.lock
     --exclude=Documents/plans
     --exclude=Documents/LOCAL_VERIFICATION.md
+    --exclude=Resource/images
     --exclude=.gitignore
     --exclude="${OUTPUT}"
     --exclude="${ARCHIVE}"
@@ -99,6 +100,8 @@ mkdir -p "${STAGE}"
 for file in "${INCLUDE_FILES[@]}"; do
     cp -a "${file}" "${STAGE}/"
 done
+# Resource/images はドキュメント用スクリーンショットのため配布対象外
+rm -rf "${STAGE}/Resource/images"
 # OUTPUT が相対パスの場合は PLUGIN_DIR 基準に解決する
 if [[ "${OUTPUT}" != /* ]]; then
     OUTPUT_ABS="${PLUGIN_DIR}/${OUTPUT}"
@@ -147,6 +150,7 @@ FORBIDDEN_PATTERNS=(
     "composer.lock"
     "Documents/plans"
     "Documents/LOCAL_VERIFICATION.md"
+    "Resource/images"
     ".gitignore"
 )
 

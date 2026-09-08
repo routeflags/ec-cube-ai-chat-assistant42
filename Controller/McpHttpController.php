@@ -66,6 +66,8 @@ class McpHttpController
         $response = new JsonResponse($data, 200, [], false);
         $response->headers->set('Content-Type', 'application/json; charset=utf-8');
         $this->addCorsHeaders($response);
+        // WebMCP discovery: RFC 8288 link to the MCP endpoint
+        $response->headers->set('Link', '</mcp>; rel="mcp"');
         // Cache-Control は setPublic()/setMaxAge() で付与し private との不整合を避ける
         $response->setPublic();
         $response->setMaxAge(300);
@@ -183,7 +185,7 @@ class McpHttpController
             $result = match ($method) {
                 'initialize' => $this->mcpHttpService->handleInitialize($id),
                 'tools/list' => $this->mcpHttpService->handleToolsList($id),
-                'tools/call' => $this->mcpHttpService->handleToolsCall($data, $id),
+                'tools/call' => $this->mcpHttpService->handleToolsCall($data, $id, $ip),
                 null => $this->mcpHttpService->writeErrorResponse($id, -32600, 'Invalid Request: method is required'),
                 default => $this->mcpHttpService->writeErrorResponse($id, -32601, "Method not found: {$method}"),
             };
@@ -260,6 +262,8 @@ class McpHttpController
         $response->headers->set('Access-Control-Allow-Origin', '*');
         $response->headers->set('Vary', 'Origin');
         // Do not set Allow-Credentials with wildcard
+        // WebMCP tools permission: top-level documents may register tools; cross-origin iframes need allow="tools"
+        $response->headers->set('Permissions-Policy', 'tools=self');
     }
 
     private function resolveBaseUrl(Request $request): string

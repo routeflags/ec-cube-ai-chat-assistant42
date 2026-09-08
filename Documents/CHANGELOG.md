@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.1] - 2026-09-07
+
+### Fixed
+- チャットウィジェットでIME変換中のEnter確定が誤送信されないよう修正（`compositionstart/end` + `e.isComposing || keyCode 229` ガード）
+- 商品キーワード検索の `LIKE ... ESCAPE '\'` を `ESCAPE '\\'` に修正（MariaDB/MySQL ERROR 1064 で検索全滅する問題を解消）
+
 ## [1.1.0] - 2026-09-05
 
 ### Added
