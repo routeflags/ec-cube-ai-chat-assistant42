@@ -136,18 +136,33 @@ class ChatLogMatrixTest extends TestCase
             : (str_contains($platform, 'sqlite') ? 'INTEGER PRIMARY KEY AUTOINCREMENT' : 'SERIAL PRIMARY KEY');
 
         $conn->executeStatement('DROP TABLE IF EXISTS plg_ai_chat_assistant_log');
-        // 集計対象の最小スキーマ（id + created_at のみ）
+        // 集計・更新対象のスキーマ（hourly 用 created_at + email 返信系カラム）
         $conn->executeStatement(<<<SQL
             CREATE TABLE plg_ai_chat_assistant_log (
                 id {$autoId},
-                created_at TIMESTAMP NULL
+                created_at TIMESTAMP NULL,
+                session_id VARCHAR(36) NULL,
+                email_reply_address VARCHAR(255) NULL,
+                email_reply_address_hash VARCHAR(64) NULL,
+                email_reply_address_enc TEXT NULL
             )
             SQL);
 
         // 2026-09-08 の 0時×1、9時×2、23時×1。前日 9時×1 は範囲外で除外される
         foreach (['2026-09-08 00:15:00', '2026-09-08 09:00:00', '2026-09-08 09:59:59', '2026-09-08 23:30:00', '2026-09-07 09:00:00'] as $dt) {
-            $conn->insert('plg_ai_chat_assistant_log', ['created_at' => $dt]);
+            $conn->insert('plg_ai_chat_assistant_log', ['created_at' => $dt, 'session_id' => 'hourly']);
         }
+
+        // email 返信系: s1/s3=未設定×2（新旧、テストごとに分離）、s2=hash設定済み×1
+        // （hourly集計の範囲外日付にする）
+        foreach (['s1', 's3'] as $sid) {
+            $conn->insert('plg_ai_chat_assistant_log', ['created_at' => '2026-09-06 10:00:00', 'session_id' => $sid]);
+            $conn->insert('plg_ai_chat_assistant_log', ['created_at' => '2026-09-06 11:00:00', 'session_id' => $sid]);
+        }
+        $conn->insert('plg_ai_chat_assistant_log', [
+            'created_at' => '2026-09-06 12:00:00', 'session_id' => 's2',
+            'email_reply_address_hash' => 'done', 'email_reply_address_enc' => 'enc-done',
+        ]);
 
         self::$seeded[$key] = true;
     }
@@ -186,5 +201,45 @@ class ChatLogMatrixTest extends TestCase
         foreach ($rows as $row) {
             $this->assertSame(0, (int) $row['count'], "[$label] all zero when no data");
         }
+    }
+
+    /** @dataProvider provideDatabases */
+    public function testUpdateEmailReplyAddress(string $label, array $params): void
+    {
+        $repo = $this->repositoryFor($label, $params);
+
+        // 最新1件（11:00）のみに平文が入る。派生テーブル二重化が3DBで動くことの検証
+        $this->assertSame(1, $repo->updateEmailReplyAddress('s1', 'a@example.com'), "[$label]");
+        $conn = DriverManager::getConnection($params);
+        $rows = $conn->fetchAllAssociative(
+            "SELECT created_at, email_reply_address FROM plg_ai_chat_assistant_log WHERE session_id = 's1' ORDER BY created_at"
+        );
+        $this->assertNull($rows[0]['email_reply_address'], "[$label] older row untouched");
+        $this->assertSame('a@example.com', $rows[1]['email_reply_address'], "[$label] newest row updated");
+
+        // 2回目は「未設定の最新1件」＝古い方の行に入る。3回目で対象なし
+        $this->assertSame(1, $repo->updateEmailReplyAddress('s1', 'b@example.com'), "[$label]");
+        $this->assertSame(0, $repo->updateEmailReplyAddress('s1', 'c@example.com'), "[$label] exhausted");
+
+        // hash設定済みセッションは対象外
+        $this->assertSame(0, $repo->updateEmailReplyAddress('s2', 'c@example.com'), "[$label]");
+    }
+
+    /** @dataProvider provideDatabases */
+    public function testUpdateEmailReplyAddressHashed(string $label, array $params): void
+    {
+        $repo = $this->repositoryFor($label, $params);
+
+        $this->assertSame(1, $repo->updateEmailReplyAddressHashed('s3', 'h64', 'enc-body'), "[$label]");
+        $conn = DriverManager::getConnection($params);
+        $rows = $conn->fetchAllAssociative(
+            "SELECT created_at, email_reply_address_hash, email_reply_address_enc FROM plg_ai_chat_assistant_log WHERE session_id = 's3' ORDER BY created_at"
+        );
+        $this->assertNull($rows[0]['email_reply_address_hash'], "[$label] older row untouched");
+        $this->assertSame('h64', $rows[1]['email_reply_address_hash'], "[$label]");
+        $this->assertSame('enc-body', $rows[1]['email_reply_address_enc'], "[$label]");
+
+        // enc設定済みセッションは対象外
+        $this->assertSame(0, $repo->updateEmailReplyAddressHashed('s2', 'hx', 'ex'), "[$label]");
     }
 }
