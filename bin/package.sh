@@ -11,8 +11,17 @@ set -euo pipefail
 PLUGIN_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PLUGIN_DIR"
 
-# バージョンは composer.json の version を正とする。なければ 1.0.0 にフォールバック
-VERSION="$(php -r 'echo json_decode(file_get_contents("composer.json"), true)["version"] ?? "1.0.0";')"
+# バージョンは composer.json の version を正とする（AGENTS.md「Version sync」4箇所同期）。
+# 管理画面アップロードは tarball 内 composer.json の version を必須とするため、
+# version フィールドの削除は不可（Packagist は無視するので両立可）。
+# composer.json に version がなければ git タグ、最後に eccube-plugin.yaml にフォールバック
+VERSION="$(php -r '$c=json_decode(file_get_contents("composer.json"),true); echo $c["version"] ?? "";' 2>/dev/null)"
+if [[ -z "$VERSION" ]]; then
+    VERSION="$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')"
+fi
+if [[ -z "$VERSION" ]]; then
+    VERSION="$(php -r 'echo json_decode(json_encode(yaml_parse_file("eccube-plugin.yaml")), true)["version"] ?? "1.0.0";' 2>/dev/null || echo "1.0.0")"
+fi
 ARCHIVE="AiChatAssistant42-${VERSION}.tar.gz"
 
 # 出力先の上書きに対応
@@ -46,6 +55,7 @@ EXCLUDE_ARGS=(
     --exclude=composer.lock
     --exclude=Documents/plans
     --exclude=Documents/LOCAL_VERIFICATION.md
+    --exclude=Resource/images
     --exclude=.gitignore
     --exclude="${OUTPUT}"
     --exclude="${ARCHIVE}"
@@ -99,6 +109,8 @@ mkdir -p "${STAGE}"
 for file in "${INCLUDE_FILES[@]}"; do
     cp -a "${file}" "${STAGE}/"
 done
+# Resource/images はドキュメント用スクリーンショットのため配布対象外
+rm -rf "${STAGE}/Resource/images"
 # OUTPUT が相対パスの場合は PLUGIN_DIR 基準に解決する
 if [[ "${OUTPUT}" != /* ]]; then
     OUTPUT_ABS="${PLUGIN_DIR}/${OUTPUT}"
@@ -147,6 +159,7 @@ FORBIDDEN_PATTERNS=(
     "composer.lock"
     "Documents/plans"
     "Documents/LOCAL_VERIFICATION.md"
+    "Resource/images"
     ".gitignore"
 )
 

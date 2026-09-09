@@ -14,3 +14,8 @@
 /test-results
 /playwright/.cache
 /node_modules
+/AGENTS.md
+.DS_Store
+/node_modules
+/Documents/reports/fork-diff
+/Documents/blog
