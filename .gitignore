@@ -19,3 +19,7 @@
 /node_modules
 /Documents/reports/fork-diff
 /Documents/blog
+# Tests/Docker: DB別検証用 EC-CUBE ソース (clone、再取得可のためコミットしない)
+/Tests/Docker/dbs/sqlite/
+/Tests/Docker/dbs/mysql/
+/Tests/Docker/dbs/pg/

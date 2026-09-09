@@ -477,7 +477,7 @@ Claude Desktop 設定例：
 }
 ```
 
-E2E: `e2e/mcp.spec.ts` 33 tests（Playwright + `docker-compose.verify.yml`）で `E2E_BASE_URL=http://localhost:8085 npx playwright test` → `33 passed` を検証。
+E2E: `e2e/mcp.spec.ts` 33 tests（Playwright + `Tests/Docker/docker-compose.verify.yml`）で `E2E_BASE_URL=http://localhost:8085 npx playwright test` → `33 passed` を検証。
 
 ### STDIO（ローカル）
 

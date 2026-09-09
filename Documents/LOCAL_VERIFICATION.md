@@ -28,11 +28,11 @@ cd /tmp/eccube-verify
 # 検証用 docker-compose を本プラグインからコピー
 # PLUGIN_DIR は任意のパスに置き換えてください
 PLUGIN_DIR=/path/to/ec-cube-ai-chat-assistant42
-cp $PLUGIN_DIR/docker-compose.verify.yml ./docker-compose.verify.yml
-cp $PLUGIN_DIR/.env.verify ./.env
+cp $PLUGIN_DIR/Tests/Docker/docker-compose.verify.yml ./docker-compose.verify.yml
+cp $PLUGIN_DIR/Tests/Docker/.env.verify ./.env
 # またはプラグインが sibling の場合:
-# cp ../ec-cube-ai-chat-assistant42/docker-compose.verify.yml ./docker-compose.verify.yml
-# cp ../ec-cube-ai-chat-assistant42/.env.verify ./.env
+# cp ../ec-cube-ai-chat-assistant42/Tests/Docker/docker-compose.verify.yml ./docker-compose.verify.yml
+# cp ../ec-cube-ai-chat-assistant42/Tests/Docker/.env.verify ./.env
 
 # 起動（sqlite, php:8.1-apache）
 docker compose -f docker-compose.verify.yml up -d --build

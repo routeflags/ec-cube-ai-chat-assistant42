@@ -32,7 +32,7 @@ fi
 echo ""
 
 echo "[4/5] EasyArticle dependency check (plg_ea_article should be 0 in code)"
-count=$(grep -r "plg_ea_article" "$PLUGIN_DIR" --include="*.php" | wc -l | tr -d ' ')
+count=$(grep -r "plg_ea_article" "$PLUGIN_DIR" --include="*.php" --exclude-dir=.git --exclude-dir=vendor --exclude-dir=Tests | wc -l | tr -d ' ')
 # コメント1件は許容（旧テーブル参照しない旨のコメント）
 if [ "$count" -le 1 ]; then
   echo "  -> OK ($count hits, comment only)"

@@ -44,8 +44,8 @@ EXCLUDE_ARGS=(
     --exclude=phpunit.xml.dist
     --exclude=.serena
     --exclude=.phpunit.result.cache
-    --exclude=.env.verify
-    --exclude=docker-compose.verify.yml
+    --exclude=Tests/Docker/.env.verify
+    --exclude=Tests/Docker/docker-compose.verify.yml
     --exclude=bin/package.sh
     --exclude=.github
     --exclude=.opencode
@@ -148,8 +148,8 @@ FORBIDDEN_PATTERNS=(
     "phpunit.xml.dist"
     ".serena"
     ".phpunit.result.cache"
-    ".env.verify"
-    "docker-compose.verify.yml"
+    "Tests/Docker/.env.verify"
+    "Tests/Docker/docker-compose.verify.yml"
     "bin/package.sh"
     ".github"
     ".opencode"

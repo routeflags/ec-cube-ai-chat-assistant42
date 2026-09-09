@@ -2,7 +2,7 @@
   "name": "ec-cube-ai-chat-assistant42-e2e",
   "private": true,
   "version": "1.0.1",
-  "description": "E2E tests for Web MCP (Streamable HTTP) — Playwright over docker-compose.verify.yml",
+  "description": "E2E tests for Web MCP (Streamable HTTP) — Playwright over Tests/Docker/docker-compose.verify.yml",
   "type": "module",
   "scripts": {
     "build:assets": "esbuild Resource/assets/js/chat-widget.js --minify --sourcemap --outfile=Resource/assets/js/chat-widget.min.js && esbuild Resource/assets/css/chat-widget.css --minify --outfile=Resource/assets/css/chat-widget.min.css",
