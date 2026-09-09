@@ -16,6 +16,8 @@
 #   make dbs-status         # 検証用DB別環境の疎通確認
 #   make dbs-install        # 検証用DB別環境の初回構築（composer＋install＋権限）
 #   make ship               # verify → unit → matrix → package の一気通し
+#   make bump [LEVEL=patch|minor|major] [V=x.y.z]  # 4箇所のバージョン同期
+#   make tag [V=x.y.z]      # gitタグ打刻（ツリークリーン必須）
 
 MYSQL_SVC ?= mysql@8.0
 PG_SVC ?= postgresql@18
@@ -28,7 +30,7 @@ DBS_COMPOSE ?= docker-compose.dbs.yml
 DBS_PROJECT ?= eccube-verify-dbs
 DBS_SERVICES ?= eccube-sqlite eccube-mysql eccube-pg
 
-.PHONY: db-up db-down db-status test-matrix test-matrix-chaos test-unit verify package dbs-up dbs-down dbs-status dbs-install ship
+.PHONY: db-up db-down db-status test-matrix test-matrix-chaos test-unit verify package dbs-up dbs-down dbs-status dbs-install ship bump tag
 
 db-up:
 	brew services start $(MYSQL_SVC)
@@ -81,3 +83,23 @@ dbs-install:
 	done
 
 ship: verify test-unit test-matrix package
+
+# バージョン管理（AGENTS.md「Version sync」4箇所同期）
+#   make bump              # patch+1（1.1.2 → 1.1.3）
+#   make bump LEVEL=minor  # minor+1（1.1.2 → 1.2.0）
+#   make bump V=2.0.0      # 明示指定（LEVELより優先）
+# 実処理は bin/bump-version.php（php -r に正規表現を書くと
+# make→shell→php の引用層でバックスラッシュが化けるためファイル化）。
+CUR_VERSION := $(shell php -r '$$c=json_decode(file_get_contents("composer.json"),true); echo $$c["version"];')
+LEVEL ?= patch
+
+bump:
+	php bin/bump-version.php $(V) --level=$(LEVEL)
+	grep -H '"version"' composer.json; grep -H "^version:" eccube-plugin.yaml; grep -H "SERVER_VERSION =" Service/McpHttpService.php; head -5 Documents/CHANGELOG.md
+
+# gitタグ打刻。V省略時はcomposer.jsonのversionを使用。ツリークリーン必須
+tag:
+	@V="$(V)"; \
+	if [ -z "$$V" ]; then V="$(CUR_VERSION)"; fi; \
+	git diff --quiet && git diff --cached --quiet || (echo "tree is dirty. commit first."; exit 1); \
+	git tag -a "v$$V" -m "v$$V" && git tag | tail -3
