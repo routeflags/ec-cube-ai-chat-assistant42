@@ -149,7 +149,7 @@ class PageContextServiceTest extends TestCase
 
         $this->assertStringContainsString('/products/detail/123', $block);
         $this->assertStringContainsString('テスト商品 (ID: 123)', $block);
-        $this->assertStringContainsString('1,100円（税込）〜1,650円（税込）', $block);
+        $this->assertStringContainsString('1,100円（税抜）〜1,650円（税抜）', $block);
         $this->assertStringContainsString('在庫: あり', $block);
         $this->assertStringContainsString('美味しいテスト商品です。', $block);
         $this->assertStringContainsString('指示語', $block);
@@ -184,7 +184,7 @@ class PageContextServiceTest extends TestCase
             ]
         );
 
-        $this->assertStringContainsString('500円（税込）', $block);
+        $this->assertStringContainsString('500円（税抜）', $block);
         $this->assertStringContainsString('在庫: なし', $block);
     }
 

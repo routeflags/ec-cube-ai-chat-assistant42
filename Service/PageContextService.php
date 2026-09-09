@@ -127,7 +127,7 @@ class PageContextService
     }
 
     /**
-     * 規格価格一覧から価格帯文字列を作る（price02 は税込）。
+     * 規格価格一覧から価格帯文字列を作る（price02 は税抜。EC-CUBE の販売価格は税抜保存が仕様）。
      *
      * @param array<int, array<string, mixed>> $classes
      */
@@ -154,7 +154,7 @@ class PageContextService
 
     private function formatPrice(float $price): string
     {
-        return number_format($price) . '円（税込）';
+        return number_format($price) . '円（税抜）';
     }
 
     /**
