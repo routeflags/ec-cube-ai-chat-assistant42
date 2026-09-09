@@ -43,6 +43,11 @@
   // ── Session ──
   var sessionId = generateSessionId();
 
+  // ── Page context (初回送信時のみ添付) ──
+  // 商品詳細ページ等で「この商品の価格は?」に具体回答するための閲覧ページ情報。
+  // sessionId はページ読込ごとに新規発行のため、メモリ内フラグで初回送信を判定する。
+  var pageContextSent = false;
+
   // ── State flags ──
   var isEmailSubmitting = false;
   var isFeedbackSubmitting = false;
@@ -99,6 +104,34 @@
   function getCsrfToken() {
     var meta = document.querySelector('meta[name="csrf-token"]');
     return meta ? meta.getAttribute('content') : '';
+  }
+
+  /**
+   * 閲覧中のページ情報を収集する（初回送信時のみサーバへ添付）。
+   * - url: パス+クエリのみ（origin/hashは送らない。hashはトークンを含みうるため除外）
+   * - title: document.title（200文字まで）
+   * - product_id: EC-CUBE標準の商品詳細パス /products/detail/{id} から抽出
+   */
+  function collectPageContext() {
+    var ctx = {};
+    try {
+      var path = window.location.pathname + window.location.search;
+      if (path) {
+        ctx.url = path.substring(0, 500);
+      }
+    } catch (e) { /* ignore */ }
+    try {
+      if (document.title) {
+        ctx.title = document.title.substring(0, 200);
+      }
+    } catch (e) { /* ignore */ }
+    try {
+      var m = window.location.pathname.match(/\/products\/detail\/(\d+)/);
+      if (m) {
+        ctx.product_id = parseInt(m[1], 10);
+      }
+    } catch (e) { /* ignore */ }
+    return ctx;
   }
 
   /** Scroll messages container to the bottom */
@@ -548,6 +581,15 @@
       message: trimmed,
       session_id: sessionId
     };
+
+    // 初回送信時のみ閲覧ページ情報を添付する（2回目以降は履歴で文脈維持）
+    if (!pageContextSent) {
+      pageContextSent = true;
+      var pageCtx = collectPageContext();
+      if (pageCtx.url || pageCtx.title || pageCtx.product_id) {
+        payload.page_context = pageCtx;
+      }
+    }
 
     fetch(API_URL, {
       method: 'POST',
