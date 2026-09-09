@@ -20,7 +20,7 @@
 MYSQL_SVC ?= mysql@8.0
 PG_SVC ?= postgresql@18
 PHPUNIT ?= php vendor/bin/phpunit
-PACKAGE_OUT ?= /tmp/AiChatAssistant42-verify.tar.gz
+PACKAGE_OUT ?= AiChatAssistant42-verify.tar.gz
 
 # 検証用DB別環境（.github/skills/docker-verify-env/SKILL.md 参照）
 DBS_DIR ?= /tmp/eccube-verify-dbs
