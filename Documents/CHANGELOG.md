@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.1.3] - 2026-09-09
+
+### Fixed
+- （追記してください）
+
+## [1.1.2] - 2026-09-08
+
+### Fixed
+- オーナーズストア審査指摘に対応: `composer.json` の `description` をプラグイン名称「AIチャットアシスタント」に変更（[プラグイン仕様](https://doc4.ec-cube.net/plugin_spec) に準拠）
+- `composer.json` の `require` に `ec-cube/plugin-installer: ^2.0` を追加（4.2系以降の仕様に準拠）
+- 商品名・文書内の表記を「for EC-CUBE 4.2/4.3」に更新（4.3対応を明示）
+- PostgreSQL/SQLite で商品検索が500エラーになる問題を修正（LIKEエスケープ文字を `!` に統一しDB差異を解消）
+- PostgreSQL で商品の表示状態（真偽値）比較がエラーになる問題を修正（真偽値をバインドで渡すよう変更）
+
 ## [1.1.1] - 2026-09-07
 
 ### Fixed

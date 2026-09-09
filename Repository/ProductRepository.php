@@ -16,6 +16,7 @@ declare(strict_types=1);
 namespace Plugin\AiChatAssistant42\Repository;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Eccube\Repository\AbstractRepository;
@@ -179,7 +180,7 @@ class ProductRepository extends AbstractRepository
             ->leftJoin('p', 'dtb_product_stock', 'ps', 'ps.product_class_id = pc.id')
             ->leftJoin('p', 'dtb_product_category', 'pct', 'pct.product_id = p.id')
             ->where('p.product_status_id = 1')
-            ->andWhere('pc.visible = 1')
+            ->andWhere('pc.visible = :visible')->setParameter('visible', true, ParameterType::BOOLEAN)
             ->groupBy('p.id', 'pc.price02', 'ps.stock', 'pc.stock_unlimited', 'p.description_list', 'p.update_date')
             ->orderBy('p.update_date', 'DESC')
             ->addOrderBy('p.id', 'DESC')
@@ -189,7 +190,8 @@ class ProductRepository extends AbstractRepository
         if ($keyword !== '') {
             $escaped = $this->escapeLikeKeyword($keyword);
             $likeKeyword = '%' . $escaped . '%';
-            $qb->andWhere('(p.name LIKE :kw ESCAPE \'\\\\\' OR p.search_word LIKE :kw_sw ESCAPE \'\\\\\' OR pc.product_code LIKE :kw_code ESCAPE \'\\\\\')')
+            $escape = $this->likeEscapeClause();
+            $qb->andWhere("(p.name LIKE :kw {$escape} OR p.search_word LIKE :kw_sw {$escape} OR pc.product_code LIKE :kw_code {$escape})")
                 ->setParameter('kw', $likeKeyword)
                 ->setParameter('kw_sw', $likeKeyword)
                 ->setParameter('kw_code', $likeKeyword);
@@ -270,7 +272,7 @@ class ProductRepository extends AbstractRepository
             ->leftJoin('pc', 'dtb_class_category', 'cc1', 'cc1.id = pc.class_category_id1')
             ->leftJoin('pc', 'dtb_class_category', 'cc2', 'cc2.id = pc.class_category_id2')
             ->where('pc.product_id = :product_id')
-            ->andWhere('pc.visible = 1')
+            ->andWhere('pc.visible = :visible')->setParameter('visible', true, ParameterType::BOOLEAN)
             ->orderBy('pc.id', 'ASC')
             ->setParameter('product_id', $productId);
 
@@ -350,7 +352,7 @@ class ProductRepository extends AbstractRepository
             ->leftJoin('p', 'dtb_product_stock', 'ps', 'ps.product_class_id = pc.id')
             ->innerJoin('p', 'dtb_product_category', 'pct', 'pct.product_id = p.id')
             ->where('p.product_status_id = 1')
-            ->andWhere('pc.visible = 1')
+            ->andWhere('pc.visible = :visible')->setParameter('visible', true, ParameterType::BOOLEAN)
             ->andWhere('pct.category_id = :category_id')
             ->setParameter('category_id', $categoryId)
             ->groupBy('p.id', 'pc.price02', 'ps.stock', 'pc.stock_unlimited', 'p.description_list')
@@ -411,7 +413,7 @@ class ProductRepository extends AbstractRepository
             ->leftJoin('p', 'dtb_product_stock', 'ps', 'ps.product_class_id = pc.id')
             ->innerJoin('p', 'dtb_product_tag', 'pt', 'pt.product_id = p.id')
             ->where('p.product_status_id = 1')
-            ->andWhere('pc.visible = 1')
+            ->andWhere('pc.visible = :visible')->setParameter('visible', true, ParameterType::BOOLEAN)
             ->andWhere('pt.tag_id = :tag_id')
             ->setParameter('tag_id', $tagId)
             ->groupBy('p.id', 'pc.price02', 'ps.stock', 'pc.stock_unlimited', 'p.description_list')
@@ -584,14 +586,30 @@ class ProductRepository extends AbstractRepository
     }
 
     /**
+     * LIKE 用 ESCAPE 句を返す。
+     *
+     * エスケープ文字には `!` を使う。バックスラッシュは SQL リテラル中での
+     * 解釈が DB ごとに異なり（MySQL=`'\\'` で1文字、SQLite/Postgres=`'\'` で
+     * 1文字）、かつ Doctrine DBAL の Postgres 用プレースホルダ変換が
+     * `ESCAPE '\'` 内の `\'` をエスケープ済みクォートと誤読して HY093
+     *（Invalid parameter number）を起こす。`!` は全 DB で素直な1文字であり、
+     * プラットフォーム分岐そのものが不要になる（a5d6f88/6b6e2d1 の分岐史を解消）。
+     */
+    private function likeEscapeClause(): string
+    {
+        return "ESCAPE '!'";
+    }
+
+    /**
      * LIKE 検索用にワイルドカードをエスケープする。
      *
      * バインドパラメータで SQL インジェクションは防げるが、LIKE の %/_ は
-     * ワイルドカードとして解釈されるためエスケープが必要。
+     * ワイルドカードとして解釈されるためエスケープが必要。エスケープ文字は
+     * likeEscapeClause() と対にした `!` を使う（`!`→`!!`、`%`→`!%`、`_`→`!_`）。
      */
     private function escapeLikeKeyword(string $keyword): string
     {
-        return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $keyword);
+        return str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $keyword);
     }
 
     // ================================================================
@@ -691,7 +709,7 @@ class ProductRepository extends AbstractRepository
             ->leftJoin('pc', 'dtb_class_category', 'cc1', 'cc1.id = pc.class_category_id1')
             ->leftJoin('pc', 'dtb_class_category', 'cc2', 'cc2.id = pc.class_category_id2')
             ->where('pc.product_id = :product_id')
-            ->andWhere('pc.visible = 1')
+            ->andWhere('pc.visible = :visible')->setParameter('visible', true, ParameterType::BOOLEAN)
             ->orderBy('pc.id', 'ASC')
             ->setParameter('product_id', $productId);
 

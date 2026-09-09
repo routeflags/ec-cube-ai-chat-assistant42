@@ -1,9 +1,21 @@
 {
     "name": "ec-cube/aichatassistant42",
     "type": "eccube-plugin",
-    "version": "1.1.1",
-    "description": "EC-CUBE の商品情報に AI チャットで質問できるプラグインです。OpenAI / Anthropic / Google Gemini に対応しています。",
+    "description": "AIチャットアシスタント",
+    "version": "1.1.2",
+    "homepage": "https://github.com/routeflags/ec-cube-ai-chat-assistant42",
     "license": "GPL-2.0-only",
+    "support": {
+        "issues": "https://github.com/routeflags/ec-cube-ai-chat-assistant42/issues",
+        "source": "https://github.com/routeflags/ec-cube-ai-chat-assistant42"
+    },
+    "authors": [
+        {
+            "name": "ROUTE FLAGS Co., Ltd.",
+            "homepage": "https://blog.routeflags.com/",
+            "role": "Developer"
+        }
+    ],
     "keywords": [
         "ec-cube",
         "ai",
@@ -11,10 +23,12 @@
         "openai",
         "anthropic",
         "gemini",
-        "mcp"
+        "mcp",
+        "webmcp"
     ],
     "require": {
         "php": ">=8.1",
+        "ec-cube/plugin-installer": "^2.0",
         "guzzlehttp/guzzle": "^7.0"
     },
     "require-dev": {

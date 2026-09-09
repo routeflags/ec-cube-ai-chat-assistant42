@@ -1,6 +1,6 @@
-# AI チャットアシスタント for EC-CUBE 4.2
+# AI チャットアシスタント for EC-CUBE 4.2/4.3
 
-![AIチャットアシスタント for EC-CUBE 4.2 - ヒーローイメージ](Resource/images/readme-hero.png)
+![AIチャットアシスタント for EC-CUBE 4.2/4.3 - ヒーローイメージ](Resource/images/readme-hero.png)
 
 ![Version](https://img.shields.io/badge/version-1.1.0-blue)
 ![EC-CUBE](https://img.shields.io/badge/EC--CUBE-4.2-orange)
@@ -103,7 +103,7 @@ EC-CUBEの商品情報を利用して、購入者からの商品に関する質�
 #### A. Composer からインストール（Packagist 公開後）
 
 ```bash
-composer require routeflags/ec-cube-ai-chat-assistant42
+composer require ec-cube/aichatassistant42
 
 php bin/console eccube:plugin:install --code=AiChatAssistant42
 php bin/console eccube:plugin:enable --code=AiChatAssistant42
@@ -357,7 +357,7 @@ AIだけで処理せず、人による対応が必要な問い合わせを店舗
 
 ## 必要要件
 
-* EC-CUBE 4.2
+* EC-CUBE 4.2/4.3
 * PHP 8.0+
 * データベース
   * MySQL 5.7+ / 8.0+（本番推奨）
@@ -498,6 +498,60 @@ php bin/console app:ai-chat-assistant
   }
 }
 ```
+
+---
+
+## Web MCP（Streamable HTTP）
+
+ブラウザや外部AIエージェント（Claude / ChatGPT / Cursorなど）から、HTTP経由で商品データを利用できます。コマンドの起動は不要で、URLを登録するだけです。
+
+### エンドポイント
+
+| 用途 | メソッド | パス | 応答 |
+|---|---|---|---|
+| MCP通信 | POST | `/mcp` | `initialize` / `tools/list` / `tools/call` にJSON-RPCで応答 |
+| Discovery | GET | `/.well-known/mcp.json`（`/mcp` でも可） | サーバー情報＋ツール一覧 |
+| プリフライト | OPTIONS | `/mcp` | CORS `204` |
+
+サーバー名は `ec-mcp`、プロトコルバージョンは `2024-11-05` です。
+
+### 利用できるツール（7件）
+
+| ツール名 | 内容 |
+|---|---|
+| `search_products` | 商品をキーワード・カテゴリ・価格帯で検索 |
+| `get_product_detail` | 商品IDから詳細（価格・説明・画像など）を取得 |
+| `get_stock` | 商品IDから在庫状況を取得 |
+| `get_categories` | カテゴリ一覧を取得 |
+| `get_category_products` | カテゴリIDから商品一覧を取得 |
+| `get_tags` | タグ一覧を取得 |
+| `search_by_tag` | タグから商品を検索 |
+
+在庫無制限の商品は在庫数を返さず `null` になります（実在庫を見せない配慮です）。
+
+### 使い方の例
+
+```bash
+# ツール一覧の取得
+curl -s -X POST https://example.com/mcp \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+
+# 商品検索の実行
+curl -s -X POST https://example.com/mcp \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call",
+       "params":{"name":"search_products","arguments":{"keyword":"リキッド"}}}'
+```
+
+### 制限と注意
+
+* **レート制限**：IP＋ツール＋分単位で制限します（通常ツール120回/分、`get_stock` は60回/分）。超過時は `429` を返します
+* **CORS**：ブラウザからの直接呼び出し（WebMCP）に対応しています
+* **メソッド制限**：`GET /mcp` は `405`、JSON以外は `415` を返します
+* **監査ログ**：呼び出しは監査ログに記録されます（IPはハッシュ化）。詳しくは `ADMIN_MANUAL.md` の付録を参照してください
+
+具体的な利用フローは `USE_CASES.md` の UC-12、運用・セキュリティの詳細は `ADMIN_MANUAL.md` を参照してください。
 
 ---
 
