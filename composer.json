@@ -2,6 +2,7 @@
     "name": "ec-cube/aichatassistant42",
     "type": "eccube-plugin",
     "description": "AIチャットアシスタント",
+    "version": "1.1.2",
     "homepage": "https://github.com/routeflags/ec-cube-ai-chat-assistant42",
     "license": "GPL-2.0-only",
     "support": {
