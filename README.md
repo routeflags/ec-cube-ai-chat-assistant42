@@ -103,6 +103,9 @@ EC-CUBEの商品情報を利用して、購入者からの商品に関する質�
 #### A. Composer からインストール（Packagist 公開後）
 
 ```bash
+composer config repositories.aichatassistant42 vcs \
+https://github.com/routeflags/ec-cube-ai-chat-assistant42
+
 composer require ec-cube/aichatassistant42
 
 php bin/console eccube:plugin:install --code=AiChatAssistant42
