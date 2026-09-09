@@ -97,9 +97,14 @@ bump:
 	php bin/bump-version.php $(V) --level=$(LEVEL)
 	grep -H '"version"' composer.json; grep -H "^version:" eccube-plugin.yaml; grep -H "SERVER_VERSION =" Service/McpHttpService.php; head -5 Documents/CHANGELOG.md
 
-# gitタグ打刻。V省略時はcomposer.jsonのversionを使用。ツリークリーン必須
+# gitタグ打刻。V省略時はcomposer.jsonのversionを使用。
+# ガード: ツリーがcleanでないと打刻しない（if-fi一体形。; 区切りでの継続を禁止）
 tag:
 	@V="$(V)"; \
 	if [ -z "$$V" ]; then V="$(CUR_VERSION)"; fi; \
-	git diff --quiet && git diff --cached --quiet || (echo "tree is dirty. commit first."; exit 1); \
-	git tag -a "v$$V" -m "v$$V" && git tag | tail -3
+	if git diff --quiet && git diff --cached --quiet; then \
+	  echo "tagging v$$V"; \
+	  git tag -a "v$$V" -m "v$$V" && git tag | tail -3; \
+	else \
+	  echo "tree is dirty. commit first."; exit 1; \
+	fi
