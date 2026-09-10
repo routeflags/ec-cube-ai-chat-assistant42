@@ -2,7 +2,7 @@
 
 ![AIチャットアシスタント for EC-CUBE 4.2/4.3 - ヒーローイメージ](Resource/images/readme-hero.png)
 
-![Version](https://img.shields.io/badge/version-1.1.0-blue)
+![Version](https://img.shields.io/badge/version-1.1.3-blue)
 ![EC-CUBE](https://img.shields.io/badge/EC--CUBE-4.2-orange)
 ![PHP](https://img.shields.io/badge/PHP-%3E%3D8.0-777BB4)
 ![License](https://img.shields.io/badge/license-GPL--2.0--only-green)

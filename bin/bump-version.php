@@ -1,6 +1,6 @@
 #!/usr/bin/env php
 <?php
-// バージョン同期スクリプト（AGENTS.md「Version sync」4箇所）。
+// バージョン同期スクリプト（AGENTS.md「Version sync」5箇所）。
 // Usage:
 //   php bin/bump-version.php 1.1.3            # 明示指定
 //   php bin/bump-version.php --level=patch    # 現行からpatch+1（minor/major可）
@@ -76,5 +76,14 @@ $c = (string) file_get_contents($f);
 $entry = "## [{$new}] - " . date('Y-m-d') . "\n\n### Fixed\n- （追記してください）\n\n";
 $c = (string) preg_replace('/(# Changelog\n\n)/', '${1}' . $entry, $c, 1);
 file_put_contents($f, $c);
+
+// 5. README バッジ
+$f = 'README.md';
+file_put_contents($f, (string) preg_replace(
+    '/(badge\/version-)[0-9]+\.[0-9]+\.[0-9]+(-blue)/',
+    '${1}' . $new . '${2}',
+    (string) file_get_contents($f),
+    1
+));
 
 echo "bump {$cur} -> {$new}\n";

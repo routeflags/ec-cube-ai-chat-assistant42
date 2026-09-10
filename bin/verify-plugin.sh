@@ -14,7 +14,8 @@ echo "  -> OK"
 echo ""
 
 echo "[2/5] PHP syntax check"
-find "$PLUGIN_DIR" -path "$PLUGIN_DIR/vendor" -prune -o -name "*.php" -type f -print | while read f; do
+# Tests/Docker/dbs は EC-CUBE 実体（make dbs-fetch で取得・git 管理外）のため除外
+find "$PLUGIN_DIR" -path "$PLUGIN_DIR/vendor" -prune -o -path "$PLUGIN_DIR/Tests/Docker/dbs" -prune -o -name "*.php" -type f -print | while read f; do
   php -l "$f" > /dev/null
 done
 echo "  -> OK (all php files syntax ok)"
