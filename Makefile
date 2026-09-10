@@ -4,6 +4,7 @@
 # 起動・停止する。SQLite はファイルのみでサービス不要。
 #
 #   make db-up              # MySQL + PostgreSQL を起動
+#   make db-wait            # 起動後の疎通待ち（test-matrixの前に必須）
 #   make db-down            # MySQL + PostgreSQL を停止
 #   make db-status          # サービスと疎通の確認
 #   make test-matrix        # 1コード×3DBのマトリクステスト
@@ -32,11 +33,25 @@ DBS_COMPOSE ?= docker-compose.dbs.yml
 DBS_PROJECT ?= eccube-verify-dbs
 DBS_SERVICES ?= eccube-sqlite eccube-mysql eccube-pg
 
-.PHONY: db-up db-down db-status test-matrix test-matrix-chaos test-unit verify package dbs-fetch dbs-up dbs-wait dbs-down dbs-status dbs-install ship bump tag
+.PHONY: db-up db-wait db-down db-status test-matrix test-matrix-chaos test-unit verify package dbs-fetch dbs-up dbs-wait dbs-down dbs-status dbs-install ship bump tag
 
 db-up:
 	brew services start $(MYSQL_SVC)
 	brew services start $(PG_SVC)
+
+# brew services start は即時復帰するため、疎通できるまで待つ。
+# 無しに test-matrix を走らせると接続拒否で全DB skip になる。
+db-wait:
+	for i in $$(seq 1 30); do \
+	  mysqladmin -uroot ping 2>/dev/null | grep -q "mysqld is alive" && break; \
+	  sleep 2; \
+	done
+	mysqladmin -uroot ping 2>&1 | head -c 120; echo
+	for i in $$(seq 1 30); do \
+	  pg_isready 2>/dev/null | grep -q "accepting connections" && break; \
+	  sleep 2; \
+	done
+	pg_isready || true
 
 db-down:
 	brew services stop $(MYSQL_SVC)
@@ -47,10 +62,10 @@ db-status:
 	mysqladmin -uroot status 2>&1 | head -c 120; echo
 	pg_isready || true
 
-test-matrix: db-up
+test-matrix: db-up db-wait
 	$(PHPUNIT) Tests/Matrix
 
-test-matrix-chaos: db-up
+test-matrix-chaos: db-up db-wait
 	MATRIX_CHAOS=1 $(PHPUNIT) Tests/Matrix
 
 test-unit:
