@@ -38,9 +38,23 @@ class ShopContextService
 
     public function getShopName(): string
     {
+        return $this->getConfiguredShopName() ?? self::DEFAULT_SHOP_NAME;
+    }
+
+    /**
+     * DB に設定されたショップ名を返す。未設定時は null。
+     *
+     * getShopName() と異なりフォールバック名を返さないため、
+     * 呼び出し側で独自のフォールバック（例: Discovery 文書の汎用名）を
+     * 選択したい場合に使う。
+     */
+    public function getConfiguredShopName(): ?string
+    {
         $shopName = $this->baseInfoRepository->get()->getShopName() ?? '';
 
-        return trim($shopName) !== '' ? $shopName : self::DEFAULT_SHOP_NAME;
+        $trimmedShopName = trim($shopName);
+
+        return $trimmedShopName !== '' ? $trimmedShopName : null;
     }
 
     public function getProductDetailUrl(int $productId): string

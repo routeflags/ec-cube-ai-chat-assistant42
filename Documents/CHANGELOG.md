@@ -4,6 +4,7 @@
 
 ### Fixed
 - 価格の税込・税抜の誤表示を修正: EC-CUBE の `price02` は税抜保存が仕様のため、ページコンテキストの価格帯を「円（税込）」→「円（税抜）」に変更し、ツール定義（`search_products` / `get_product_detail` / `get_stock`）に税抜価格である旨を明記
+- Discovery 文書（`/.well-known/mcp.json`）の表示名を DB のショップ名から参照するように変更（未設定・DB 不可時は従来の `EC-CUBE MCP` にフォールバック、`serverInfo.name` は不変）
 
 ## [1.1.2] - 2026-09-08
 

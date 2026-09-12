@@ -37,9 +37,17 @@ class McpHttpService
     /** サーバーバージョン — eccube-plugin.yaml と同期 */
     public const SERVER_VERSION = '1.1.3';
 
+    /**
+     * Discovery 文書の表示名フォールバック。
+     *
+     * ショップ名未設定・DB 不可時は汎用名を返し、配布物の汎用性を保つ。
+     */
+    public const FALLBACK_DISPLAY_NAME = 'EC-CUBE MCP';
+
     public function __construct(
         private ProductRepository $productRepository,
         private ?McpAuditRepository $mcpAuditRepository = null,
+        private ?ShopContextService $shopContextService = null,
     ) {
     }
 
@@ -232,7 +240,7 @@ class McpHttpService
         $mcpUrl = rtrim($baseUrl, '/') . '/mcp';
 
         return [
-            'name' => 'EC-CUBE MCP',
+            'name' => $this->resolveDisplayName(),
             'protocolVersion' => self::PROTOCOL_VERSION,
             'serverInfo' => [
                 'name' => self::SERVER_NAME,
@@ -248,6 +256,25 @@ class McpHttpService
             'baseUrl' => $baseUrl,
             'tools' => $mcpTools,
         ];
+    }
+
+    /**
+     * Discovery 文書の表示名を解決する。
+     *
+     * DB のショップ名を優先し、未設定・DB 不可・未注入時は汎用名に
+     * フォールバックする。serverInfo.name（機械向け識別子）は変えない。
+     */
+    private function resolveDisplayName(): string
+    {
+        if ($this->shopContextService === null) {
+            return self::FALLBACK_DISPLAY_NAME;
+        }
+        try {
+            return $this->shopContextService->getConfiguredShopName() ?? self::FALLBACK_DISPLAY_NAME;
+        } catch (\Throwable) {
+            // DB 不可時も Discovery 応答自体は壊さない
+            return self::FALLBACK_DISPLAY_NAME;
+        }
     }
 
     /**
