@@ -3,6 +3,7 @@
 ![AIチャットアシスタント for EC-CUBE 4.2/4.3](../Resource/images/readme-hero.png)
 
 ![EC-CUBE](https://img.shields.io/badge/EC--CUBE-4.2%20%7C%204.3-orange)
+![Symfony](https://img.shields.io/badge/Symfony-5.4%20%7C%206.4-black)
 ![PHP](https://img.shields.io/badge/PHP-%3E%3D8.1-777BB4)
 ![License](https://img.shields.io/badge/license-GPL--2.0--only-green)
 ![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-2ec9bb)
@@ -677,8 +678,8 @@ composer quality:ci
 
 ## EC-CUBE
 
-* EC-CUBE 4.2
-* EC-CUBE 4.3
+* EC-CUBE 4.2（Symfony 5.4）
+* EC-CUBE 4.3（Symfony 6.4）
 
 ## PHP
 
