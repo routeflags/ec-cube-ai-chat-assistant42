@@ -1,6 +1,6 @@
 # AIチャットアシスタント for EC-CUBE 4.2 / 4.3
 
-![AIチャットアシスタント for EC-CUBE 4.2/4.3](Resource/images/readme-hero.png)
+![AIチャットアシスタント for EC-CUBE 4.2/4.3](../Resource/images/readme-hero.png)
 
 ![EC-CUBE](https://img.shields.io/badge/EC--CUBE-4.2%20%7C%204.3-orange)
 ![PHP](https://img.shields.io/badge/PHP-%3E%3D8.1-777BB4)

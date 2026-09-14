@@ -1,606 +1,879 @@
-# AI チャットアシスタント for EC-CUBE 4.2/4.3
+# AI Chat Assistant for EC-CUBE 4.2 / 4.3
 
-![AIチャットアシスタント for EC-CUBE 4.2/4.3 - ヒーローイメージ](Resource/images/readme-hero.png)
+![AI Chat Assistant for EC-CUBE 4.2/4.3](Resource/images/readme-hero.png)
 
-![Version](https://img.shields.io/badge/version-1.1.0-blue)
-![EC-CUBE](https://img.shields.io/badge/EC--CUBE-4.2-orange)
-![PHP](https://img.shields.io/badge/PHP-%3E%3D8.0-777BB4)
+![EC-CUBE](https://img.shields.io/badge/EC--CUBE-4.2%20%7C%204.3-orange)
+![PHP](https://img.shields.io/badge/PHP-%3E%3D8.1-777BB4)
 ![License](https://img.shields.io/badge/license-GPL--2.0--only-green)
-![Web MCP](https://img.shields.io/badge/Web%20MCP-Streamable%20HTTP-2ec9bb)
-![E2E](https://img.shields.io/badge/e2e-Playwright%2033%20passed-brightgreen)
+![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-2ec9bb)
+![WebMCP](https://img.shields.io/badge/WebMCP-Supported-2ec9bb)
+![E2E](https://img.shields.io/badge/E2E-Playwright-brightgreen)
 
-![Version](https://img.shields.io/badge/version-1.1.0-blue)
-![EC-CUBE](https://img.shields.io/badge/EC--CUBE-4.2-orange)
-![PHP](https://img.shields.io/badge/PHP-%3E%3D8.0-777BB4)
-![License](https://img.shields.io/badge/license-GPL--2.0--only-green)
-![Web MCP](https://img.shields.io/badge/Web%20MCP-Streamable%20HTTP-2ec9bb)
-![E2E](https://img.shields.io/badge/e2e-Playwright%2033%20passed-brightgreen)
+**An open-source AI commerce assistant for EC-CUBE that answers customer questions using your product catalog and store-specific knowledge.**
 
-EC-CUBEの商品情報をもとに、AIが購入者からの質問に回答するチャットアシスタントプラグインです。
+It supports OpenAI, Anthropic Claude, and Google Gemini, enabling AI-powered product discovery, product comparison, stock inquiries, and multi-turn conversations directly within your EC-CUBE storefront.
 
-「この商品は在庫がありますか？」
-「初心者向けの商品はありますか？」
-「この2つの商品は何が違いますか？」
+It also supports both **MCP (Model Context Protocol) and WebMCP**, allowing EC-CUBE capabilities to be exposed not only through the traditional chat interface, but also to external MCP clients, AI agents, and browser-based AI.
 
-といった質問に、EC-CUBEの商品情報や登録したナレッジを利用して回答します。
-
-AIだけでは解決できない問い合わせは、メールでの回答依頼へ引き継ぐこともできます。
-
-**商品案内の自動化から、問い合わせ分析・FAQ改善までをEC-CUBEの管理画面から運用できます。**
+[日本語 README](README.ja.md)
 
 ---
 
-## フィロソフィー
+## Overview
 
-私たちが大切にしている OSS への向き合い方を、指針としてまとめたコラムです。この指針があるからこそ、日々の OSS 活動や記事の執筆を続けています。社会に積み重なった見直されない仕組みを「技術的負債」と捉え直す考え方に触れていただけるとうれしいです。
+Online stores repeatedly receive questions from customers before they make a purchase:
 
-- [社会にも、技術的負債がある。| リキッド通販ショップ](https://www.thch-vape.shop/guide/column/git-log--oneline--all--society)
+> "Is this product in stock?"
 
----
+> "Which product would you recommend for a beginner?"
 
-## 主な機能
+> "What's the difference between these two products?"
 
-### AIによる商品案内
+> "Can you recommend something within my budget?"
 
-EC-CUBEの商品情報を利用して、購入者からの商品に関する質問へ自然言語で回答します。
+AI Chat Assistant uses your EC-CUBE product data and store-specific knowledge to answer these questions in natural language.
 
-* 商品名
-* 価格
-* 在庫
-* カテゴリ
-* 商品検索
-* 商品比較
-* 複数ターンの会話
+It maintains conversational context within the same session, enabling follow-up interactions such as:
 
-同じチャットセッション内では会話履歴を保持するため、
+```text
+"Show me some products for beginners."
+              ↓
+"Which one is the cheapest?"
+              ↓
+"Is that one in stock?"
+```
 
-> 「初心者向けの商品を教えて」
-> 「その中で一番安いものは？」
-> 「それの在庫は？」
+When AI alone cannot resolve a customer's question, the conversation can also be escalated to human support.
 
-といった連続した質問にも対応できます。
+**The plugin goes beyond automated product guidance: it provides conversation analytics, FAQ improvement workflows, and human escalation directly from the EC-CUBE administration panel.**
 
 ---
 
-### 3つのAIプロバイダに対応
+# Philosophy
 
-以下のAIプロバイダを利用できます。
+Technical debt is usually discussed in software engineering, but we believe the same structural problem can exist in society.
+
+Rules, institutions, and systems that remain unchanged while the world around them evolves can accumulate a form of **social technical debt**.
+
+Open-source development provides one useful model for addressing this problem: make systems visible, allow people to inspect them, propose changes, test alternatives, and continuously improve them.
+
+This idea also influences how we approach this project and our broader open-source work.
+
+[Read: **Technical Debt Exists in Society, Too**](https://www.thch-vape.shop/guide/column/git-log--oneline--all--society)
+
+---
+
+# Key Features
+
+* AI-powered product search and guidance
+* Product comparison and stock inquiries
+* Multi-turn conversations
+* OpenAI support
+* Anthropic Claude support
+* Google Gemini support
+* Store-specific knowledge base
+* Hybrid AI + predefined responses
+* Conversation history
+* Usage analytics and reports
+* Human support escalation by email
+* Notifications
+* Access control
+* MCP Server
+* MCP Streamable HTTP
+* WebMCP
+* MCP Discovery
+* Rate limiting
+* Security protections
+* Responsive desktop and mobile interface
+
+---
+
+# AI-Powered Product Guidance
+
+AI Chat Assistant uses your EC-CUBE product data to help customers discover and compare products.
+
+It can work with information such as:
+
+* Product names
+* Prices
+* Stock availability
+* Categories
+* Product search
+* Product comparison
+* Multi-turn conversation context
+
+Unlike a generic AI chatbot, the assistant can answer questions using the actual commerce data registered in your EC-CUBE store.
+
+---
+
+# Three AI Providers
+
+The plugin supports three major AI providers.
+
+### OpenAI
+
+Use supported OpenAI models.
+
+### Anthropic
+
+Use supported Anthropic Claude models.
+
+### Google Gemini
+
+Use supported Google Gemini models.
+
+The provider and model can be selected from the EC-CUBE administration panel.
+
+Model definitions can also be updated through an external JSON file, allowing new AI models to be added without requiring a plugin release.
+
+---
+
+# MCP / WebMCP
+
+AI Chat Assistant supports both **MCP and WebMCP** in addition to the standard storefront chat interface.
+
+```text
+                    ┌─────────────────┐
+                    │     EC-CUBE     │
+                    │ Commerce Data   │
+                    └────────┬────────┘
+                             │
+               ┌─────────────┼─────────────┐
+               │             │             │
+               ▼             ▼             ▼
+         Chat Widget     MCP Server      WebMCP
+               │             │             │
+               ▼             ▼             ▼
+           Customer      MCP Client    Browser / AI
+                             │
+                             ▼
+                          AI Agent
+```
+
+This architecture makes EC-CUBE commerce data and capabilities available through multiple AI interfaces.
+
+---
+
+## MCP Server
+
+The plugin provides an MCP Server that allows external MCP-compatible clients and AI agents to interact with EC-CUBE.
+
+### Transport
+
+```text
+Streamable HTTP
+```
+
+### Endpoints
+
+```text
+POST /mcp
+GET /.well-known/mcp.json
+```
+
+### MCP Operations
+
+The server supports core MCP operations including:
+
+```text
+initialize
+tools/list
+tools/call
+```
+
+An MCP client can connect to the server, discover the available tools, and invoke EC-CUBE capabilities through those tools.
+
+```text
+AI Agent
+    │
+    ▼
+initialize
+    │
+    ▼
+tools/list
+    │
+    ▼
+Discover available tools
+    │
+    ▼
+tools/call
+    │
+    ▼
+EC-CUBE
+```
+
+---
+
+## MCP Discovery
+
+The plugin exposes MCP discovery information through:
+
+```text
+GET /.well-known/mcp.json
+```
+
+MCP clients and AI agents can use this endpoint to discover the MCP Server endpoint and transport information.
+
+---
+
+## WebMCP
+
+The plugin also supports **WebMCP**.
+
+While the MCP Server exposes EC-CUBE capabilities to external AI agents through a server-side interface, WebMCP provides an interface between the EC-CUBE storefront and AI running in or interacting with the browser.
+
+```text
+EC-CUBE Storefront
+        │
+        ▼
+      WebMCP
+        │
+        ▼
+Browser / AI Agent
+```
+
+This makes it possible to move beyond the traditional interaction model:
+
+```text
+Human
+  ↓
+Chat Widget
+  ↓
+AI
+  ↓
+EC-CUBE
+```
+
+and support another path:
+
+```text
+Browser AI / AI Agent
+        ↓
+      WebMCP
+        ↓
+     EC-CUBE
+```
+
+EC-CUBE capabilities can therefore be exposed directly to AI agents operating in the context of the storefront.
+
+---
+
+## MCP vs. WebMCP
+
+|                     | MCP Server                                  | WebMCP                                       |
+| ------------------- | ------------------------------------------- | -------------------------------------------- |
+| Primary environment | Server                                      | Browser / Web page                           |
+| Primary consumer    | MCP clients / AI agents                     | Browser-based AI                             |
+| EC-CUBE connection  | HTTP MCP endpoint                           | Storefront                                   |
+| Main purpose        | Expose commerce capabilities to external AI | Expose page/store capabilities to browser AI |
+| Plugin support      | Supported                                   | Supported                                    |
+
+By supporting both, EC-CUBE can evolve from an **e-commerce platform with an AI chatbot** into a **commerce platform that AI agents can interact with directly**.
+
+---
+
+# Hybrid AI + Predefined Responses
+
+Not every customer question needs to be sent to an AI model.
+
+Questions with deterministic answers, such as those about returns, shipping fees, or business hours, can be handled using predefined scenarios.
+
+```text
+Customer
+   │
+   ▼
+Question
+   │
+   ▼
+Scenario match?
+   │
+   ├── YES ──→ Predefined response
+   │
+   └── NO
+        │
+        ▼
+       AI
+        │
+        ├── Product data
+        └── Store knowledge
+             │
+             ▼
+           Answer
+```
+
+Because the AI API is not called for predefined responses, scenarios can help:
+
+* Reduce AI API costs
+* Improve response speed
+* Keep deterministic answers consistent
+
+---
+
+# Quick Start
+
+You do not need to configure every feature to start using the basic AI chat functionality.
+
+## 1. Install the Plugin
+
+Download the plugin package from GitHub Releases or another supported distribution channel and install it into EC-CUBE.
+
+Using the CLI:
+
+```bash
+php bin/console eccube:plugin:install --code=AiChatAssistant42
+php bin/console eccube:plugin:enable --code=AiChatAssistant42
+```
+
+The plugin can also be enabled from the EC-CUBE administration panel.
+
+---
+
+## 2. Configure an API Key
+
+Open the plugin settings from the EC-CUBE administration panel.
+
+```text
+Settings
+└── AI Chat Assistant
+      └── Plugin Settings
+```
+
+Configure an API key for one of the supported providers:
 
 * OpenAI
 * Anthropic
 * Google Gemini
 
-利用するプロバイダ・モデルは管理画面から変更できます。
+---
 
-モデル一覧は外部JSONから更新できるため、プラグイン本体を更新せずに新しいモデルを追加できます。
+## 3. Enable Chat
+
+Turn on **Enable Chat**.
+
+The AI chat widget will appear on the storefront.
+
+**That's all you need for the basic setup.**
+
+Knowledge, scenarios, notifications, access controls, and other features can be configured as needed.
 
 ---
 
-### AI + 定型回答のハイブリッド
+# Customer-Facing Features
 
-すべての問い合わせをAIへ送信する必要はありません。
+## Responsive Chat
 
-「返品」「送料」「営業時間」など、回答が決まっている質問にはシナリオ機能を利用できます。
+The chat widget supports both desktop and mobile devices.
+
+The following properties can be customized to match your storefront:
+
+* Widget color
+* Size
+* Position
+* AI assistant display name
+* Initial message
+
+---
+
+## Multi-Turn Conversations
+
+Conversation history is retained within the same session so the assistant can maintain context.
+
+For example:
 
 ```text
-購入者
-   ↓
-問い合わせ
-   ↓
-シナリオに一致？
-   ├─ YES → 定型回答
+"Show me products for beginners."
+          ↓
+"Which one is the cheapest?"
+          ↓
+"Is that one in stock?"
+```
+
+These questions can be handled as a single continuous conversation.
+
+---
+
+## Human Support Escalation
+
+When AI chat cannot resolve a question, the customer can request a response from the store.
+
+```text
+AI Chat
    │
-   └─ NO → AI
-              ↓
-         商品情報 / ナレッジ
-              ↓
-             回答
+   ▼
+Unresolved
+   │
+   ▼
+Request email response
+   │
+   ▼
+Store staff
+   │
+   ▼
+Human support
 ```
 
-定型質問ではAI APIを呼び出さないため、応答速度やAPIコストの改善にも利用できます。
+The system is designed to hand unresolved conversations over to humans rather than assuming that AI should handle every support request.
 
 ---
 
-## 最短セットアップ
+# Administration Panel
 
-基本的なAIチャットを開始するために、すべての機能を設定する必要はありません。
+AI configuration, operations, and analytics can all be managed from the EC-CUBE administration panel.
 
-### 1. インストール
+| Page                 | Main Functions                                                    |
+| -------------------- | ----------------------------------------------------------------- |
+| Dashboard            | Conversations, resolution rate, error rate, average response time |
+| Plugin Settings      | AI provider, model, API key, system prompt                        |
+| Chat History         | Customer and AI conversations                                     |
+| Statistics & Reports | Provider, model, and time-based analytics                         |
+| Knowledge Management | FAQs and store-specific information                               |
+| Scenario Management  | Keyword-triggered predefined responses                            |
+| Access Rules         | IP, time range, blocked words                                     |
+| Design Settings      | Color, size, position, display name                               |
+| Notification Rules   | Email, Webhook, LINE notifications                                |
 
-#### A. Composer からインストール（Packagist 公開後）
+---
 
-```bash
-composer require ec-cube/aichatassistant42
+# Dashboard
 
-php bin/console eccube:plugin:install --code=AiChatAssistant42
-php bin/console eccube:plugin:enable --code=AiChatAssistant42
-```
+The dashboard provides visibility into AI chat operations.
 
-#### B. tar.gz からインストール（推奨: GitHub Release 配布）
+Key metrics include:
 
-```bash
-# 1. AiChatAssistant42-1.0.0.tar.gz を EC-CUBE 本体の app/Plugin/ に展開
-tar -xzf AiChatAssistant42-1.0.0.tar.gz -C /path/to/ec-cube/app/Plugin/
+* Total conversations
+* Resolution rate
+* Error rate
+* Average response time
+* Usage by AI provider
+* Usage by AI model
+* Requests by time period
+* Pending human responses
 
-# 2. プラグインをインストール
-php bin/console eccube:plugin:install --code=AiChatAssistant42
-
-# 3. 管理画面で有効化（またはコマンドで有効化）
-php bin/console eccube:plugin:enable --code=AiChatAssistant42
-# 管理画面: コンテンツ管理 > プラグイン > AiChatAssistant42 > 有効化
-```
-
-> tar.gz は `bin/package.sh` で生成します。`vendor/` は含まないため、展開後に EC-CUBE が依存を解決します。
-
-### 2. APIキーを設定
-
-EC-CUBE管理画面から、
+The goal is not simply to deploy an AI chatbot, but to establish an improvement cycle:
 
 ```text
-設定
-└── AI チャットアシスタント
-    └── プラグイン設定
+Usage
+  ↓
+Measurement
+  ↓
+Analysis
+  ↓
+Discover common questions
+  ↓
+Improve knowledge / scenarios
+  ↓
+Improve answer quality
 ```
-
-を開きます。
-
-OpenAI / Anthropic / Google Gemini のいずれかのAPIキーを入力します。
-
-### 3. チャットを有効化
-
-「チャットを有効にする」をONにします。
-
-これでフロントエンドにAIチャットウィジェットが表示されます。
-
-**基本セットアップはこれだけです。**
-
-ナレッジ、シナリオ、通知、アクセス制御などは必要に応じて追加設定できます。
 
 ---
 
-## 購入者側の機能
+# Knowledge Management
 
-### レスポンシブチャット
+Store-specific information that is not available in the EC-CUBE product catalog can be registered as knowledge.
 
-PC / スマートフォンに対応したチャットウィジェットを表示します。
-
-表示位置、サイズ、カラー、表示名などは管理画面から変更できます。
-
-### 会話履歴
-
-同じセッション内では過去の会話を参照し、文脈を維持した回答ができます。
-
-### メール回答依頼
-
-AIチャットだけでは解決できなかった場合、購入者はメールでの回答を依頼できます。
+For example:
 
 ```text
-AIチャット
-    ↓
-解決できない
-    ↓
-メール回答を依頼
-    ↓
-店舗スタッフが対応
+Title:
+Returns and Exchanges
+
+Category:
+Returns
+
+Content:
+Returns are accepted within seven days of delivery
+for unopened products.
 ```
 
-AIだけで問い合わせ対応を完結させることを前提とせず、人によるサポートへ引き継げる設計です。
+The AI can then use this information when answering customer questions.
+
+Typical use cases include:
+
+* Returns and exchanges
+* Shipping
+* Shipping fees
+* Payment methods
+* Product usage
+* Store information
+* Store-specific FAQs
 
 ---
 
-## 管理画面
+# Scenario Management
 
-AIチャットの設定から運用状況の分析まで、EC-CUBE管理画面から行えます。
+Specific questions can be answered with predefined responses without invoking an AI model.
 
-| ページ     | 主な機能                        |
-| ------- | --------------------------- |
-| ダッシュボード | 総会話数・解決率・エラー率・平均応答時間        |
-| プラグイン設定 | AIプロバイダ・モデル・APIキー・システムプロンプト |
-| チャット履歴  | 購入者とAIの会話履歴                 |
-| 統計・レポート | プロバイダ別・モデル別・時間帯別分析          |
-| ナレッジ管理  | FAQ・ショップ独自情報                |
-| シナリオ管理  | キーワードによる定型回答                |
-| アクセスルール | IP・時間帯・ブロックワード              |
-| デザイン設定  | 色・サイズ・位置・表示名                |
-| 通知ルール   | メール・Webhook・LINE通知          |
-
----
-
-## ダッシュボード
-
-AIチャットの運用状況を確認できます。
-
-主なKPI：
-
-* 総会話数
-* 解決率
-* エラー率
-* 平均応答時間
-* プロバイダ別利用状況
-* 時間帯別リクエスト
-* 未対応メール返信
-
-チャットを設置するだけではなく、実際にどの程度利用され、問い合わせが解決しているかを確認できます。
-
----
-
-## ナレッジ管理
-
-EC-CUBEの商品情報だけでは回答できないショップ独自情報を登録できます。
-
-例えば、
+Example:
 
 ```text
-タイトル:
-返品・交換について
+Keyword:
+return
 
-カテゴリ:
-返品・交換
+Match:
+contains
 
-本文:
-商品到着後7日以内、未開封の商品に限り返品できます。
+Response:
+Returns are accepted within seven days of delivery
+for unopened products.
 ```
 
-と登録すると、AIが回答時のナレッジとして利用します。
+Supported matching methods:
 
-利用例：
+| Type               | Behavior                         |
+| ------------------ | -------------------------------- |
+| Exact              | Input must match exactly         |
+| Contains           | Input contains the keyword       |
+| Regular expression | Match using a regular expression |
 
-* 返品・交換
-* 配送
-* 送料
-* 支払方法
-* 商品の使い方
-* ショップ独自FAQ
-
-有効なナレッジは最大50件までAIのコンテキストへ追加されます。
+When multiple scenarios match, priority determines which response is returned.
 
 ---
 
-## シナリオ管理
+# Chat History & Analytics
 
-特定の質問に対して、AIを利用せず定型回答できます。
+Customer and AI conversations can be reviewed from the administration panel.
 
-例：
+Recorded information includes:
+
+* User input
+* AI response
+* Session
+* AI provider
+* AI model
+* Response time
+* Token usage
+* Errors
+* Tools used
+* Human response requests
+
+Conversation history can be used to identify recurring questions and improve the knowledge base and scenarios.
 
 ```text
-キーワード:
-返品
-
-マッチ:
-部分一致
-
-回答:
-返品は商品到着後7日以内、未開封の商品に限り受け付けています。
+Customer questions
+       │
+       ▼
+Conversation history
+       │
+       ▼
+Identify recurring questions
+       │
+       ▼
+Add knowledge / scenarios
+       │
+       ▼
+Improve answer quality
 ```
 
-マッチ方式：
+---
 
-| タイプ  | 動作            |
-| ---- | ------------- |
-| 完全一致 | 入力内容が完全に一致    |
-| 部分一致 | 入力内容にキーワードを含む |
-| 正規表現 | 正規表現による判定     |
+# Statistics & Reports
 
-複数のシナリオが一致した場合は、優先度によって回答を決定します。
+AI chat usage can be analyzed by:
+
+* AI provider
+* AI model
+* Time period
+* Error status
+* Response time
+* Overall usage
+
+CSV export is also supported.
 
 ---
 
-## チャット履歴・分析
+# Access Control
 
-購入者とAIの会話を管理画面から確認できます。
+Access rules can be configured to reduce unnecessary requests and abuse of AI APIs.
 
-記録される主な情報：
+Supported rules include:
 
-* ユーザー入力
-* AI回答
-* セッション
-* AIプロバイダ
-* AIモデル
-* 応答時間
-* トークン使用量
-* エラー
-* 使用したツール
-* メール回答依頼
+* IP address
+* Time range
+* Blocked words
 
-実際の質問内容を確認することで、
-
-```text
-購入者の質問
-      ↓
-チャット履歴
-      ↓
-頻出質問を発見
-      ↓
-ナレッジ / シナリオへ追加
-      ↓
-回答品質を改善
-```
-
-という運用ができます。
+Rate limiting is also applied to the MCP HTTP endpoint.
 
 ---
 
-## アクセス制御
+# Notifications
 
-AI APIの不正利用や不要なリクエストを抑えるため、アクセスルールを設定できます。
+Notifications can be configured based on support conditions.
 
-対応ルール：
+Supported channels include:
 
-* IPアドレス
-* 時間帯
-* ブロックワード
-
-また、1分間あたりのリクエスト数を制限するレートリミットにも対応しています。
-
----
-
-## デザイン設定
-
-チャットウィジェットはショップデザインに合わせて変更できます。
-
-設定可能な項目：
-
-* ウィジェットカラー
-* サイズ
-* 表示位置
-* AIアシスタント表示名
-* 初回メッセージ
-
----
-
-## 通知
-
-問い合わせ状況に応じて通知を設定できます。
-
-対応：
-
-* メール
+* Email
 * Webhook
 * LINE
 
-AIだけで処理せず、人による対応が必要な問い合わせを店舗運営へつなげる用途に利用できます。
+This can be used to route conversations requiring human attention to store operations.
 
 ---
 
-## 必要要件
+# Security
 
-* EC-CUBE 4.2/4.3
-* PHP 8.0+
-* データベース
-  * MySQL 5.7+ / 8.0+（本番推奨）
-  * PostgreSQL 12+（EC-CUBE 4.2 準拠）
-  * SQLite 3.x（開発・テスト用）
-* Guzzle（EC-CUBE同梱）
+The plugin includes multiple security measures designed for AI functionality operating within an e-commerce environment.
 
-> **対応 DB とバージョン**: 本プラグインの集計クエリ（時間帯別分布など）は MySQL / PostgreSQL / SQLite のいずれでも動作するように分岐しています。MySQL では `HOUR()`、PostgreSQL では `EXTRACT(HOUR FROM ...)`、SQLite では `strftime('%H', ...)` を使用します。ローカル検証は `DATABASE_URL=sqlite:///var/eccube.db` でも `500` にならないことをテストで担保しています。
+These include:
+
+* CSRF protection
+* Masked API key display
+* Log anonymization
+* Scenario input validation
+* Regular-expression injection protection
+* Session-based rate limiting
+* Per-IP MCP rate limiting
+* Tool-specific MCP rate limiting
+* JSON-RPC 2.0 validation
+* Content-Type validation
+* SQL wildcard escaping
+* Internal error sanitization
+
+MCP error responses are sanitized to prevent internal information such as SQLSTATE messages, Doctrine details, internal database table names, and PHP file paths from being exposed externally.
 
 ---
 
-## アーキテクチャ
+# Testing & Code Quality
 
-```text
-                    EC-CUBE
-                       │
-              ┌────────┴────────┐
-              │                 │
-          商品データ          ナレッジ
-              │                 │
-              └────────┬────────┘
-                       │
-購入者 ──→ Chat Widget ──→ Chat API
-                       │
-              ┌────────┴────────┐
-              │                 │
-           Scenario            LLM
-              │                 │
-         定型回答       ┌───────┼───────┐
-                        │       │       │
-                     OpenAI Anthropic Gemini
-                        │       │       │
-                        └───────┬───────┘
-                                │
-                              回答
-                                │
-                         Chat History
-                                │
-                         Dashboard / Report
+The MCP HTTP interface is covered by Playwright E2E tests.
+
+Test coverage includes areas such as:
+
+* MCP Discovery
+* `initialize`
+* `tools/list`
+* `tools/call`
+* HTTP request validation
+* Error handling
+* Rate limiting
+* Security-related responses
+
+The PHP codebase uses the following quality tools:
+
+* PHPUnit
+* PHP_CodeSniffer
+* PHPStan
+* PHPMD
+* PHPMetrics
+
+Run code quality checks with:
+
+```bash
+composer quality
+```
+
+For CI:
+
+```bash
+composer quality:ci
 ```
 
 ---
 
-## ディレクトリ構成
+# Requirements
+
+## EC-CUBE
+
+* EC-CUBE 4.2
+* EC-CUBE 4.3
+
+## PHP
+
+```text
+PHP >= 8.1
+```
+
+## Databases
+
+* MySQL
+* PostgreSQL
+* SQLite (primarily for development and testing)
+
+Compatibility considerations include DBMS-specific differences such as `LIKE` search escaping and boolean handling between MySQL and PostgreSQL.
+
+---
+
+# Architecture
+
+AI Chat Assistant provides multiple ways for humans and AI agents to interact with EC-CUBE.
+
+```text
+                       EC-CUBE
+                          │
+               ┌──────────┴──────────┐
+               │                     │
+        Product Catalog         Store Knowledge
+               │                     │
+               └──────────┬──────────┘
+                          │
+                          ▼
+                 AI Chat Assistant
+                          │
+        ┌─────────────────┼─────────────────┐
+        │                 │                 │
+        ▼                 ▼                 ▼
+     OpenAI           Anthropic          Gemini
+
+
+        ┌─────────────────────────────────┐
+        │        AI Access Layer          │
+        └─────────────────────────────────┘
+
+              │             │
+      ┌───────┴───────┐     └──────────────┐
+      ▼               ▼                    ▼
+
+ Chat Widget      MCP Server             WebMCP
+      │               │                    │
+      ▼               ▼                    ▼
+  Customer       External AI Agent     Browser AI
+```
+
+In other words:
+
+```text
+Human → Chat → AI → EC-CUBE
+
+AI Agent → MCP → EC-CUBE
+
+Browser AI → WebMCP → EC-CUBE
+```
+
+These interaction models are provided within a single EC-CUBE plugin.
+
+---
+
+# Development
+
+Clone the repository:
+
+```bash
+git clone https://github.com/routeflags/ec-cube-ai-chat-assistant42.git
+cd ec-cube-ai-chat-assistant42
+```
+
+Install dependencies:
+
+```bash
+composer install
+```
+
+Run quality checks:
+
+```bash
+composer quality
+```
+
+For CI:
+
+```bash
+composer quality:ci
+```
+
+---
+
+# Project Structure
 
 ```text
 AiChatAssistant42/
 ├── Controller/
-│   ├── Admin/
-│   └── Api/
 ├── Entity/
+├── Event/
+├── Form/
 ├── Repository/
-├── Service/
-│   ├── AiAgent/
-│   ├── AiAgentFactory.php
-│   ├── AiModelRegistry.php
-│   ├── ChatLogger.php
-│   ├── McpServerService.php
-│   ├── NotificationService.php
-│   └── AccessRuleService.php
-├── EventListener/
-├── Command/
-├── DoctrineMigrations/
 ├── Resource/
-│   ├── config/
-│   ├── template/admin/
-│   ├── template/default/
-│   └── assets/
-├── Nav.php
+├── Service/
+├── Tests/
+├── Documents/
 ├── composer.json
-├── eccube-plugin.yaml
 └── README.md
 ```
 
 ---
 
-## MCPサーバー
+# Changelog
 
-商品データは MCP サーバーとして利用できます。**STDIO** と **Web MCP（Streamable HTTP）** の 2 transport に対応しています。
+For release history, bug fixes, security improvements, and newly added features, see:
 
-### Web MCP（Streamable HTTP）— 推奨
-
-`https://www.thch-vape.shop` で Web MCP として公開。Claude Desktop（`mcp-remote`）/ Cursor / VS Code から HTTP で接続できます。
-
-```bash
-# Discovery
-curl https://www.thch-vape.shop/.well-known/mcp.json | jq '.tools | length' # → 7
-
-# Streamable HTTP
-curl -X POST https://www.thch-vape.shop/mcp \
-  -H 'Content-Type: application/json' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{}}}'
-```
-
-| エンドポイント | メソッド | 説明 |
-|--------------|----------|------|
-| `GET /.well-known/mcp.json` | GET | Discovery。`transport: streamable-http` + 7 tools の inputSchema |
-| `GET /.well-known/mcp` | GET | 同上（alias） |
-| `POST /mcp` | POST | JSON-RPC 2.0（`initialize` / `tools/list` / `tools/call x7`） |
-| `OPTIONS /mcp` | OPTIONS | CORS preflight（`204 + ACAO: *`） |
-
-**7 tools:** `search_products` / `get_product_detail` / `get_stock` / `get_categories` / `get_category_products` / `get_tags` / `search_by_tag`（全て read-only、匿名 `ACAO: *`、RateLimit `120/min` / `get_stock 60/min`）
-
-Claude Desktop 設定例：
-
-```json
-{
-  "mcpServers": {
-    "thch-vape": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "https://www.thch-vape.shop/mcp"]
-    }
-  }
-}
-```
-
-E2E: `e2e/mcp.spec.ts` 33 tests（Playwright + `docker-compose.verify.yml`）で `E2E_BASE_URL=http://localhost:8085 npx playwright test` → `33 passed` を検証。
-
-### STDIO（ローカル）
-
-```bash
-php bin/console app:ai-chat-assistant
-```
-
-`.mcp.json`：
-
-```json
-{
-  "mcpServers": {
-    "ec-product": {
-      "command": "php",
-      "args": [
-        "bin/console",
-        "app:ai-chat-assistant"
-      ],
-      "cwd": "/path/to/ec-cube"
-    }
-  }
-}
-```
+[CHANGELOG](Documents/CHANGELOG.md)
 
 ---
 
-## Web MCP（Streamable HTTP）
+# Bug Reports & Feature Requests
 
-ブラウザや外部AIエージェント（Claude / ChatGPT / Cursorなど）から、HTTP経由で商品データを利用できます。コマンドの起動は不要で、URLを登録するだけです。
+Bug reports and feature requests are welcome through GitHub Issues:
 
-### エンドポイント
+https://github.com/routeflags/ec-cube-ai-chat-assistant42/issues
 
-| 用途 | メソッド | パス | 応答 |
-|---|---|---|---|
-| MCP通信 | POST | `/mcp` | `initialize` / `tools/list` / `tools/call` にJSON-RPCで応答 |
-| Discovery | GET | `/.well-known/mcp.json`（`/mcp` でも可） | サーバー情報＋ツール一覧 |
-| プリフライト | OPTIONS | `/mcp` | CORS `204` |
+When reporting a bug, please include the following information where possible:
 
-サーバー名は `ec-mcp`、プロトコルバージョンは `2024-11-05` です。
-
-### 利用できるツール（7件）
-
-| ツール名 | 内容 |
-|---|---|
-| `search_products` | 商品をキーワード・カテゴリ・価格帯で検索 |
-| `get_product_detail` | 商品IDから詳細（価格・説明・画像など）を取得 |
-| `get_stock` | 商品IDから在庫状況を取得 |
-| `get_categories` | カテゴリ一覧を取得 |
-| `get_category_products` | カテゴリIDから商品一覧を取得 |
-| `get_tags` | タグ一覧を取得 |
-| `search_by_tag` | タグから商品を検索 |
-
-在庫無制限の商品は在庫数を返さず `null` になります（実在庫を見せない配慮です）。
-
-### 使い方の例
-
-```bash
-# ツール一覧の取得
-curl -s -X POST https://example.com/mcp \
-  -H 'Content-Type: application/json' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
-
-# 商品検索の実行
-curl -s -X POST https://example.com/mcp \
-  -H 'Content-Type: application/json' \
-  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call",
-       "params":{"name":"search_products","arguments":{"keyword":"リキッド"}}}'
-```
-
-### 制限と注意
-
-* **レート制限**：IP＋ツール＋分単位で制限します（通常ツール120回/分、`get_stock` は60回/分）。超過時は `429` を返します
-* **CORS**：ブラウザからの直接呼び出し（WebMCP）に対応しています
-* **メソッド制限**：`GET /mcp` は `405`、JSON以外は `415` を返します
-* **監査ログ**：呼び出しは監査ログに記録されます（IPはハッシュ化）。詳しくは `ADMIN_MANUAL.md` の付録を参照してください
-
-具体的な利用フローは `USE_CASES.md` の UC-12、運用・セキュリティの詳細は `ADMIN_MANUAL.md` を参照してください。
+* EC-CUBE version
+* PHP version
+* Database
+* Plugin version
+* Steps to reproduce
+* Expected behavior
+* Actual behavior
+* Error logs, excluding sensitive information
 
 ---
 
-## AIモデルの追加
+# Contributing
 
-AIモデル一覧は、
+Issues, bug reports, documentation improvements, and pull requests are welcome.
+
+For substantial changes, please open an Issue to discuss the proposal before implementation.
+
+For pull requests, please consider:
+
+* Consistency with the existing code style
+* Adding or updating tests
+* Static analysis
+* Potential impact on existing functionality
+
+---
+
+# License
+
+This project is released under the **GPL-2.0-only** license.
+
+See the license file in this repository for details.
+
+---
+
+# Developed by
+
+**ROUTE FLAGS Co., Ltd.**
+
+GitHub:
+
+https://github.com/routeflags
+
+Website:
+
+https://blog.routeflags.com/
+
+---
+
+# AI × Commerce × MCP × WebMCP
+
+AI Chat Assistant is more than a chatbot added to an online store.
+
+By connecting EC-CUBE product data, store-specific knowledge, AI models, MCP, and WebMCP, the project brings together:
 
 ```text
-Resource/config/ai_models.json
+EC-CUBE
+   +
+Commerce Data
+   +
+AI
+   +
+MCP
+   +
+WebMCP
 ```
 
-で管理されています。
+in a single open-source plugin.
 
-管理画面からリモートJSON URLを設定することで、プラグイン本体を更新せずモデル情報を更新することもできます。
+The goal is to move beyond e-commerce where **humans ask AI about products**, toward commerce infrastructure where **AI agents themselves can discover products and interact with store capabilities**.
 
----
-
-## 詳細ドキュメント
-
-より詳しい管理画面の操作方法については、
-
-`ADMIN_MANUAL.md`
-
-を参照してください。
-
-具体的な利用フローや動作例については、
-
-`USE_CASES.md`
-
-を参照してください。
-
----
-
-## アンインストール
-
-```bash
-php bin/console eccube:plugin:uninstall --code=AiChatAssistant42
-```
-
----
-
-## License
-
-GPL-2.0-only License
-
+**Bringing EC-CUBE into the era of agentic commerce.**
