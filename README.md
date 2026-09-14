@@ -15,7 +15,7 @@ It supports OpenAI, Anthropic Claude, and Google Gemini, enabling AI-powered pro
 
 It also supports both **MCP (Model Context Protocol) and WebMCP**, allowing EC-CUBE capabilities to be exposed not only through the traditional chat interface, but also to external MCP clients, AI agents, and browser-based AI.
 
-[日本語 README](README.ja.md)
+[日本語 README](Documents/README.ja.md)
 
 ---
 
