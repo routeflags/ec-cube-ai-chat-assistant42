@@ -15,7 +15,7 @@ It supports OpenAI, Anthropic Claude, and Google Gemini, enabling AI-powered pro
 
 It also supports both **MCP (Model Context Protocol) and WebMCP**, allowing EC-CUBE capabilities to be exposed not only through the traditional chat interface, but also to external MCP clients, AI agents, and browser-based AI.
 
-[日本語 README](README.ja.md)
+[日本語 README](Documents/README.ja.md)
 
 ---
 
@@ -58,8 +58,6 @@ Rules, institutions, and systems that remain unchanged while the world around th
 Open-source development provides one useful model for addressing this problem: make systems visible, allow people to inspect them, propose changes, test alternatives, and continuously improve them.
 
 This idea also influences how we approach this project and our broader open-source work.
-
-[Read: **Technical Debt Exists in Society, Too**](https://www.thch-vape.shop/guide/column/git-log--oneline--all--society)
 
 ---
 
@@ -661,7 +659,7 @@ Run code quality checks with:
 composer quality
 ```
 
-For CI:
+To include metrics reporting (as used in CI pipelines):
 
 ```bash
 composer quality:ci
@@ -763,7 +761,7 @@ Run quality checks:
 composer quality
 ```
 
-For CI:
+To include metrics reporting (as used in CI pipelines):
 
 ```bash
 composer quality:ci
@@ -777,13 +775,18 @@ composer quality:ci
 AiChatAssistant42/
 ├── Controller/
 ├── Entity/
-├── Event/
-├── Form/
+├── EventListener/
+├── EventSubscriber/
 ├── Repository/
 ├── Resource/
 ├── Service/
+├── Command/
+├── DoctrineMigrations/
+├── Twig/
 ├── Tests/
 ├── Documents/
+├── e2e/
+├── bin/
 ├── composer.json
 └── README.md
 ```
