@@ -17,7 +17,7 @@ OpenAI、Anthropic Claude、Google Geminiに対応し、商品検索・商品比
 
 従来のチャットUIだけでなく、外部のMCPクライアントやAIエージェント、ブラウザ上のAIからEC-CUBEの機能を利用するための基盤としても利用できます。
 
-[English README](README.md)
+[English README](../README.md)
 
 ---
 
@@ -58,10 +58,6 @@ AIだけでは解決できない問い合わせについては、人によるサ
 私たちは、ソフトウェアだけでなく、長期間にわたり見直されず社会に積み重なった仕組みにも「技術的負債」と似た構造が存在すると考えています。
 
 OSSの開発、公開、改善、議論を通じて、技術を社会へ還元していくことを大切にしています。
-
-この考え方については以下のコラムで紹介しています。
-
-[社会にも、技術的負債がある。｜リキッド通販ショップ](https://www.thch-vape.shop/guide/column/git-log--oneline--all--society)
 
 ---
 
@@ -665,7 +661,7 @@ PHPコードでは以下の品質管理ツールを利用しています。
 composer quality
 ```
 
-CI向け：
+メトリクスレポートを含める場合（CIパイプラインでの利用を想定）：
 
 ```bash
 composer quality:ci
@@ -767,7 +763,7 @@ composer install
 composer quality
 ```
 
-CI向け：
+メトリクスレポートを含める場合（CIパイプラインでの利用を想定）：
 
 ```bash
 composer quality:ci
@@ -781,13 +777,18 @@ composer quality:ci
 AiChatAssistant42/
 ├── Controller/
 ├── Entity/
-├── Event/
-├── Form/
+├── EventListener/
+├── EventSubscriber/
 ├── Repository/
 ├── Resource/
 ├── Service/
+├── Command/
+├── DoctrineMigrations/
+├── Twig/
 ├── Tests/
 ├── Documents/
+├── e2e/
+├── bin/
 ├── composer.json
 └── README.md
 ```
@@ -798,7 +799,7 @@ AiChatAssistant42/
 
 リリースごとの追加機能、修正、セキュリティ変更については、
 
-[CHANGELOG](Documents/CHANGELOG.md)
+[CHANGELOG](CHANGELOG.md)
 
 を参照してください。
 
