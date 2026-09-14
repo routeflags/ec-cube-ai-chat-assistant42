@@ -33,6 +33,7 @@ final class ProductToolDefinition
             'name' => 'search_products',
             'description' => '商品をキーワードとカテゴリで検索します。'
                 . '商品名・検索ワード・商品コードが対象です。'
+                . '返却される価格は税抜価格です（EC-CUBE の price02 は税抜保存）。'
                 . '返却される各商品の url はショップの商品詳細ページの絶対URLです。'
                 . '相対パスや https://www.example.com は使用しないでください。',
             'input_schema' => [
@@ -49,6 +50,7 @@ final class ProductToolDefinition
             'type' => 'function',
             'name' => 'get_product_detail',
             'description' => '商品の詳細情報を取得します。規格・在庫・カテゴリ・画像・タグを含みます。'
+                . '返却される価格は税抜価格です（EC-CUBE の price02 は税抜保存）。'
                 . '返却される url はショップの商品詳細ページの絶対URLです。'
                 . '相対パスや https://www.example.com は使用しないでください。',
             'input_schema' => [
@@ -62,7 +64,10 @@ final class ProductToolDefinition
         [
             'type' => 'function',
             'name' => 'get_stock',
-            'description' => '商品の規格ごとの在庫情報を取得します。返却される在庫情報と紐づく商品URLはショップの商品詳細ページの絶対URLで案内してください。相対パスや https://www.example.com は使用しないでください。',
+            'description' => '商品の規格ごとの在庫情報を取得します。'
+                . '返却される価格は税抜価格です（EC-CUBE の price02 は税抜保存）。'
+                . '返却される在庫情報と紐づく商品URLはショップの商品詳細ページの絶対URLで案内してください。'
+                . '相対パスや https://www.example.com は使用しないでください。',
             'input_schema' => [
                 'type' => 'object',
                 'properties' => [

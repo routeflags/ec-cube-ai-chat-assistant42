@@ -1,0 +1,106 @@
+services:
+  eccube-sqlite:
+    image: php:8.1-apache-bookworm
+    ports:
+      - "8088:80"
+    volumes:
+      - ./sqlite:/var/www/html
+      - dbs_var_sqlite:/var/www/html/var
+      - dbs_vendor_sqlite:/var/www/html/vendor
+    environment:
+      APP_ENV: "dev"
+      APP_DEBUG: 1
+      DATABASE_URL: "sqlite:///var/eccube.db"
+      DATABASE_SERVER_VERSION: 3
+      ECCUBE_AUTH_MAGIC: "verify-magic"
+      ECCUBE_ADMIN_ROUTE: "admin"
+    command: >
+      bash -c "
+      apt-get update -o Acquire::Check-Valid-Until=false && apt-get install -y libicu-dev libzip-dev libpng-dev libjpeg-dev libfreetype6-dev libonig-dev libsqlite3-dev libpq-dev unzip sqlite3 &&
+      docker-php-ext-configure gd --with-freetype --with-jpeg &&
+      docker-php-ext-install -j$$(nproc) zip gd intl pdo pdo_sqlite pdo_mysql pdo_pgsql opcache &&
+      a2enmod rewrite &&
+      echo 'ServerName localhost' >> /etc/apache2/apache2.conf &&
+      apache2-foreground
+      "
+
+  eccube-mysql:
+    image: php:8.1-apache-bookworm
+    ports:
+      - "8089:80"
+    volumes:
+      - ./mysql:/var/www/html
+      - dbs_var_mysql:/var/www/html/var
+      - dbs_vendor_mysql:/var/www/html/vendor
+    environment:
+      APP_ENV: "dev"
+      APP_DEBUG: 1
+      DATABASE_URL: "mysql://eccube:eccube@mysql:3306/eccube?serverVersion=8.0"
+      ECCUBE_AUTH_MAGIC: "verify-magic"
+      ECCUBE_ADMIN_ROUTE: "admin"
+    depends_on:
+      - mysql
+    command: >
+      bash -c "
+      apt-get update -o Acquire::Check-Valid-Until=false && apt-get install -y libicu-dev libzip-dev libpng-dev libjpeg-dev libfreetype6-dev libonig-dev libsqlite3-dev libpq-dev unzip sqlite3 &&
+      docker-php-ext-configure gd --with-freetype --with-jpeg &&
+      docker-php-ext-install -j$$(nproc) zip gd intl pdo pdo_sqlite pdo_mysql pdo_pgsql opcache &&
+      a2enmod rewrite &&
+      echo 'ServerName localhost' >> /etc/apache2/apache2.conf &&
+      apache2-foreground
+      "
+
+  eccube-pg:
+    image: php:8.1-apache-bookworm
+    ports:
+      - "8090:80"
+    volumes:
+      - ./pg:/var/www/html
+      - dbs_var_pg:/var/www/html/var
+      - dbs_vendor_pg:/var/www/html/vendor
+    environment:
+      APP_ENV: "dev"
+      APP_DEBUG: 1
+      DATABASE_URL: "pgsql://eccube:eccube@postgres:5432/eccube?serverVersion=15"
+      ECCUBE_AUTH_MAGIC: "verify-magic"
+      ECCUBE_ADMIN_ROUTE: "admin"
+    depends_on:
+      - postgres
+    command: >
+      bash -c "
+      apt-get update -o Acquire::Check-Valid-Until=false && apt-get install -y libicu-dev libzip-dev libpng-dev libjpeg-dev libfreetype6-dev libonig-dev libsqlite3-dev libpq-dev unzip sqlite3 &&
+      docker-php-ext-configure gd --with-freetype --with-jpeg &&
+      docker-php-ext-install -j$$(nproc) zip gd intl pdo pdo_sqlite pdo_mysql pdo_pgsql opcache &&
+      a2enmod rewrite &&
+      echo 'ServerName localhost' >> /etc/apache2/apache2.conf &&
+      apache2-foreground
+      "
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: eccube
+      MYSQL_USER: eccube
+      MYSQL_PASSWORD: eccube
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - dbs_mysql_data:/var/lib/mysql
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: eccube
+      POSTGRES_USER: eccube
+      POSTGRES_PASSWORD: eccube
+    volumes:
+      - dbs_pg_data:/var/lib/postgresql/data
+
+volumes:
+  dbs_var_sqlite:
+  dbs_vendor_sqlite:
+  dbs_var_mysql:
+  dbs_vendor_mysql:
+  dbs_var_pg:
+  dbs_vendor_pg:
+  dbs_mysql_data:
+  dbs_pg_data:

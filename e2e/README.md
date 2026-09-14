@@ -62,8 +62,8 @@ e2e は 4.2 の 8080 のみで実行し 4.3 は手動で代替。
 # 2. 起動 + インストール + enable
 PLUGIN_DIR="$(pwd)"  # このプラグインの root
 TMPDIR=/tmp/eccube-verify-4.2
-cp docker-compose.verify.yml "$TMPDIR/docker-compose.verify.yml"
-cp .env.verify "$TMPDIR/.env"
+cp Tests/Docker/docker-compose.verify.yml "$TMPDIR/docker-compose.verify.yml"
+cp Tests/Docker/.env.verify "$TMPDIR/.env"
 (
   cd "$TMPDIR"
   PHP_IMAGE=php:8.1-apache-bullseye PLUGIN_DIR="$PLUGIN_DIR" ECCUBE_PORT=8080 \
@@ -122,7 +122,7 @@ e2e は Docker 上でのみ実行する explicit な `npm run test:e2e` に分�
 ローカルで `code-server` が `8080` を占有している環境では、`ECCUBE_PORT` を `8085` 等にずらして起動する。e2e の `E2E_BASE_URL` も合わせる。
 
 ```bash
-ECCUBE_PORT=8085 PLUGIN_DIR="$(pwd)" docker compose -f docker-compose.verify.yml up -d --build
+ECCUBE_PORT=8085 PLUGIN_DIR="$(pwd)" docker compose -f Tests/Docker/docker-compose.verify.yml up -d --build
 E2E_BASE_URL=http://localhost:8085 npx playwright test --config=playwright.config.ts --reporter=list
 # → 33 passed
 ```

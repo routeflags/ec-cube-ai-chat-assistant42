@@ -301,6 +301,45 @@ class ChatFlowServiceTest extends TestCase
     }
 
     // ================================================================
+    //  buildSystemPrompt — ページコンテキストブロック
+    // ================================================================
+
+    public function testBuildSystemPromptAppendsPageContextBlock(): void
+    {
+        $config = new Config();
+        $config->setSystemPrompt('ベース');
+        $config->setResponseMode('hybrid');
+
+        $conn = $this->createMock(Connection::class);
+        $conn->method('fetchAllAssociative')->willReturn([]);
+
+        $service = new ChatFlowService($this->createEntityManagerWithConnection($conn));
+        $prompt = $service->buildSystemPrompt($config, "\n\n## 閲覧中ページ\n- URL: /products/detail/5");
+
+        $this->assertStringContainsString('ベース', $prompt);
+        $this->assertStringContainsString('## 閲覧中ページ', $prompt);
+        $this->assertStringContainsString('/products/detail/5', $prompt);
+    }
+
+    public function testBuildSystemPromptWithoutPageContextBlockIsUnchanged(): void
+    {
+        $config = new Config();
+        $config->setSystemPrompt('ベース');
+        $config->setResponseMode('hybrid');
+
+        $conn = $this->createMock(Connection::class);
+        $conn->method('fetchAllAssociative')->willReturn([]);
+
+        $service = new ChatFlowService($this->createEntityManagerWithConnection($conn));
+
+        $this->assertSame(
+            $service->buildSystemPrompt($config),
+            $service->buildSystemPrompt($config, ''),
+            '空ブロックは従来のプロンプトと同一であること'
+        );
+    }
+
+    // ================================================================
     //  DB例外時は空文字を返し、システムプロンプトはベースで継続
     // ================================================================
 

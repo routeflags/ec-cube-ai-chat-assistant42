@@ -30,6 +30,7 @@ use Plugin\AiChatAssistant42\Service\ChatLogger;
 use Plugin\AiChatAssistant42\Service\EmailHashService;
 use Plugin\AiChatAssistant42\Service\EmailReplyService;
 use Plugin\AiChatAssistant42\Service\NotificationService;
+use Plugin\AiChatAssistant42\Service\PageContextService;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -67,6 +68,7 @@ class ChatApiController extends AbstractController
         private LoggerInterface $logger,
         private ?ChatLogRepository $chatLogRepository = null,
         private ?EmailHashService $emailHashService = null,
+        private ?PageContextService $pageContextService = null,
     ) {
         $this->entityManager = $entityManager;
     }
@@ -82,12 +84,23 @@ class ChatApiController extends AbstractController
         return $repo;
     }
 
+    private function getPageContextService(): PageContextService
+    {
+        if ($this->pageContextService !== null) {
+            return $this->pageContextService;
+        }
+
+        return new PageContextService();
+    }
+
     /**
      * チャットメッセージを処理し、AI 応答を返す。
      *
      * リクエストボディ (JSON):
      *   - message: string (必須) — ユーザー入力メッセージ
      *   - session_id: string (オプション) — クライアント生成のセッション ID
+     *   - page_context: object (オプション) — 初回送信時の閲覧ページ情報
+     *     {url?: string, title?: string, product_id?: int}
      *
      * @return JsonResponse
      */
@@ -101,6 +114,7 @@ class ChatApiController extends AbstractController
 
         $userMessage = $parsed['message'];
         $sessionId = $parsed['session_id'];
+        $pageContext = $parsed['page_context'];
 
         // 2. 設定を取得し、有効かチェック
         $config = $this->configRepository->get();
@@ -168,13 +182,16 @@ class ChatApiController extends AbstractController
         }
 
         // 7. チャットを実行して結果を返す（ナレッジをシステムプロンプトに統合）
-        return $this->executeChatSession($userMessage, $sessionId, $config, $apiKey);
+        return $this->executeChatSession($userMessage, $sessionId, $config, $apiKey, $pageContext);
     }
 
     /**
      * チャットリクエストを解析し、バリデーションを行う。
      *
-     * @return array{message: string, session_id: string}|JsonResponse
+     * page_context は任意。不正な形式でも 400 にはせず無視する
+     * （旧ウィジェットとの互換性のため）。
+     *
+     * @return array{message: string, session_id: string, page_context: array|null}|JsonResponse
      *         成功時は配列、バリデーション失敗時は JsonResponse
      */
     private function parseChatRequest(Request $request): array|JsonResponse
@@ -198,6 +215,7 @@ class ChatApiController extends AbstractController
         return [
             'message' => $message,
             'session_id' => $this->normalizeSessionId($data['session_id'] ?? null),
+            'page_context' => $this->getPageContextService()->parse($data['page_context'] ?? null),
         ];
     }
 
@@ -344,18 +362,30 @@ class ChatApiController extends AbstractController
 
     /**
      * チャットセッションを実行し、結果をログ記録して返す。
+     *
+     * @param array{url?: string, title?: string, product_id?: int}|null $pageContext
      */
     private function executeChatSession(
         string $userMessage,
         string $sessionId,
         \Plugin\AiChatAssistant42\Entity\Config $config,
-        string $apiKey
+        string $apiKey,
+        ?array $pageContext = null
     ): JsonResponse {
         $startTime = microtime(true);
 
         try {
+            // 同じセッションの過去の会話を取得し、AI に渡す
+            $history = $this->chatLogger->fetchSessionHistory($sessionId);
+
+            // 初回ターン（履歴なし）のみページコンテキストを注入する
+            $pageContextBlock = '';
+            if ($pageContext !== null && $history === []) {
+                $pageContextBlock = $this->resolvePageContextBlock($pageContext);
+            }
+
             // buildSystemPrompt 内の DB例外も捕捉するため try 内で生成する
-            $systemPrompt = $this->chatFlowService->buildSystemPrompt($config);
+            $systemPrompt = $this->chatFlowService->buildSystemPrompt($config, $pageContextBlock);
             $agent = $this->aiAgentFactory->create(
                 $config->getProvider(),
                 $apiKey,
@@ -363,9 +393,6 @@ class ChatApiController extends AbstractController
                 $config->getMaxTokens(),
                 $systemPrompt,
             );
-
-            // 同じセッションの過去の会話を取得し、AI に渡す
-            $history = $this->chatLogger->fetchSessionHistory($sessionId);
 
             $tools = $this->productRepository->getToolDefinitions();
             $toolExecutor = fn (string $name, array $args): array => $this->productRepository->executeTool($name, $args);
@@ -391,6 +418,30 @@ class ChatApiController extends AbstractController
                 'error' => 'AI 応答の生成中にエラーが発生しました。',
             ], 500);
         }
+    }
+
+    /**
+     * ページコンテキストの商品情報を解決し、プロンプト用ブロックを返す。
+     *
+     * 商品取得に失敗してもチャット全体は止めず、
+     * 商品なしのブロックにフォールバックする。
+     *
+     * @param array{url?: string, title?: string, product_id?: int} $pageContext
+     */
+    private function resolvePageContextBlock(array $pageContext): string
+    {
+        $product = null;
+        if (isset($pageContext['product_id'])) {
+            try {
+                $product = $this->productRepository->getDetail($pageContext['product_id']);
+            } catch (\Throwable $e) {
+                $this->logger->warning(
+                    'Page context product lookup failed: ' . $this->redactedMessage($e->getMessage())
+                );
+            }
+        }
+
+        return $this->getPageContextService()->buildBlock($pageContext, $product);
     }
 
     /**

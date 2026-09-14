@@ -107,8 +107,8 @@ run_one_version() {
 
   # 2. compose 定義と env を配置
   echo "[${ver} 2/7] docker-compose.verify.yml / .env.verify を配置"
-  cp "$PLUGIN_DIR/docker-compose.verify.yml" "$tmpdir/docker-compose.verify.yml"
-  cp "$PLUGIN_DIR/.env.verify" "$tmpdir/.env"
+  cp "$PLUGIN_DIR/Tests/Docker/docker-compose.verify.yml" "$tmpdir/docker-compose.verify.yml"
+  cp "$PLUGIN_DIR/Tests/Docker/.env.verify" "$tmpdir/.env"
   # .env は compose の env_file ではなく EC-CUBE 本体用。compose 側は environment 直書きのため不要だが一応配置
 
   # 3. 起動

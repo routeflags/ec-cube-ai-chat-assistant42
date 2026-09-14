@@ -7,13 +7,13 @@ import { test, expect, request } from '@playwright/test';
  * - 設計の 8タスク (T-01..T-08) を 10シナリオでカバー。
  * - 既存の McpHttpController / McpHttpService / RateLimitService を再実装せず HTTP 経由で検証。
  * - EC-CUBE 4.2 制約 (routes.yaml 手書き) を壊さず、Unit/Integration と seam を分離。
- * - EC-CUBE 本体が無いプラグイン単体リポジトリでは docker-compose.verify.yml で
- *   EC-CUBE 本体を立ち上げてから実行する。E2E_BASE_URL が無い場合は graceful skip。
- *
- * 実行:
- *   E2E_BASE_URL=http://localhost:8080 npx playwright test --config=playwright.config.ts --reporter=list
- *   # docker:
- *   #   docker compose -f docker-compose.verify.yml up -d --build
+  * - EC-CUBE 本体が無いプラグイン単体リポジトリでは Tests/Docker/docker-compose.verify.yml で
+  *   EC-CUBE 本体を立ち上げてから実行する。E2E_BASE_URL が無い場合は graceful skip.
+  *
+  * 実行:
+  *   E2E_BASE_URL=http://localhost:8080 npx playwright test --config=playwright.config.ts --reporter=list
+  *   # docker:
+  *   #   docker compose -f Tests/Docker/docker-compose.verify.yml up -d --build
  *   #   bin/console eccube:install --no-interaction; bin/console cache:clear
  *   #   E2E_BASE_URL=http://localhost:8080 npm run test:e2e
  */

@@ -4,6 +4,7 @@
 # 起動・停止する。SQLite はファイルのみでサービス不要。
 #
 #   make db-up              # MySQL + PostgreSQL を起動
+#   make db-wait            # 起動後の疎通待ち（test-matrixの前に必須）
 #   make db-down            # MySQL + PostgreSQL を停止
 #   make db-status          # サービスと疎通の確認
 #   make test-matrix        # 1コード×3DBのマトリクステスト
@@ -11,7 +12,9 @@
 #   make test-unit           # 既存の高速suite（DB不要）
 #   make verify             # verify-plugin.sh（5 checks）
 #   make package            # Store提出用tarballを作成（PACKAGE_OUTで上書き可）
+#   make dbs-fetch          # 検証用EC-CUBE実体が無い場合のみ取得（git clone -b 4.2 --depth 1 ×3。dbs/{sqlite,mysql,pg}/ はgit管理外）
 #   make dbs-up             # 検証用DB別環境（sqlite/mysql/pg）を起動
+#   make dbs-wait           # 起動時プロビジョニング完了待ち（up直後に必須）
 #   make dbs-down           # 検証用DB別環境を停止（データ保持）
 #   make dbs-status         # 検証用DB別環境の疎通確認
 #   make dbs-install        # 検証用DB別環境の初回構築（composer＋install＋権限）
@@ -24,17 +27,31 @@ PG_SVC ?= postgresql@18
 PHPUNIT ?= php vendor/bin/phpunit
 PACKAGE_OUT ?= AiChatAssistant42-verify.tar.gz
 
-# 検証用DB別環境（.github/skills/docker-verify-env/SKILL.md 参照）
-DBS_DIR ?= /tmp/eccube-verify-dbs
+# 検証用DB別環境（Tests/Docker/dbs 配下に永続化。/tmp は再起動で消えるため使用しない）
+DBS_DIR ?= Tests/Docker/dbs
 DBS_COMPOSE ?= docker-compose.dbs.yml
 DBS_PROJECT ?= eccube-verify-dbs
 DBS_SERVICES ?= eccube-sqlite eccube-mysql eccube-pg
 
-.PHONY: db-up db-down db-status test-matrix test-matrix-chaos test-unit verify package dbs-up dbs-down dbs-status dbs-install ship bump tag
+.PHONY: db-up db-wait db-down db-status test-matrix test-matrix-chaos test-unit verify package dbs-fetch dbs-up dbs-wait dbs-down dbs-status dbs-install ship bump tag
 
 db-up:
 	brew services start $(MYSQL_SVC)
 	brew services start $(PG_SVC)
+
+# brew services start は即時復帰するため、疎通できるまで待つ。
+# 無しに test-matrix を走らせると接続拒否で全DB skip になる。
+db-wait:
+	for i in $$(seq 1 30); do \
+	  mysqladmin -uroot ping 2>/dev/null | grep -q "mysqld is alive" && break; \
+	  sleep 2; \
+	done
+	mysqladmin -uroot ping 2>&1 | head -c 120; echo
+	for i in $$(seq 1 30); do \
+	  pg_isready 2>/dev/null | grep -q "accepting connections" && break; \
+	  sleep 2; \
+	done
+	pg_isready || true
 
 db-down:
 	brew services stop $(MYSQL_SVC)
@@ -45,10 +62,10 @@ db-status:
 	mysqladmin -uroot status 2>&1 | head -c 120; echo
 	pg_isready || true
 
-test-matrix: db-up
+test-matrix: db-up db-wait
 	$(PHPUNIT) Tests/Matrix
 
-test-matrix-chaos: db-up
+test-matrix-chaos: db-up db-wait
 	MATRIX_CHAOS=1 $(PHPUNIT) Tests/Matrix
 
 test-unit:
@@ -60,8 +77,29 @@ verify:
 package:
 	./bin/package.sh --output $(PACKAGE_OUT)
 
+dbs-fetch:
+	for d in sqlite mysql pg; do \
+	  if [ -d "$(DBS_DIR)/$$d" ]; then echo "$$d exists, skip"; \
+	  else git clone -b 4.2 --depth 1 https://github.com/EC-CUBE/ec-cube.git $(DBS_DIR)/$$d; fi; \
+	done
+
 dbs-up:
 	docker compose -p $(DBS_PROJECT) -f $(DBS_DIR)/$(DBS_COMPOSE) up -d
+
+# 起動時プロビジョニング（apt+PHP拡張ビルド、数分）の完了待ち。
+# up直後の dbs-install は ext-intl/ext-zip 不足で失敗するため、必ず経由する。
+# 各サービス最大10分ポーリングする。
+dbs-wait:
+	for s in $(DBS_SERVICES); do \
+	  echo "waiting for $$s extensions..."; \
+	  for i in $$(seq 1 60); do \
+	    if docker compose -p $(DBS_PROJECT) -f $(DBS_DIR)/$(DBS_COMPOSE) exec -T $$s php -m 2>/dev/null | grep -qE "^intl$$" \
+	    && docker compose -p $(DBS_PROJECT) -f $(DBS_DIR)/$(DBS_COMPOSE) exec -T $$s php -m 2>/dev/null | grep -qE "^zip$$"; then \
+	      echo "$$s ready"; break; \
+	    fi; \
+	    sleep 10; \
+	  done; \
+	done
 
 dbs-down:
 	docker compose -p $(DBS_PROJECT) -f $(DBS_DIR)/$(DBS_COMPOSE) down
@@ -76,10 +114,10 @@ dbs-install:
 	    "php -r \"copy('https://getcomposer.org/installer', '/tmp/composer-setup.php');\" && php /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer --quiet" || exit 1; \
 	  docker compose -p $(DBS_PROJECT) -f $(DBS_DIR)/$(DBS_COMPOSE) exec -T $$s bash -c \
 	    "cd /var/www/html && COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --no-progress" || exit 1; \
-	  docker compose -p $(DBS_PROJECT) -f $(DBS_DIR)/$(DBS_COMPOSE) exec -T $$s \
-	    php bin/console eccube:install --no-interaction || exit 1; \
-	  docker compose -p $(DBS_PROJECT) -f $(DBS_DIR)/$(DBS_COMPOSE) exec -T $$s \
-	    bash -c "chown -R www-data var/ vendor/" || exit 1; \
+  docker compose -p $(DBS_PROJECT) -f $(DBS_DIR)/$(DBS_COMPOSE) exec -T $$s \
+    php bin/console eccube:install --no-interaction || exit 1; \
+  docker compose -p $(DBS_PROJECT) -f $(DBS_DIR)/$(DBS_COMPOSE) exec -T $$s \
+    bash -c "chown -R www-data var/ vendor/ app/Plugin/" || exit 1; \
 	done
 
 ship: verify test-unit test-matrix package

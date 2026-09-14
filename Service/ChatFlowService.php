@@ -278,8 +278,10 @@ class ChatFlowService
      * response_mode が 'knowledge_only' の場合、ナレッジにない質問には
      * 「該当情報がございません」と返し、管理者への連絡を促す。
      * ヘルプ・ガイド・ニュースのコンテキストも常時付与する。
+     *
+     * @param string $pageContextBlock PageContextService::buildBlock() の戻り値（空文字なら追記しない）
      */
-    public function buildSystemPrompt(Config $config): string
+    public function buildSystemPrompt(Config $config, string $pageContextBlock = ''): string
     {
         $basePrompt = $config->getSystemPrompt() ?? '';
         if (empty($basePrompt)) {
@@ -320,6 +322,11 @@ class ChatFlowService
             // コンテキストが空でも knowledge_only モードなら制限を維持
             $combinedContext .= "\n\n現在ナレッジが登録されていません。"
                 . "申し訳ございません。該当する情報がございません。メールにてお問い合わせください。";
+        }
+
+        // 初回送信時のページコンテキスト（閲覧中ページ・商品情報）を追記
+        if ($pageContextBlock !== '') {
+            $combinedContext .= $pageContextBlock;
         }
 
         return $basePrompt . $combinedContext;
