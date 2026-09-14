@@ -59,6 +59,8 @@ Open-source development provides one useful model for addressing this problem: m
 
 This idea also influences how we approach this project and our broader open-source work.
 
+[Read: **Technical Debt Exists in Society, Too**](https://www.thch-vape.shop/guide/column/git-log--oneline--all--society)
+
 ---
 
 # Key Features
