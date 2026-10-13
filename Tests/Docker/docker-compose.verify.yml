@@ -30,6 +30,7 @@ services:
       apt-get update && apt-get install -y libicu-dev libzip-dev libpng-dev libjpeg-dev libfreetype6-dev libonig-dev libsqlite3-dev git unzip sqlite3 &&
       docker-php-ext-configure gd --with-freetype --with-jpeg &&
       docker-php-ext-install -j$$(nproc) zip gd intl pdo pdo_sqlite opcache &&
+      echo 'memory_limit=512M' > /usr/local/etc/php/conf.d/zz-memory-limit.ini &&
       a2enmod rewrite &&
       echo 'ServerName localhost' >> /etc/apache2/apache2.conf &&
       apache2-foreground

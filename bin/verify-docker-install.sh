@@ -34,7 +34,7 @@ while [[ $# -gt 0 ]]; do
       echo "Usage: $0 [--version 4.2|4.3|4.4|both|all] [--keep] [--quick]"
       echo "  4.2  -> EC-CUBE 4.2 + php:8.1-apache-bullseye + port 8080 (code AiChatAssistant42)"
       echo "  4.3  -> EC-CUBE 4.3 + php:8.2-apache-bullseye + port 8081 (code AiChatAssistant42)"
-      echo "  4.4  -> EC-CUBE 4.4 + php:8.3-apache-bullseye + port 8082 (code AiChatAssistant44)"
+      echo "  4.4  -> EC-CUBE 4.4 + php:8.3-apache-bookworm + port 8082 (code AiChatAssistant44)"
       echo "  both -> 4.2 + 4.3 (既存互換。4.4は含まない)"
       echo "  all  -> 4.2 + 4.3 + 4.4"
       exit 0
@@ -95,7 +95,7 @@ run_one_version() {
   case "$ver" in
     4.2) php_image="php:8.1-apache-bullseye"; eccube_branch="4.2"; port="8080"; plugin_code="${PLUGIN_CODE:-AiChatAssistant42}"; plugin_mount="${PLUGIN_MOUNT:-AiChatAssistant42}" ;;
     4.3) php_image="php:8.2-apache-bullseye"; eccube_branch="4.3"; port="8081"; plugin_code="${PLUGIN_CODE:-AiChatAssistant42}"; plugin_mount="${PLUGIN_MOUNT:-AiChatAssistant42}" ;;
-    4.4) php_image="${PHP_IMAGE_44:-php:8.3-apache-bullseye}"; eccube_branch="${ECCUBE_BRANCH_44:-4.4}"; port="8082"; plugin_code="${PLUGIN_CODE:-AiChatAssistant44}"; plugin_mount="${PLUGIN_MOUNT:-AiChatAssistant44}" ;;
+    4.4) php_image="${PHP_IMAGE_44:-php:8.3-apache-bookworm}"; eccube_branch="${ECCUBE_BRANCH_44:-4.4}"; port="8082"; plugin_code="${PLUGIN_CODE:-AiChatAssistant44}"; plugin_mount="${PLUGIN_MOUNT:-AiChatAssistant44}" ;;
     *) echo "[ERROR] unsupported version: $ver" >&2; exit 1 ;;
   esac
 
@@ -138,20 +138,30 @@ run_one_version() {
   (
     cd "$tmpdir"
     PHP_IMAGE="$php_image" PLUGIN_DIR="$PLUGIN_DIR" PLUGIN_MOUNT="$plugin_mount" ECCUBE_PORT="$port" docker compose -f docker-compose.verify.yml up -d --build
-    echo "  -> waiting for eccube container..."
-    for i in $(seq 1 30); do
-      if docker compose -f docker-compose.verify.yml exec -T eccube php -v > /dev/null 2>&1; then
+    echo "  -> waiting for eccube container (provisioning: apt + PHP extensions + memory.ini)..."
+    for i in $(seq 1 120); do
+      if docker compose -f docker-compose.verify.yml exec -T eccube test -f /usr/local/etc/php/conf.d/zz-memory-limit.ini 2>/dev/null \
+      && docker compose -f docker-compose.verify.yml exec -T eccube php -m 2>/dev/null | grep -qE "^intl$" \
+      && docker compose -f docker-compose.verify.yml exec -T eccube php -m 2>/dev/null | grep -qE "^zip$"; then
         echo "  -> eccube ready (try $i)"
         break
       fi
-      sleep 2
-      if [[ $i -eq 30 ]]; then
-        echo "[ERROR] eccube container not ready" >&2
+      sleep 10
+      if [[ $i -eq 120 ]]; then
+        echo "[ERROR] eccube container not ready (extensions missing)" >&2
         docker compose -f docker-compose.verify.yml logs --tail 50 eccube || true
         exit 1
       fi
     done
   )
+
+  # 3b. composer install (EC-CUBE 本体の vendor が無いと bin/console が動かない。
+  #     Makefile dbs-install と同等。post-install の cache:clear もここで走る)
+  echo "[${ver} 3b] composer install (EC-CUBE本体 vendor)"
+  docker compose -f "$tmpdir/docker-compose.verify.yml" exec -T eccube bash -c \
+    "command -v composer >/dev/null || { php -r \"copy('https://getcomposer.org/installer', '/tmp/composer-setup.php');\" && php /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer --quiet; }" || exit 1
+  docker compose -f "$tmpdir/docker-compose.verify.yml" exec -T eccube bash -c \
+    "cd /var/www/html && COMPOSER_ALLOW_SUPERUSER=1 composer install --no-interaction --no-progress" || exit 1
 
   # 4. EC-CUBE install
   echo "[${ver} 4/7] eccube:install --no-interaction"
@@ -160,6 +170,10 @@ run_one_version() {
     docker compose -f "$tmpdir/docker-compose.verify.yml" exec -T eccube php bin/console doctrine:database:create --if-not-exists || true
     docker compose -f "$tmpdir/docker-compose.verify.yml" exec -T eccube php bin/console doctrine:migrations:migrate --no-interaction || true
   }
+
+  # 4b. 権限補正 (console=root 実行で作られた var/ を www-data へ。apache 500 防止)
+  echo "[${ver} 4b] chown -R www-data var/"
+  docker compose -f "$tmpdir/docker-compose.verify.yml" exec -T eccube bash -c "chown -R www-data var/" || exit 1
 
   # 5. plugin install / enable — 審査再現の核心
   echo "[${ver} 5/7] eccube:plugin:install --code=${plugin_code} (審査再現)"
