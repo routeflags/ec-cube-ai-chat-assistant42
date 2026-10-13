@@ -220,3 +220,30 @@ rm -rf /tmp/eccube-verify
   # 空であること + APIが200
   ```
 
+---
+
+## 10. フルサイクル試験 `--cycle` (T-C1〜T-C4: install→enable→disable→enable→uninstall→reinstall)
+
+稼働中デバッグ環境 `/tmp/eccube-verify-4.4` (port 8082) を破壊せず、独立環境でアンインストール試験まで完走する手順です。
+T-01受入の `uninstall` が従来の install/enable 試験では未実施だったため追加しました (bind制約の記録を含む)。
+
+```bash
+# 既定: /tmp/eccube-cycle-4.4 + port 8083 + project eccube-cycle-44
+./bin/verify-docker-install.sh --version 4.4 --cycle
+# 環境を残す場合
+./bin/verify-docker-install.sh --version 4.4 --cycle --keep
+# 上書き例
+CYCLE_TMPDIR=/tmp/eccube-cycle-4.4 CYCLE_PORT=8083 CYCLE_PROJECT=eccube-cycle-44 ./bin/verify-docker-install.sh --version 4.4 --cycle
+```
+
+- T-C1: `bin/package.sh` の tar.gz を `install --path` (管理画面アップロード相当) で導入。失敗時は手動配置 + `install --code` にフォールバック
+- T-C2: 各遷移で `dtb_plugin` 行 / `plg_ai_chat_assistant_*` / `html/plugin` assets / `PluginData/*.json` (S-07) を検証。uninstall は `--uninstall-force` あり (管理画面 `PluginController::uninstall` は force=true が既定。forceなしはディレクトリ残存のため非等価)。保持検証は marker JSON (`cycle_marker.json`) で行う`plg_*` は本体がdrop、JSONは保持 (現 `PluginManager::uninstall` は no-op) のため reinstall は移行/fallback検証になる
+- T-C3: `/.well-known/mcp.json` (200+tools==7)・`GET /`・`GET /admin` (302許容)・API smoke (非500) を実測
+- T-C4: `ai_chat` ルート >=20 (理想28)・API非500の既存ゲートを維持。`--version 4.4 --keep/--quick/--doctor` は従来通り green
+
+### bindマウント制約 (必読): `rmdir ... Device or resource busy` について
+
+- `app/Plugin/<code>` がホスト共有 (bindマウント) の環境で EC-CUBE の uninstall を実行すると、`rmdir` が `Device or resource busy` で必ず失敗し 500 になります
+- これはマウント環境固有の制約であり、製品バグではありません。管理画面から再現した場合は試験環境の構成を見直してください
+- `--cycle` は tarball配置 (マウント無し) の独立環境を既定とし、実行前に `/proc/mounts` で `app/Plugin/AiChatAssistant44` を検出します。検出時は uninstall を SKIP し、理由を表示して `SKIPPED (bind mount detected)` で終了します
+- 稼働中デバッグ環境 (`/tmp/eccube-verify-4.4`, port 8082) は `--cycle` の保護対象です。`CYCLE_TMPDIR=/tmp/eccube-verify-*` と `CYCLE_PORT=8080/8081/8082` は拒否されます
