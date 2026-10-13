@@ -683,6 +683,12 @@ CYCLE_YML
     exit 1
   fi
 
+  echo "[cycle 7f] HTML検証ゲート C4 (bin/lint-html.sh: void-style再発防止。静的チェック・docker不要)"
+  if ! "$PLUGIN_DIR/bin/lint-html.sh"; then
+    echo "[ERROR] HTML検証ゲート (C4) が失敗しました" >&2
+    exit 1
+  fi
+
   # --- T-C2 続き: uninstall → reinstall ---
   # 管理画面 (Admin Store PluginController::uninstall) は pluginService->uninstall($Plugin) = force=true。
   # forceなし (console既定) はディレクトリ残存のため管理画面と非等価。サイクル試験は --uninstall-force を使用する。

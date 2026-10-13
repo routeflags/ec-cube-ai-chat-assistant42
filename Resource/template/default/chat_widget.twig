@@ -78,7 +78,7 @@
                autocomplete="off"
                maxlength="500"
                aria-required="true"
-               data-mcp-field="ai-chat.message" />
+               data-mcp-field="ai-chat.message">
         <button type="submit" class="chat-form__send" aria-label="送信" data-mcp-field="ai-chat.submit">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="22" y1="2" x2="11" y2="13"/>
@@ -175,7 +175,7 @@
                required
                autocomplete="email"
                aria-required="true"
-               data-mcp-field="ai-chat-email.email" />
+               data-mcp-field="ai-chat-email.email">
         <div id="chat-email-error" class="chat-email-modal__error" role="alert" style="display:none;"></div>
         <div class="chat-email-modal__buttons">
           <button type="submit" class="chat-email-modal__submit" data-mcp-field="ai-chat-email.submit">送信</button>
@@ -186,8 +186,6 @@
   </div>
 </div>
 
-{# WebMCP discovery: exposes the MCP endpoint to browser agents (RFC 8288 link-tag style) #}
-<link rel="mcp" href="/mcp">
 {# アセット読込: dev(app.debug)は可読版、prodはmin版。min版は npm run build:assets の生成物 #}
 {% set chat_widget_css = app.debug ? 'AiChatAssistant44/assets/css/chat-widget.css' : 'AiChatAssistant44/assets/css/chat-widget.min.css' %}
 {% set chat_widget_js = app.debug ? 'AiChatAssistant44/assets/js/chat-widget.js' : 'AiChatAssistant44/assets/js/chat-widget.min.js' %}

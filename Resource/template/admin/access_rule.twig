@@ -29,7 +29,7 @@
                 </div>
                 <div class="card-body">
                     <form method="post" action="{{ url('admin_ai_chat_assistant_access_create') }}">
-                        <input type="hidden" name="_token" value="{{ csrf_token(constant('Eccube\\Common\\Constant::TOKEN_NAME')) }}" />
+                        <input type="hidden" name="_token" value="{{ csrf_token(constant('Eccube\\Common\\Constant::TOKEN_NAME')) }}">
 
                         <div class="row mb-3">
                             <label class="col-sm-3 col-form-label">
@@ -65,7 +65,7 @@
                             </label>
                             <div class="col-sm-9">
                                 <input type="text" name="rule_value" class="form-control" required
-                                       placeholder="IPアドレスまたはキーワードを入力" />
+                                       placeholder="IPアドレスまたはキーワードを入力">
                             </div>
                         </div>
 
@@ -73,13 +73,13 @@
                             <label class="col-sm-3 col-form-label">適用アクション</label>
                             <div class="col-sm-9">
                                 <div class="btn-group" role="group">
-                                    <input type="radio" class="btn-check" name="action" value="deny" id="action_deny" checked />
+                                    <input type="radio" class="btn-check" name="action" value="deny" id="action_deny" checked>
                                     <label class="btn btn-outline-danger" for="action_deny">拒否 (Deny)</label>
 
-                                    <input type="radio" class="btn-check" name="action" value="throttle" id="action_throttle" />
+                                    <input type="radio" class="btn-check" name="action" value="throttle" id="action_throttle">
                                     <label class="btn btn-outline-warning" for="action_throttle">スロットリング (Throttle)</label>
 
-                                    <input type="radio" class="btn-check" name="action" value="allow" id="action_allow" />
+                                    <input type="radio" class="btn-check" name="action" value="allow" id="action_allow">
                                     <label class="btn btn-outline-success" for="action_allow">許可 (Allow)</label>
                                 </div>
                             </div>
@@ -148,7 +148,7 @@
                                         <td class="align-middle">
                                             <form method="post" action="{{ url('admin_ai_chat_assistant_access_delete', { id: rule.id }) }}" style="display: inline;"
                                                   onsubmit="return confirm('このアクセスルールを削除してもよろしいですか？');">
-                                                <input type="hidden" name="_token" value="{{ csrf_token(constant('Eccube\\Common\\Constant::TOKEN_NAME')) }}" />
+                                                <input type="hidden" name="_token" value="{{ csrf_token(constant('Eccube\\Common\\Constant::TOKEN_NAME')) }}">
                                                 <button type="submit" class="btn btn-sm btn-outline-ec-delete">削除</button>
                                             </form>
                                         </td>

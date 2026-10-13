@@ -131,7 +131,7 @@
 
                     {# ページネーション #}
                     {% if last_page > 1 %}
-                    <nav>
+                    <nav aria-label="pagination">
                         <ul class="pagination mb-0 justify-content-center">
                             {% for p in 1..last_page %}
                                 <li class="page-item {% if p == page %}active{% endif %}">
