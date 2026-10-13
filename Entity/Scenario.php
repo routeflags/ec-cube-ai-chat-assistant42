@@ -13,8 +13,9 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Entity;
+namespace Plugin\AiChatAssistant44\Entity;
 
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -22,63 +23,47 @@ use Doctrine\ORM\Mapping as ORM;
  *
  * ユーザー入力にキーワードがマッチした場合、
  * AI 呼び出しなしで定型応答を返す。
- *
- * @ORM\Entity
- * @ORM\Table(name="plg_ai_chat_assistant_scenario")
  */
+#[ORM\Entity]
+#[ORM\Table(name: 'plg_ai_chat_assistant_scenario')]
 class Scenario extends \Eccube\Entity\AbstractEntity
 {
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(type="integer", options={"unsigned":true})
-     */
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(type: Types::INTEGER, options: ['unsigned' => true])]
     private ?int $id = null;
 
-    /**
-     * @ORM\Column(type="string", length=128)
-     */
+    #[ORM\Column(type: Types::STRING, length: 128)]
     private string $trigger_keyword;
 
     /**
      * exact: 完全一致, contains: 部分一致, regex: 正規表現
-     *
-     * @ORM\Column(type="string", length=32, options={"default":"exact"})
      */
+    #[ORM\Column(type: Types::STRING, length: 32, options: ['default' => 'exact'])]
     private string $trigger_type = 'exact';
 
-    /**
-     * @ORM\Column(type="text")
-     */
+    #[ORM\Column(type: Types::TEXT)]
     private string $response_text;
 
     /**
      * text: テキスト, product_list: 商品一覧, url: URL リダイレクト
-     *
-     * @ORM\Column(type="string", length=32, options={"default":"text"})
      */
+    #[ORM\Column(type: Types::STRING, length: 32, options: ['default' => 'text'])]
     private string $response_type = 'text';
 
     /**
      * 数値が大きいほど優先的にマッチする。
-     *
-     * @ORM\Column(type="integer", options={"default":0})
      */
+    #[ORM\Column(type: Types::INTEGER, options: ['default' => 0])]
     private int $priority = 0;
 
-    /**
-     * @ORM\Column(type="smallint", options={"default":1})
-     */
+    #[ORM\Column(type: Types::SMALLINT, options: ['default' => 1])]
     private int $is_active = 1;
 
-    /**
-     * @ORM\Column(type="datetimetz")
-     */
+    #[ORM\Column(type: Types::DATETIMETZ_MUTABLE)]
     private ?\DateTimeInterface $create_date = null;
 
-    /**
-     * @ORM\Column(type="datetimetz")
-     */
+    #[ORM\Column(type: Types::DATETIMETZ_MUTABLE)]
     private ?\DateTimeInterface $update_date = null;
 
     public function getId(): ?int

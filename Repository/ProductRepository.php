@@ -13,17 +13,17 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Repository;
+namespace Plugin\AiChatAssistant44\Repository;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Eccube\Repository\AbstractRepository;
-use Plugin\AiChatAssistant42\Service\ProductToolDefinition;
-use Plugin\AiChatAssistant42\Service\ProductToolExecutor;
-use Plugin\AiChatAssistant42\Service\ShopContextService;
-use Plugin\AiChatAssistant42\Service\TwigPlainTextExtractor;
+use Plugin\AiChatAssistant44\Service\ProductToolDefinition;
+use Plugin\AiChatAssistant44\Service\ProductToolExecutor;
+use Plugin\AiChatAssistant44\Service\ShopContextService;
+use Plugin\AiChatAssistant44\Service\TwigPlainTextExtractor;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -83,7 +83,7 @@ class ProductRepository extends AbstractRepository
                 {
                     // $id を検証して監査ログに残す（フォールバックでは id=1 のみが正規）
                     if ($id !== 1) {
-                        $this->fallbackLogger->debug(sprintf('[AiChatAssistant42] Fallback BaseInfoRepository::get unexpected id=%s', (string) $id));
+                        $this->fallbackLogger->debug(sprintf('[AiChatAssistant44] Fallback BaseInfoRepository::get unexpected id=%s', (string) $id));
                     }
 
                     return new class {
@@ -128,7 +128,7 @@ class ProductRepository extends AbstractRepository
                     // パラメータを例外メッセージに含め、デバッグ時の原因特定を容易にする
                     $paramJson = json_encode($parameters, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                     $this->fallbackLogger->debug(sprintf(
-                        '[AiChatAssistant42] Fallback UrlGenerator::generate route=%s params=%s referenceType=%d',
+                        '[AiChatAssistant44] Fallback UrlGenerator::generate route=%s params=%s referenceType=%d',
                         $name,
                         $paramJson !== false ? $paramJson : '[]',
                         $referenceType

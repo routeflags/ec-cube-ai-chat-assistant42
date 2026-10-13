@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Unit\Service;
+namespace Plugin\AiChatAssistant44\Tests\Unit\Service;
 
 use PHPUnit\Framework\TestCase;
-use Plugin\AiChatAssistant42\Service\ApiKeyEncryptor;
+use Plugin\AiChatAssistant44\Service\ApiKeyEncryptor;
 
 class ApiKeyEncryptorTest extends TestCase
 {

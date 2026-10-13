@@ -3,8 +3,9 @@ import { defineConfig } from '@playwright/test';
 /**
  * Playwright config for Web MCP E2E (true HTTP e2e).
  *
-  * - Base URL is Tests/Docker/docker-compose.verify.yml の eccube:80 -> host 8080 (4.2) / 8081 (4.3).
- *   E2E_BASE_URL で上書き可能。未設定時は 8080 を既定とするが、CI では必ず 8080 を明示すること。
+  * - Base URL is Tests/Docker/docker-compose.verify.yml の eccube:80 -> host 8080 (4.2) / 8081 (4.3) / 8082 (4.4).
+ *   E2E_BASE_URL で上書き可能。未設定時は 8080 を既定とするが、CI では必ず明示すること。
+ *   4.4 検証時は E2E_BASE_URL=http://localhost:8082 npx playwright test (V-04, e2e/mcp.spec.ts 33 tests が green であること)。
  *   ローカルで EC-CUBE が無い場合は graceful skip (mcp.spec.ts 側で test.skip)。
  * - webServer は持たない。docker compose up で EC-CUBE を起動してから test:e2e を叩く運用。
  * - 既存の bun 前提は bash/playwright に置換。

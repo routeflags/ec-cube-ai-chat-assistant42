@@ -13,11 +13,11 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Service;
+namespace Plugin\AiChatAssistant44\Service;
 
-use Plugin\AiChatAssistant42\Service\AiAgent\AnthropicAgent;
-use Plugin\AiChatAssistant42\Service\AiAgent\GeminiAgent;
-use Plugin\AiChatAssistant42\Service\AiAgent\OpenAiAgent;
+use Plugin\AiChatAssistant44\Service\AiAgent\AnthropicAgent;
+use Plugin\AiChatAssistant44\Service\AiAgent\GeminiAgent;
+use Plugin\AiChatAssistant44\Service\AiAgent\OpenAiAgent;
 use Psr\Log\LoggerInterface;
 use InvalidArgumentException;
 

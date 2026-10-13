@@ -13,9 +13,9 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Service;
+namespace Plugin\AiChatAssistant44\Service;
 
-use Plugin\AiChatAssistant42\Repository\AccessRuleRepository;
+use Plugin\AiChatAssistant44\Repository\AccessRuleRepository;
 use Psr\Log\LoggerInterface;
 
 /**

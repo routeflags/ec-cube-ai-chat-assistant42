@@ -13,7 +13,7 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Service;
+namespace Plugin\AiChatAssistant44\Service;
 
 use Psr\Log\LoggerInterface;
 use RuntimeException;
@@ -58,7 +58,7 @@ class AiModelRegistry
      *
      * 優先度:
      *  1. $primary（PluginData/ai_models.json — リモート同期の正本）
-     *  2. $projectDir/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json（EC-CUBE 本体配置）
+     *  2. $projectDir/app/Plugin/AiChatAssistant44/Resource/config/ai_models.json（EC-CUBE 本体配置）
      *  3. プラグイン直下 Resource/config/ai_models.json（単体実行・テスト）
      *
      * 見つからなければ $primary を返し、呼び出し元の loadAndValidateConfig で
@@ -90,7 +90,9 @@ class AiModelRegistry
 
         $candidates = array_filter([
             $primary,
-            $projectDir !== '' ? $projectDir . '/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json' : null,
+            // S-07: 旧code (AiChatAssistant42) の PluginData をフォールバック参照 (消失禁止)
+            $projectDir !== '' ? $projectDir . '/app/PluginData/AiChatAssistant42/ai_models.json' : null,
+            $projectDir !== '' ? $projectDir . '/app/Plugin/AiChatAssistant44/Resource/config/ai_models.json' : null,
             // EC-CUBE ルート直下の Resource（プラグイン単体リポジトリのレイアウト）
             $projectDir !== '' ? $projectDir . '/Resource/config/ai_models.json' : null,
             // プラグイン内部の相対パス（Service の兄弟ディレクトリ）

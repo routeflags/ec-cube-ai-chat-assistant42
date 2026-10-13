@@ -1,5 +1,5 @@
 /**
- * AiChatAssistant42 — Chat Widget
+ * AiChatAssistant44 — Chat Widget
  *
  * Vanilla JS (IIFE) — no jQuery dependency.
  * Posts to POST /api/ai-chat-assistant/chat

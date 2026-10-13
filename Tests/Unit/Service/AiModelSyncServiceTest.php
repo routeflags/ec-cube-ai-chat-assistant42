@@ -13,12 +13,12 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Unit\Service;
+namespace Plugin\AiChatAssistant44\Tests\Unit\Service;
 
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
-use Plugin\AiChatAssistant42\Service\AiModelSyncService;
+use Plugin\AiChatAssistant44\Service\AiModelSyncService;
 use Psr\Log\NullLogger;
 use Psr\Log\Test\TestLogger;
 

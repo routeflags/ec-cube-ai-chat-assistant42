@@ -13,11 +13,11 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Unit\Controller\Admin;
+namespace Plugin\AiChatAssistant44\Tests\Unit\Controller\Admin;
 
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use Plugin\AiChatAssistant42\Controller\Admin\DesignController;
+use Plugin\AiChatAssistant44\Controller\Admin\DesignController;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;

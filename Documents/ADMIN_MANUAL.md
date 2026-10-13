@@ -1,6 +1,6 @@
 # AI チャットアシスタント — 管理者向けマニュアル
 
-EC-CUBE 4.2 プラグイン「AiChatAssistant42」の管理画面操作マニュアルです。
+EC-CUBE 4.2 プラグイン「AiChatAssistant44」の管理画面操作マニュアルです。
 
 ---
 
@@ -123,7 +123,7 @@ AI チャットの基本設定を行います。
 #### ログ
 
 - 外部通信は `monolog`（`var/log/*.log`）に `日時・リクエスト元・IP` を含めて記録します（ガイドライン §2-3 ログ徹底）
-- 失敗時は `warning` / 成功時は `info` レベルで `[AiChatAssistant42]` プレフィクス付きで記録
+- 失敗時は `warning` / 成功時は `info` レベルで `[AiChatAssistant44]` プレフィクス付きで記録
 
 ### システムプロンプトの書き方例
 
@@ -406,7 +406,7 @@ A: ブラウザのキャッシュをクリアしてから、フロントペー�
 
 - `plg_ai_chat_assistant_log.email_reply_address` にメールアドレスを保存します（メール返信依頼機能のため）。
 - **保持期間:** 返信対応後 **30日** を目安に削除することを推奨します。
-- **削除方法:** 管理画面 `チャット履歴` の削除、または `bin/console doctrine:query:dql "DELETE FROM Plugin\AiChatAssistant42\Entity\ChatLog l WHERE l.email_replied_at < :d" --set-d="2026-08-03"` 等で一括削除できます。
+- **削除方法:** 管理画面 `チャット履歴` の削除、または `bin/console doctrine:query:dql "DELETE FROM Plugin\AiChatAssistant44\Entity\ChatLog l WHERE l.email_replied_at < :d" --set-d="2026-08-03"` 等で一括削除できます。
 - ログ出力時はメールアドレスをマスク（`a***@example.com`）して記録し、平文は出力しません。
 - 上記以外の個人情報（氏名・住所・電話番号等）は本プラグインのDBに保存しません（ガイドライン §2-3 個人情報の保持制限 準拠）。
 
@@ -427,6 +427,6 @@ A: ブラウザのキャッシュをクリアしてから、フロントペー�
 |----------------------|-----------------------------------|------|------|
 | `Resource/assets/js/chat-widget.js` | `html/template/default/assets/...` または `public/...` 配下 | フロントチャットウィジェット JS | 必要最小限の複製 |
 | `Resource/assets/css/chat-widget.css` | 同上 `css/chat-widget.css` | ウィジェット用 CSS | 同上 |
-| （その他） | — | — | `app/PluginData/AiChatAssistant42/*.json` は公開側に置かず非公開領域に保存 |
+| （その他） | — | — | `app/PluginData/AiChatAssistant44/*.json` は公開側に置かず非公開領域に保存 |
 
-> 上記以外は `app/Plugin/AiChatAssistant42/` 配下に展開され、公開ディレクトリには複製されません（ガイドライン「むやみに公開側にファイルを設置せず」準拠）。
+> 上記以外は `app/Plugin/AiChatAssistant44/` 配下に展開され、公開ディレクトリには複製されません（ガイドライン「むやみに公開側にファイルを設置せず」準拠）。

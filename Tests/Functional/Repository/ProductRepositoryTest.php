@@ -13,7 +13,7 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Functional\Repository;
+namespace Plugin\AiChatAssistant44\Tests\Functional\Repository;
 
 use Eccube\Tests\Web\AbstractWebTestCase;
 
@@ -26,7 +26,7 @@ use Eccube\Tests\Web\AbstractWebTestCase;
  */
 class ProductRepositoryTest extends AbstractWebTestCase
 {
-    /** @var \Plugin\AiChatAssistant42\Repository\ProductRepository */
+    /** @var \Plugin\AiChatAssistant44\Repository\ProductRepository */
     private $productRepository;
 
     protected function setUp(): void
@@ -34,7 +34,7 @@ class ProductRepositoryTest extends AbstractWebTestCase
         parent::setUp();
 
         $this->productRepository = $this->getContainer()->get(
-            \Plugin\AiChatAssistant42\Repository\ProductRepository::class
+            \Plugin\AiChatAssistant44\Repository\ProductRepository::class
         );
     }
 

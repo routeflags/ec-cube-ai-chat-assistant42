@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Functional\Controller\Admin;
+namespace Plugin\AiChatAssistant44\Tests\Functional\Controller\Admin;
 
 use PHPUnit\Framework\TestCase;
 
@@ -16,7 +16,7 @@ use PHPUnit\Framework\TestCase;
 class CsrfFunctionalTest extends TestCase
 {
     private const TEMPLATE_DIR = __DIR__ . '/../../../../Resource/template/admin';
-    private const TEMPLATE_DIR_FALLBACK = __DIR__ . '/../../../../../../../app/Plugin/AiChatAssistant42/Resource/template/admin';
+    private const TEMPLATE_DIR_FALLBACK = __DIR__ . '/../../../../../../../app/Plugin/AiChatAssistant44/Resource/template/admin';
 
     /**
      * 全管理画面 Twig が正しい CSRF トークンIDを使用していることを検証。
@@ -116,7 +116,7 @@ class CsrfFunctionalTest extends TestCase
         $errors = [];
         foreach ($controllers as $file => $route) {
             $base = __DIR__ . '/../../../../Controller/Admin/' . $file;
-            $path = is_file($base) ? $base : __DIR__ . '/../../../../../../../app/Plugin/AiChatAssistant42/Controller/Admin/' . $file;
+            $path = is_file($base) ? $base : __DIR__ . '/../../../../../../../app/Plugin/AiChatAssistant44/Controller/Admin/' . $file;
             $content = file_get_contents($path);
             $hasTryCatch = strpos($content, 'try {') !== false
                 && strpos($content, 'isTokenValid()') !== false
@@ -136,7 +136,7 @@ class CsrfFunctionalTest extends TestCase
     {
         foreach (['KnowledgeController.php', 'ScenarioController.php'] as $file) {
             $base = __DIR__ . '/../../../../Controller/Admin/' . $file;
-            $path = is_file($base) ? $base : __DIR__ . '/../../../../../../../app/Plugin/AiChatAssistant42/Controller/Admin/' . $file;
+            $path = is_file($base) ? $base : __DIR__ . '/../../../../../../../app/Plugin/AiChatAssistant44/Controller/Admin/' . $file;
             $content = file_get_contents($path);
             $this->assertStringContainsString(
                 'isCsrfTokenValid',

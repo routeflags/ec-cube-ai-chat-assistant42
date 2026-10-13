@@ -13,8 +13,9 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Entity;
+namespace Plugin\AiChatAssistant44\Entity;
 
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -22,52 +23,35 @@ use Doctrine\ORM\Mapping as ORM;
  *
  * 管理画面で登録された FAQ や商品知識を保存し、
  * チャット時の応答生成に利用する。
- *
- * @ORM\Entity
- * @ORM\Table(name="plg_ai_chat_assistant_knowledge")
  */
+#[ORM\Entity]
+#[ORM\Table(name: 'plg_ai_chat_assistant_knowledge')]
 class Knowledge extends \Eccube\Entity\AbstractEntity
 {
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(type="integer", options={"unsigned":true})
-     */
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(type: Types::INTEGER, options: ['unsigned' => true])]
     private ?int $id = null;
 
-    /**
-     * @ORM\Column(type="string", length=255)
-     */
+    #[ORM\Column(type: Types::STRING, length: 255)]
     private string $title;
 
-    /**
-     * @ORM\Column(type="text")
-     */
+    #[ORM\Column(type: Types::TEXT)]
     private string $content;
 
-    /**
-     * @ORM\Column(type="string", length=64, nullable=true)
-     */
+    #[ORM\Column(type: Types::STRING, length: 64, nullable: true)]
     private ?string $category = null;
 
-    /**
-     * @ORM\Column(type="smallint", options={"default":1})
-     */
+    #[ORM\Column(type: Types::SMALLINT, options: ['default' => 1])]
     private int $is_active = 1;
 
-    /**
-     * @ORM\Column(type="integer", options={"default":0})
-     */
+    #[ORM\Column(type: Types::INTEGER, options: ['default' => 0])]
     private int $display_order = 0;
 
-    /**
-     * @ORM\Column(type="datetimetz")
-     */
+    #[ORM\Column(type: Types::DATETIMETZ_MUTABLE)]
     private ?\DateTimeInterface $create_date = null;
 
-    /**
-     * @ORM\Column(type="datetimetz")
-     */
+    #[ORM\Column(type: Types::DATETIMETZ_MUTABLE)]
     private ?\DateTimeInterface $update_date = null;
 
     public function getId(): ?int

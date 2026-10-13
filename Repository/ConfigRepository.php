@@ -13,11 +13,11 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Repository;
+namespace Plugin\AiChatAssistant44\Repository;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
-use Plugin\AiChatAssistant42\Entity\Config;
+use Plugin\AiChatAssistant44\Entity\Config;
 use Eccube\Repository\AbstractRepository;
 
 /**

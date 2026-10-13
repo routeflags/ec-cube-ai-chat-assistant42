@@ -13,10 +13,10 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Unit\Service;
+namespace Plugin\AiChatAssistant44\Tests\Unit\Service;
 
 use PHPUnit\Framework\TestCase;
-use Plugin\AiChatAssistant42\Service\PageContextService;
+use Plugin\AiChatAssistant44\Service\PageContextService;
 
 /**
  * PageContextService の単体テスト。

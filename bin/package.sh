@@ -1,10 +1,10 @@
 #!/bin/bash
-# AiChatAssistant42 パッケージングスクリプト
+# AiChatAssistant44 パッケージングスクリプト
 # EC-CUBE プラグイン規約に準拠した tar.gz を生成します。
 # vendor/ は含めず、利用側で composer install または EC-CUBE 管理画面が解決します。
 #
 # Usage:
-#   ./bin/package.sh              # AiChatAssistant42-1.0.0.tar.gz を生成
+#   ./bin/package.sh              # AiChatAssistant44-1.0.0.tar.gz を生成
 #   ./bin/package.sh --output /tmp/out.tar.gz
 set -euo pipefail
 
@@ -22,7 +22,7 @@ fi
 if [[ -z "$VERSION" ]]; then
     VERSION="$(php -r 'echo json_decode(json_encode(yaml_parse_file("eccube-plugin.yaml")), true)["version"] ?? "1.0.0";' 2>/dev/null || echo "1.0.0")"
 fi
-ARCHIVE="AiChatAssistant42-${VERSION}.tar.gz"
+ARCHIVE="AiChatAssistant44-${VERSION}.tar.gz"
 
 # 出力先の上書きに対応
 OUTPUT="${ARCHIVE}"
@@ -92,7 +92,7 @@ if [[ ${#missing[@]} -ne 0 ]]; then
     exit 1
 fi
 
-echo "=== AiChatAssistant42 packaging ==="
+echo "=== AiChatAssistant44 packaging ==="
 echo "Version : ${VERSION}"
 echo "Output  : ${OUTPUT}"
 echo "Source  : ${PLUGIN_DIR}"
@@ -100,7 +100,7 @@ echo ""
 
 echo "[1/2] Creating archive..."
 # EC-CUBE オーナーズストア規約: アーカイブ直下に composer.json を置く（prefix なし）
-# 手動設置時は mkdir -p app/Plugin/AiChatAssistant42 && tar -xzf -C app/Plugin/AiChatAssistant42 で展開する
+# 手動設置時は mkdir -p app/Plugin/AiChatAssistant44 && tar -xzf -C app/Plugin/AiChatAssistant44 で展開する
 # GNU/BSD tar の --transform 非互換を避けるため staging 方式を採用
 STAGE="$(mktemp -d)"
 # shellcheck disable=SC2064
@@ -199,6 +199,6 @@ fi
 echo "  -> OK (excluded files not present, required files present)"
 echo ""
 echo "=== Packaging succeeded: ${OUTPUT} ==="
-echo "Install (manual): mkdir -p /path/to/ec-cube/app/Plugin/AiChatAssistant42 && tar -xzf ${OUTPUT} -C /path/to/ec-cube/app/Plugin/AiChatAssistant42"
-echo "         bin/console eccube:plugin:install --code=AiChatAssistant42"
+echo "Install (manual): mkdir -p /path/to/ec-cube/app/Plugin/AiChatAssistant44 && tar -xzf ${OUTPUT} -C /path/to/ec-cube/app/Plugin/AiChatAssistant44"
+echo "         bin/console eccube:plugin:install --code=AiChatAssistant44"
 echo "Install (store): upload ${OUTPUT} via admin Store > Plugin install"

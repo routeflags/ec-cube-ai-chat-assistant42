@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ruleset name="AiChatAssistant42"
+<ruleset name="AiChatAssistant44"
          xmlns="http://pmd.sf.net/ruleset/1.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://pmd.sf.net/ruleset/1.0.0 http://pmd.sf.net/ruleset_xml_schema.xsd"
          xsi:noNamespaceSchemaLocation="http://pmd.sf.net/ruleset_xml_schema.xsd">
 
     <description>
-        EC-CUBE plugin AiChatAssistant42 PHPMD ruleset —
+        EC-CUBE plugin AiChatAssistant44 PHPMD ruleset —
         商品リポジトリ / チャットAPI / MCP向けの
         cleancode / codesize / design 検証
     </description>

@@ -13,7 +13,7 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\EventSubscriber;
+namespace Plugin\AiChatAssistant44\EventSubscriber;
 
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\Session\Flash\FlashBagInterface;
@@ -50,6 +50,7 @@ class PluginEnableFlashSubscriber implements EventSubscriberInterface
     ) {
     }
 
+    #[\Override]
     public static function getSubscribedEvents(): array
     {
         return [
@@ -177,15 +178,10 @@ class PluginEnableFlashSubscriber implements EventSubscriberInterface
     }
 
     /**
-     * Symfony 5.4 互換: isMainRequest / isMasterRequest の両対応.
+     * EC-CUBE 4.4 (Symfony 7.4): isMainRequest のみ。isMasterRequest は削除済み。
      */
     private function isMainRequest(ResponseEvent $event): bool
     {
-        if (method_exists($event, 'isMainRequest')) {
-            return $event->isMainRequest();
-        }
-
-        // @phpstan-ignore-next-line Symfony 5.3 以前のフォールバック
-        return $event->isMasterRequest();
+        return $event->isMainRequest();
     }
 }

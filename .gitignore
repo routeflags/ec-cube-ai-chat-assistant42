@@ -8,6 +8,7 @@
 /vendor
 /.phpunit.result.cache
 /AiChatAssistant42-*
+/AiChatAssistant44-*
 /.phpcs-cache
 /composer.lock
 /playwright-report

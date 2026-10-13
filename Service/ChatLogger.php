@@ -13,11 +13,11 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Service;
+namespace Plugin\AiChatAssistant44\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
-use Plugin\AiChatAssistant42\Entity\ChatLog;
-use Plugin\AiChatAssistant42\Repository\ChatLogRepository;
+use Plugin\AiChatAssistant44\Entity\ChatLog;
+use Plugin\AiChatAssistant44\Repository\ChatLogRepository;
 use DateTimeImmutable;
 
 /**

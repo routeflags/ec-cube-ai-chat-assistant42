@@ -13,7 +13,7 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Service;
+namespace Plugin\AiChatAssistant44\Service;
 
 use LogicException;
 
@@ -21,7 +21,7 @@ use LogicException;
  * ai_models.json のリモート同期を担うサービス。
  *
  * - 取得元: https://routeflags.com/dist/ec_chat/ai_models.json (REMOTE_URL)
- * - 保存先: app/PluginData/AiChatAssistant42/ai_models.json (永続領域)
+ * - 保存先: app/PluginData/AiChatAssistant44/ai_models.json (永続領域)
  * - 同期間隔: TTL 86400秒、排他や原子書き込みは基底に集約
  * - 検証: providers/cost_tier/boolean/文字数上限/重複id を厳格に検証
  * - 永続化: 全文置換 + 1世代バックアップ
@@ -31,9 +31,9 @@ use LogicException;
 class AiModelSyncService extends AbstractPluginDataSyncService
 {
     public const REMOTE_URL = 'https://routeflags.com/dist/ec_chat/ai_models.json';
-    public const PLUGIN_DATA_PATH = '/app/PluginData/AiChatAssistant42/ai_models.json';
-    public const META_PATH = '/app/PluginData/AiChatAssistant42/.ai_models.meta.json';
-    public const LOCK_PATH = '/app/PluginData/AiChatAssistant42/.ai_models.sync.lock';
+    public const PLUGIN_DATA_PATH = '/app/PluginData/AiChatAssistant44/ai_models.json';
+    public const META_PATH = '/app/PluginData/AiChatAssistant44/.ai_models.meta.json';
+    public const LOCK_PATH = '/app/PluginData/AiChatAssistant44/.ai_models.sync.lock';
 
     private const ALLOWED_PROVIDERS = ['openai', 'anthropic', 'gemini'];
     private const ALLOWED_COST_TIERS = ['low', 'medium', 'high'];

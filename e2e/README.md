@@ -71,8 +71,8 @@ cp Tests/Docker/.env.verify "$TMPDIR/.env"
   # 起動待ち
   for i in $(seq 1 30); do docker compose -f docker-compose.verify.yml exec -T eccube php -v >/dev/null 2>&1 && break; sleep 2; done
   docker compose -f docker-compose.verify.yml exec -T eccube php bin/console eccube:install --no-interaction
-  docker compose -f docker-compose.verify.yml exec -T eccube php bin/console eccube:plugin:install --code=AiChatAssistant42
-  docker compose -f docker-compose.verify.yml exec -T eccube php bin/console eccube:plugin:enable  --code=AiChatAssistant42
+  docker compose -f docker-compose.verify.yml exec -T eccube php bin/console eccube:plugin:install --code=AiChatAssistant44
+  docker compose -f docker-compose.verify.yml exec -T eccube php bin/console eccube:plugin:enable  --code=AiChatAssistant44
   docker compose -f docker-compose.verify.yml exec -T eccube php bin/console cache:clear --no-warmup
   docker compose -f docker-compose.verify.yml exec -T eccube php bin/console cache:warmup
 )

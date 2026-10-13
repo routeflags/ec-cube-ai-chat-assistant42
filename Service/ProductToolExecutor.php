@@ -13,10 +13,10 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Service;
+namespace Plugin\AiChatAssistant44\Service;
 
 use InvalidArgumentException;
-use Plugin\AiChatAssistant42\Repository\ProductRepository;
+use Plugin\AiChatAssistant44\Repository\ProductRepository;
 
 /**
  * AI ツール実行の Facade。

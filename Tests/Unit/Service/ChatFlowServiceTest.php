@@ -13,15 +13,15 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Unit\Service;
+namespace Plugin\AiChatAssistant44\Tests\Unit\Service;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
-use Plugin\AiChatAssistant42\Entity\Config;
-use Plugin\AiChatAssistant42\Service\ChatFlowService;
-use Plugin\AiChatAssistant42\Service\ShopContextService;
-use Plugin\AiChatAssistant42\Service\TwigPlainTextExtractor;
+use Plugin\AiChatAssistant44\Entity\Config;
+use Plugin\AiChatAssistant44\Service\ChatFlowService;
+use Plugin\AiChatAssistant44\Service\ShopContextService;
+use Plugin\AiChatAssistant44\Service\TwigPlainTextExtractor;
 use Psr\Log\LoggerInterface;
 
 /**

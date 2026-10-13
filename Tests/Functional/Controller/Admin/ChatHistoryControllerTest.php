@@ -13,13 +13,13 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Functional\Controller\Admin;
+namespace Plugin\AiChatAssistant44\Tests\Functional\Controller\Admin;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\ORM\AbstractQuery;
-use Plugin\AiChatAssistant42\Controller\Admin\ChatHistoryController;
-use Plugin\AiChatAssistant42\Entity\ChatLog;
+use Plugin\AiChatAssistant44\Controller\Admin\ChatHistoryController;
+use Plugin\AiChatAssistant44\Entity\ChatLog;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -125,7 +125,7 @@ class ChatHistoryControllerTest extends TestCase
         }
 
         // ChatLogRepository mock for countAll (リポジトリ移譲後)
-        $chatLogRepo = $this->createMock(\Plugin\AiChatAssistant42\Repository\ChatLogRepository::class);
+        $chatLogRepo = $this->createMock(\Plugin\AiChatAssistant44\Repository\ChatLogRepository::class);
         if ($expectRemove) {
             $chatLogRepo->method('countAll')->willReturn($totalAfterDelete);
         }

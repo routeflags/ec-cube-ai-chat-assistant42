@@ -13,11 +13,11 @@ declare(strict_types=1);
  * file that was distributed with this source code.
  */
 
-namespace Plugin\AiChatAssistant42\Tests\Unit\Service;
+namespace Plugin\AiChatAssistant44\Tests\Unit\Service;
 
 use PHPUnit\Framework\TestCase;
-use Plugin\AiChatAssistant42\Service\RateLimitExceededException;
-use Plugin\AiChatAssistant42\Service\RateLimitService;
+use Plugin\AiChatAssistant44\Service\RateLimitExceededException;
+use Plugin\AiChatAssistant44\Service\RateLimitService;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 

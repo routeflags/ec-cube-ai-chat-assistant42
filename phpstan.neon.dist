@@ -30,14 +30,14 @@ parameters:
 
     ignoreErrors:
         # EC-CUBE 本体不在で static 解析できない Repository/Tool dispatch
-        - '#Call to an undefined method Plugin\\AiChatAssistant42\\Repository.*#'
-        - '#Method Plugin\\AiChatAssistant42\\Repository\\ProductRepository::execute.* is unused#'
+        - '#Call to an undefined method Plugin\\AiChatAssistant44\\Repository.*#'
+        - '#Method Plugin\\AiChatAssistant44\\Repository\\ProductRepository::execute.* is unused#'
         - '#Call to an undefined (method|static method) (Eccube|Doctrine)\\.*#'
         - '#Access to an undefined property.*#'
 
         # Entity $id は Doctrine がリフレクションで代入するため誤検出
-        - '#Property Plugin\\AiChatAssistant42\\Entity\\.*::\$id .* is never assigned#'
-        - '#Property Plugin\\AiChatAssistant42\\Repository\\ProductRepository::\$entityManager is never read#'
+        - '#Property Plugin\\AiChatAssistant44\\Entity\\.*::\$id .* is never assigned#'
+        - '#Property Plugin\\AiChatAssistant44\\Repository\\ProductRepository::\$entityManager is never read#'
 
         # 動的ディスパッチ / by-ref は誤検出が多いため許容（将来厳格化）
         - '#Parameter .* by-ref type.*#'

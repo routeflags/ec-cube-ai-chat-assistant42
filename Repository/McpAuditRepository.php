@@ -13,12 +13,12 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Repository;
+namespace Plugin\AiChatAssistant44\Repository;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Eccube\Repository\AbstractRepository;
-use Plugin\AiChatAssistant42\Entity\McpAudit;
+use Plugin\AiChatAssistant44\Entity\McpAudit;
 use DateTimeImmutable;
 
 /**

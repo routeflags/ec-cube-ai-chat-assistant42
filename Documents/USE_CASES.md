@@ -1,10 +1,10 @@
-# AiChatAssistant42 — ユースケース資料
+# AiChatAssistant44 — ユースケース資料
 
 ## 1. プラグイン概要
 
 | 項目 | 内容 |
 |------|------|
-| プラグイン名 | AI チャットアシスタント (AiChatAssistant42) |
+| プラグイン名 | AI チャットアシスタント (AiChatAssistant44) |
 | 対象 | EC-CUBE 4.2 |
 | プロバイダ | OpenAI / Anthropic / Google Gemini |
 | フロントエンド | レスポンシブチャットウィジェット（PC / スマホ） |

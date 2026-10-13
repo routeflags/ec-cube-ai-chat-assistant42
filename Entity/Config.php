@@ -13,87 +13,62 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Entity;
+namespace Plugin\AiChatAssistant44\Entity;
 
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
  * AI チャットアシスタントの設定を保持するエンティティ。
  *
  * プロバイダ・モデル・API キーなどのプラグイン設定を1行で管理する。
- *
- * @ORM\Entity
- * @ORM\Table(name="plg_ai_chat_assistant_config")
  */
+#[ORM\Entity]
+#[ORM\Table(name: 'plg_ai_chat_assistant_config')]
 class Config extends \Eccube\Entity\AbstractEntity
 {
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(type="integer", options={"unsigned":true})
-     */
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(type: Types::INTEGER, options: ['unsigned' => true])]
     private ?int $id = null;
 
-    /**
-     * @ORM\Column(type="string", length=32, options={"default":"openai"})
-     */
+    #[ORM\Column(type: Types::STRING, length: 32, options: ['default' => 'openai'])]
     private string $provider = 'openai';
 
-    /**
-     * @ORM\Column(type="string", length=128, options={"default":"gpt-4o"})
-     */
+    #[ORM\Column(type: Types::STRING, length: 128, options: ['default' => 'gpt-4o'])]
     private string $model = 'gpt-4o';
 
-    /**
-     * @ORM\Column(type="string", length=255, nullable=true)
-     */
+    #[ORM\Column(type: Types::STRING, length: 255, nullable: true)]
     private ?string $api_key_openai = null;
 
-    /**
-     * @ORM\Column(type="string", length=255, nullable=true)
-     */
+    #[ORM\Column(type: Types::STRING, length: 255, nullable: true)]
     private ?string $api_key_anthropic = null;
 
-    /**
-     * @ORM\Column(type="string", length=255, nullable=true)
-     */
+    #[ORM\Column(type: Types::STRING, length: 255, nullable: true)]
     private ?string $api_key_gemini = null;
 
-    /**
-     * @ORM\Column(type="text", nullable=true)
-     */
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $system_prompt = null;
 
-    /**
-     * @ORM\Column(type="integer", options={"unsigned":true, "default":4096})
-     */
+    #[ORM\Column(type: Types::INTEGER, options: ['unsigned' => true, 'default' => 4096])]
     private int $max_tokens = 4096;
 
-    /**
-     * @ORM\Column(type="smallint", options={"default":0})
-     */
+    #[ORM\Column(type: Types::SMALLINT, options: ['default' => 0])]
     private int $is_enabled = 0;
 
     /**
      * 回答モード: 'hybrid' = ナレッジ+一般知識, 'knowledge_only' = ナレッジのみ
-     *
-     * @ORM\Column(type="string", length=32, options={"default":"hybrid"})
      */
+    #[ORM\Column(type: Types::STRING, length: 32, options: ['default' => 'hybrid'])]
     private string $response_mode = 'hybrid';
 
-    /**
-     * @ORM\Column(type="integer", options={"unsigned":true, "default":30})
-     */
+    #[ORM\Column(type: Types::INTEGER, options: ['unsigned' => true, 'default' => 30])]
     private int $rate_limit_per_minute = 30;
 
-    /**
-     * @ORM\Column(type="datetimetz")
-     */
+    #[ORM\Column(type: Types::DATETIMETZ_MUTABLE)]
     private ?\DateTimeInterface $create_date = null;
 
-    /**
-     * @ORM\Column(type="datetimetz")
-     */
+    #[ORM\Column(type: Types::DATETIMETZ_MUTABLE)]
     private ?\DateTimeInterface $update_date = null;
 
     public function getId(): ?int

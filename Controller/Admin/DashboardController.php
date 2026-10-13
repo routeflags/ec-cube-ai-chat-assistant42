@@ -13,16 +13,16 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Controller\Admin;
+namespace Plugin\AiChatAssistant44\Controller\Admin;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Eccube\Controller\AbstractController;
-use Plugin\AiChatAssistant42\Entity\ChatLog;
-use Plugin\AiChatAssistant42\Entity\Config;
-use Plugin\AiChatAssistant42\Repository\ChatLogRepository;
-use Plugin\AiChatAssistant42\Service\AiModelRegistry;
-use Plugin\AiChatAssistant42\Service\AiModelSyncService;
-use Plugin\AiChatAssistant42\Service\ApiKeyEncryptor;
+use Plugin\AiChatAssistant44\Entity\ChatLog;
+use Plugin\AiChatAssistant44\Entity\Config;
+use Plugin\AiChatAssistant44\Repository\ChatLogRepository;
+use Plugin\AiChatAssistant44\Service\AiModelRegistry;
+use Plugin\AiChatAssistant44\Service\AiModelSyncService;
+use Plugin\AiChatAssistant44\Service\ApiKeyEncryptor;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -95,7 +95,7 @@ class DashboardController extends AbstractController
                     $this->logger->warning('AI model sync failed, keeping local', ['error' => $e->getMessage()]);
                 }
                 if ($this->logger === null) {
-                    error_log(sprintf('[AiChatAssistant42] AI model sync failed, keeping local: %s', $e->getMessage()));
+                    error_log(sprintf('[AiChatAssistant44] AI model sync failed, keeping local: %s', $e->getMessage()));
                 }
             }
         }
@@ -117,7 +117,7 @@ class DashboardController extends AbstractController
         $config = $this->fetchConfig();
         $hourlyDistribution = $this->fetchHourlyDistribution($periodStart, $periodEnd);
 
-        return $this->render('@AiChatAssistant42/admin/dashboard.twig', [
+        return $this->render('@AiChatAssistant44/admin/dashboard.twig', [
             'menus' => ['setting', 'ai_chat_assistant', 'ai_chat_assistant_dashboard'],
             'kpi_current' => $kpiCurrent,
             'kpi_previous' => $kpiPrevious,
@@ -239,7 +239,7 @@ class DashboardController extends AbstractController
             'gemini' => $this->getMaskedApiKey($config->getApiKeyGemini()),
         ];
 
-        return $this->render('@AiChatAssistant42/admin/settings.twig', [
+        return $this->render('@AiChatAssistant44/admin/settings.twig', [
             'menus' => ['setting', 'ai_chat_assistant', 'ai_chat_assistant_settings'],
             'config' => $config,
             'modelsByProvider' => $modelsByProvider,
@@ -586,8 +586,8 @@ class DashboardController extends AbstractController
 
         // Registry 委譲が優先のため、フォールバック経路のみ PluginData を先頭に追加
         $candidates = [
-            $projectDir . '/app/PluginData/AiChatAssistant42/ai_models.json',
-            $projectDir . '/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json',
+            $projectDir . '/app/PluginData/AiChatAssistant44/ai_models.json',
+            $projectDir . '/app/Plugin/AiChatAssistant44/Resource/config/ai_models.json',
             $projectDir . '/Resource/config/ai_models.json',
         ];
         foreach ($candidates as $candidate) {

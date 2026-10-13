@@ -13,11 +13,11 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Unit\Service;
+namespace Plugin\AiChatAssistant44\Tests\Unit\Service;
 
-use Plugin\AiChatAssistant42\Entity\AccessRule;
-use Plugin\AiChatAssistant42\Repository\AccessRuleRepository;
-use Plugin\AiChatAssistant42\Service\AccessRuleService;
+use Plugin\AiChatAssistant44\Entity\AccessRule;
+use Plugin\AiChatAssistant44\Repository\AccessRuleRepository;
+use Plugin\AiChatAssistant44\Service\AccessRuleService;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 

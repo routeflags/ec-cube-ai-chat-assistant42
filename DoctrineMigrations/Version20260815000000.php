@@ -13,7 +13,7 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\DoctrineMigrations;
+namespace Plugin\AiChatAssistant44\DoctrineMigrations;
 
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;

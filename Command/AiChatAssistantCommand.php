@@ -13,9 +13,9 @@ declare(strict_types=1);
  * file that was distributed with this source code.
  */
 
-namespace Plugin\AiChatAssistant42\Command;
+namespace Plugin\AiChatAssistant44\Command;
 
-use Plugin\AiChatAssistant42\Service\McpServerService;
+use Plugin\AiChatAssistant44\Service\McpServerService;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;

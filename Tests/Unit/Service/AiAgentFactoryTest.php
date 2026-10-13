@@ -13,13 +13,13 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Unit\Service;
+namespace Plugin\AiChatAssistant44\Tests\Unit\Service;
 
-use Plugin\AiChatAssistant42\Service\AiAgent\AnthropicAgent;
-use Plugin\AiChatAssistant42\Service\AiAgent\GeminiAgent;
-use Plugin\AiChatAssistant42\Service\AiAgent\OpenAiAgent;
-use Plugin\AiChatAssistant42\Service\AiAgentFactory;
-use Plugin\AiChatAssistant42\Service\AiAgentInterface;
+use Plugin\AiChatAssistant44\Service\AiAgent\AnthropicAgent;
+use Plugin\AiChatAssistant44\Service\AiAgent\GeminiAgent;
+use Plugin\AiChatAssistant44\Service\AiAgent\OpenAiAgent;
+use Plugin\AiChatAssistant44\Service\AiAgentFactory;
+use Plugin\AiChatAssistant44\Service\AiAgentInterface;
 use PHPUnit\Framework\TestCase;
 
 /**

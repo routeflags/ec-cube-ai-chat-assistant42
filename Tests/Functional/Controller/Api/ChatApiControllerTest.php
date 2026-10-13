@@ -13,7 +13,7 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Functional\Controller\Api;
+namespace Plugin\AiChatAssistant44\Tests\Functional\Controller\Api;
 
 use Eccube\Tests\Web\AbstractWebTestCase;
 

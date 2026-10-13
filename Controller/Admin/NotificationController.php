@@ -13,12 +13,12 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Controller\Admin;
+namespace Plugin\AiChatAssistant44\Controller\Admin;
 
 use Eccube\Controller\AbstractController;
-use Plugin\AiChatAssistant42\Entity\Notification;
-use Plugin\AiChatAssistant42\Repository\NotificationRepository;
-use Plugin\AiChatAssistant42\Service\ApiKeyEncryptor;
+use Plugin\AiChatAssistant44\Entity\Notification;
+use Plugin\AiChatAssistant44\Repository\NotificationRepository;
+use Plugin\AiChatAssistant44\Service\ApiKeyEncryptor;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -54,7 +54,7 @@ class NotificationController extends AbstractController
     {
         $notifications = $this->notificationRepository->findAllActive();
 
-        return $this->render('@AiChatAssistant42/admin/notification.twig', [
+        return $this->render('@AiChatAssistant44/admin/notification.twig', [
             'notifications' => $notifications,
             'notification_types' => self::NOTIFICATION_TYPES,
             'trigger_events' => self::TRIGGER_EVENTS,

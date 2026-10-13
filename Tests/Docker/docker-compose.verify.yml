@@ -8,9 +8,14 @@ services:
       # PLUGIN_DIR はホスト側のプラグイン配置パス。デフォルトは EC-CUBE の sibling にある想定
       # 例: EC-CUBE が /tmp/eccube-verify、プラグインが /tmp/ec-cube-ai-chat-assistant42 の場合
       #      PLUGIN_DIR=../ec-cube-ai-chat-assistant42 docker compose ... で上書き可能
-      - ${PLUGIN_DIR:-../ec-cube-ai-chat-assistant42}:/var/www/html/app/Plugin/AiChatAssistant42:rw
+      # S-02: code分離対応。PLUGIN_MOUNT でマウント先codeを切替 (4.2/4.3=AiChatAssistant42, 4.4=AiChatAssistant44)。
+      #      verify-docker-install.sh がバージョン毎に PLUGIN_MOUNT を設定する。既定は44 (本ブランチ)。
+      #      port: 4.2=8080 / 4.3=8081 / 4.4=8082。PHP: 4.2=8.1 / 4.3=8.2 / 4.4=8.3系。
+      - ${PLUGIN_DIR:-../ec-cube-ai-chat-assistant42}:/var/www/html/app/Plugin/${PLUGIN_MOUNT:-AiChatAssistant44}:rw
       # プラグイン単体の vendor は EC-CUBE と競合するため hide（EC-CUBE 側の autoload のみを使用）
-      - plugin_vendor_empty:/var/www/html/app/Plugin/AiChatAssistant42/vendor
+      # 新旧両codeをhide (片方は空ディレクトリとして無害。両載せ時の衝突回避)。
+      - plugin_vendor_empty:/var/www/html/app/Plugin/${PLUGIN_MOUNT:-AiChatAssistant44}/vendor
+      - plugin_vendor_empty_42:/var/www/html/app/Plugin/AiChatAssistant42/vendor
       - eccube_var:/var/www/html/var
       - eccube_vendor:/var/www/html/vendor
     environment:
@@ -34,3 +39,4 @@ volumes:
   eccube_var:
   eccube_vendor:
   plugin_vendor_empty:
+  plugin_vendor_empty_42:

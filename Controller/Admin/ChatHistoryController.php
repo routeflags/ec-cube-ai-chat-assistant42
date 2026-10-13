@@ -13,11 +13,11 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Controller\Admin;
+namespace Plugin\AiChatAssistant44\Controller\Admin;
 
 use Eccube\Controller\AbstractController;
-use Plugin\AiChatAssistant42\Entity\ChatLog;
-use Plugin\AiChatAssistant42\Repository\ChatLogRepository;
+use Plugin\AiChatAssistant44\Entity\ChatLog;
+use Plugin\AiChatAssistant44\Repository\ChatLogRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -123,7 +123,7 @@ class ChatHistoryController extends AbstractController
      */
     private function renderGroupedHistory(array $logs, int $total, int $page, array $filters, array $sessionCounts, int $lastPage = 1): Response
     {
-        return $this->render('@AiChatAssistant42/admin/chat_history.twig', [
+        return $this->render('@AiChatAssistant44/admin/chat_history.twig', [
             'menus' => ['setting', 'ai_chat_assistant', 'ai_chat_assistant_history'],
             'filters' => $filters,
             'logs' => $logs,
@@ -152,7 +152,7 @@ class ChatHistoryController extends AbstractController
         $relatedLogs = $this->fetchSessionRelayLogs($log);
         $currentIndex = $this->resolveCurrentRelayIndex($relatedLogs, $log);
 
-        return $this->render('@AiChatAssistant42/admin/chat_history_show.twig', [
+        return $this->render('@AiChatAssistant44/admin/chat_history_show.twig', [
             'menus' => ['setting', 'ai_chat_assistant', 'ai_chat_assistant_history'],
             'log' => $log,
             'relatedLogs' => $relatedLogs,

@@ -13,12 +13,12 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Unit\Controller\Admin;
+namespace Plugin\AiChatAssistant44\Tests\Unit\Controller\Admin;
 
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use Plugin\AiChatAssistant42\Controller\Admin\NotificationController;
-use Plugin\AiChatAssistant42\Repository\NotificationRepository;
+use Plugin\AiChatAssistant44\Controller\Admin\NotificationController;
+use Plugin\AiChatAssistant44\Repository\NotificationRepository;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
@@ -145,7 +145,7 @@ class NotificationControllerTest extends TestCase
 
     public function testDeleteSucceedsWhenTokenValidAndFound(): void
     {
-        $existing = $this->createMock(\Plugin\AiChatAssistant42\Entity\Notification::class);
+        $existing = $this->createMock(\Plugin\AiChatAssistant44\Entity\Notification::class);
         $this->repository->method('find')->with(3)->willReturn($existing);
         $this->repository->expects($this->once())->method('delete')->with($existing);
 

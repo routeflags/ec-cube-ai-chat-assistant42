@@ -13,11 +13,11 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Controller\Admin;
+namespace Plugin\AiChatAssistant44\Controller\Admin;
 
 use Eccube\Controller\AbstractController;
-use Plugin\AiChatAssistant42\Entity\Knowledge;
-use Plugin\AiChatAssistant42\Repository\KnowledgeRepository;
+use Plugin\AiChatAssistant44\Entity\Knowledge;
+use Plugin\AiChatAssistant44\Repository\KnowledgeRepository;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -52,7 +52,7 @@ class KnowledgeController extends AbstractController
         if ($keyword === '' && $category === '') {
             $entities = $this->knowledgeRepository->findAll();
 
-            return $this->render('@AiChatAssistant42/admin/knowledge.twig', [
+            return $this->render('@AiChatAssistant44/admin/knowledge.twig', [
                 'entities' => $entities,
                 'keyword' => $keyword,
                 'category' => $category,
@@ -76,7 +76,7 @@ class KnowledgeController extends AbstractController
 
         $entities = $entities->getQuery()->getResult();
 
-        return $this->render('@AiChatAssistant42/admin/knowledge.twig', [
+        return $this->render('@AiChatAssistant44/admin/knowledge.twig', [
             'entities' => $entities,
             'keyword' => $keyword,
             'category' => $category,
@@ -139,7 +139,7 @@ class KnowledgeController extends AbstractController
             return $this->redirectToRoute('admin_ai_chat_assistant_knowledge_index');
         }
 
-        return $this->render('@AiChatAssistant42/admin/knowledge_form.twig', [
+        return $this->render('@AiChatAssistant44/admin/knowledge_form.twig', [
             'form' => $form->createView(),
             'knowledge' => $knowledge,
         ]);
@@ -203,7 +203,7 @@ class KnowledgeController extends AbstractController
             return $this->redirectToRoute('admin_ai_chat_assistant_knowledge_index');
         }
 
-        return $this->render('@AiChatAssistant42/admin/knowledge_form.twig', [
+        return $this->render('@AiChatAssistant44/admin/knowledge_form.twig', [
             'form' => $form->createView(),
             'knowledge' => $knowledge,
         ]);

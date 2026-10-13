@@ -4,7 +4,7 @@
 set -e
 
 PLUGIN_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-echo "=== AiChatAssistant42 Plugin Verification ==="
+echo "=== AiChatAssistant44 Plugin Verification ==="
 echo "Plugin dir: $PLUGIN_DIR"
 echo ""
 

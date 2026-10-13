@@ -13,9 +13,9 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Command;
+namespace Plugin\AiChatAssistant44\Command;
 
-use Plugin\AiChatAssistant42\Repository\ChatLogRepository;
+use Plugin\AiChatAssistant44\Repository\ChatLogRepository;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;

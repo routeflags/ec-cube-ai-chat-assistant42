@@ -13,10 +13,10 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Service\AiAgent;
+namespace Plugin\AiChatAssistant44\Service\AiAgent;
 
-use Plugin\AiChatAssistant42\Service\AiAgentInterface;
-use Plugin\AiChatAssistant42\Service\AiModelRegistry;
+use Plugin\AiChatAssistant44\Service\AiAgentInterface;
+use Plugin\AiChatAssistant44\Service\AiModelRegistry;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use Psr\Log\LoggerInterface;
@@ -385,7 +385,7 @@ class OpenAiAgent implements AiAgentInterface
      * 将来的には AiModelRegistry 必須化し、本ファイル探索自体を削除する方針。
      * 現状は PluginData（リモート同期の正本）を最優先で探索する。
      *
-     * @see \Plugin\AiChatAssistant42\Service\AiModelRegistry::resolveConfigPath()
+     * @see \Plugin\AiChatAssistant44\Service\AiModelRegistry::resolveConfigPath()
      * @todo Registry 必須化後は本メソッドのファイル探索を削除し、Registry 委譲のみにする
      */
     private function resolveCapabilityFromJson(): bool
@@ -395,9 +395,9 @@ class OpenAiAgent implements AiAgentInterface
         // 12候補の膨張を整理し、代表6候補に集約（MN04）
         $candidates = array_unique([
             // PluginData 同期ファイル（最優先）— プロジェクトルートからの相対で探索
-            dirname(__DIR__, 2) . '/app/PluginData/AiChatAssistant42/ai_models.json',
-            dirname(__DIR__, 3) . '/app/PluginData/AiChatAssistant42/ai_models.json',
-            dirname(__DIR__, 4) . '/app/PluginData/AiChatAssistant42/ai_models.json',
+            dirname(__DIR__, 2) . '/app/PluginData/AiChatAssistant44/ai_models.json',
+            dirname(__DIR__, 3) . '/app/PluginData/AiChatAssistant44/ai_models.json',
+            dirname(__DIR__, 4) . '/app/PluginData/AiChatAssistant44/ai_models.json',
             // Resource フォールバック
             dirname(__DIR__, 2) . '/Resource/config/ai_models.json',
             dirname(__DIR__, 3) . '/Resource/config/ai_models.json',

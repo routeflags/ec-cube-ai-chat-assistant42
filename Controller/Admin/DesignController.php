@@ -13,11 +13,11 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Controller\Admin;
+namespace Plugin\AiChatAssistant44\Controller\Admin;
 
 use Eccube\Controller\AbstractController;
-use Plugin\AiChatAssistant42\Repository\ConfigRepository;
-use Plugin\AiChatAssistant42\Service\DesignSettingsSyncService;
+use Plugin\AiChatAssistant44\Repository\ConfigRepository;
+use Plugin\AiChatAssistant44\Service\DesignSettingsSyncService;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -34,7 +34,9 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 class DesignController extends AbstractController
 {
     /** デザイン設定 JSON ファイルのパス（永続化: PluginData） */
-    private const PLUGIN_DATA_PATH = '/app/PluginData/AiChatAssistant42/design_settings.json';
+    private const PLUGIN_DATA_PATH = '/app/PluginData/AiChatAssistant44/design_settings.json';
+    /** 旧code PluginData (S-07 移行フォールバック) */
+    private const LEGACY_PLUGIN_DATA_PATH = '/app/PluginData/AiChatAssistant42/design_settings.json';
     /** 旧パス（Resource/config）— 移行用フォールバック */
     private const LEGACY_PATH = __DIR__ . '/../../Resource/config/design_settings.json';
 
@@ -47,7 +49,7 @@ class DesignController extends AbstractController
         'assistant_display_name' => '商品アドバイザー',
         'license_footer_label' => 'ライセンスについて',
         'license_title' => 'ソフトウェアライセンスについて',
-        'license_lead' => 'AiChatAssistant42（チャットソフトウェア）の著作権は '
+        'license_lead' => 'AiChatAssistant44（チャットソフトウェア）の著作権は '
             . '<a href="https://blog.routeflags.com/%e5%88%a9%e7%94%a8%e8%a6%8f%e7%b4%84/"'
             . ' target="_blank" rel="noopener">ROUTE FLAGS Co., Ltd.</a> に帰属し、'
             . 'GNU General Public License v2 (GPL-2.0-only) に基づき提供されています。',
@@ -58,8 +60,8 @@ class DesignController extends AbstractController
             . '複製・改変・再配布する際は GPL-2.0 の条件（著作権表示とライセンス条文の保持、'
             . '改変時の変更明示、ソースコードの提供等）を遵守してください。',
         'license_item3_heading' => 'オープンソースソフトウェアの利用',
-        'license_item3_body' => '本ソフトウェアは以下のOSSを利用しています: EC-CUBE 4.2 (GPL-2.0-only)、'
-            . 'Symfony 5.4 (MIT)、Doctrine ORM/DBAL (MIT)、Twig 2.x (BSD-3-Clause)、'
+        'license_item3_body' => '本ソフトウェアは以下のOSSを利用しています: EC-CUBE 4.4 (GPL-2.0-only)、'
+            . 'Symfony 7.4 (MIT)、Doctrine ORM/DBAL (MIT)、Twig 3.x (BSD-3-Clause)、'
             . 'GuzzleHTTP (MIT)、Monolog (MIT)、KnpPaginatorBundle (MIT) ほか '
             . 'composer.json 記載のライブラリ。各OSSのライセンス詳細は各プロジェクトの配布物を'
             . 'ご参照ください。',
@@ -67,7 +69,7 @@ class DesignController extends AbstractController
 
     public function __construct(
         private string $projectDir = '',
-        private ?\Plugin\AiChatAssistant42\Service\DesignSettingsSyncService $syncService = null,
+        private ?\Plugin\AiChatAssistant44\Service\DesignSettingsSyncService $syncService = null,
     ) {
     }
 
@@ -78,7 +80,7 @@ class DesignController extends AbstractController
             return $this->projectDir . self::PLUGIN_DATA_PATH;
         }
         // フォールバック（テスト等で projectDir が注入されない場合）
-        return dirname(__DIR__, 3) . '/PluginData/AiChatAssistant42/design_settings.json';
+        return dirname(__DIR__, 3) . '/PluginData/AiChatAssistant44/design_settings.json';
     }
 
     /**
@@ -99,10 +101,10 @@ class DesignController extends AbstractController
 
         $designSettings = $this->loadDesignSettings();
 
-        return $this->render('@AiChatAssistant42/admin/design.twig', [
+        return $this->render('@AiChatAssistant44/admin/design.twig', [
             'design_settings' => $designSettings,
             'sync_meta' => $syncMeta,
-            'remote_url' => \Plugin\AiChatAssistant42\Service\DesignSettingsSyncService::REMOTE_URL,
+            'remote_url' => \Plugin\AiChatAssistant44\Service\DesignSettingsSyncService::REMOTE_URL,
         ]);
     }
 
@@ -205,6 +207,14 @@ class DesignController extends AbstractController
         return $this->redirectToRoute('admin_ai_chat_assistant_design_index');
     }
 
+    private function getLegacyPluginDataPath(): string
+    {
+        if ($this->projectDir !== '') {
+            return $this->projectDir . self::LEGACY_PLUGIN_DATA_PATH;
+        }
+        return dirname(__DIR__, 3) . '/PluginData/AiChatAssistant42/design_settings.json';
+    }
+
     /**
      * JSON ファイルからデザイン設定を読み込む。
      *
@@ -214,6 +224,10 @@ class DesignController extends AbstractController
     private function loadDesignSettings(): array
     {
         $path = $this->getDesignSettingsPath();
+        // S-07: 新側になければ旧code側 PluginData から引き継ぐ (消失禁止)
+        if (!file_exists($path) && file_exists($this->getLegacyPluginDataPath())) {
+            $path = $this->getLegacyPluginDataPath();
+        }
         // 永続化パスが存在すればそちらを優先、なければ旧パスから移行を試みる
         if (!file_exists($path) && file_exists(self::LEGACY_PATH)) {
             $path = self::LEGACY_PATH;

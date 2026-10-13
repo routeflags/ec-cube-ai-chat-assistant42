@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Integration\Controller;
+namespace Plugin\AiChatAssistant44\Tests\Integration\Controller;
 
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -33,7 +33,7 @@ class ContainerSmokeTest extends TestCase
                 continue;
             }
             $relative = substr($file->getPathname(), strlen($baseDir) + 1);
-            $fqcn = 'Plugin\\AiChatAssistant42\\Controller\\' . str_replace(['/', '.php'], ['\\', ''], $relative);
+            $fqcn = 'Plugin\\AiChatAssistant44\\Controller\\' . str_replace(['/', '.php'], ['\\', ''], $relative);
             $cases[$fqcn] = [$fqcn];
         }
         ksort($cases);

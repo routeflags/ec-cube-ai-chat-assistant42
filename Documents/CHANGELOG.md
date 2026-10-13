@@ -1,5 +1,21 @@
 # Changelog
 
+## [Unreleased] - EC-CUBE 4.4 対応 (AiChatAssistant44)
+
+### Added
+- EC-CUBE 4.4 (Symfony 7.4 / PHP 8.2〜8.5) 対応を追加。同一リポジトリのまま code 分離 `AiChatAssistant44` (D-01)。別リポジトリは作らない。
+- Entity 8件を Doctrine Attribute 化 (`Types::` + typed property)。テーブル名 `plg_ai_chat_assistant_*` は変更なし (データ消失禁止)。
+- `PluginManager::enable/update/disable/uninstall(...): void` + `#[Override]`、`Nav::getNav(): array` + `#[Override]`、`EventSubscriber::getSubscribedEvents(): array` + `#[Override]`。`isMasterRequest` フォールバックを廃止し `isMainRequest` のみ (Symfony 7.4)。
+- データ移行: `PluginData/AiChatAssistant42/*.json` (design_settings/ai_models) を新code側へ自動移行 + フォールバック参照 (S-07)。テーブルは据え置きのためDB移行不要。
+- Docker 4.4 検証: `bin/verify-docker-install.sh --version 4.4|all` (php:8.3-apache-bullseye + port 8082 + code AiChatAssistant44)。`both` は既存互換 (4.2+4.3のみ)。`Tests/Docker/docker-compose.verify.yml` は `PLUGIN_MOUNT` 切替 + 新旧 vendor hide。`playwright.config.ts` は 8082 対応。`Makefile dbs-fetch DBS_BRANCH=4.4` + `dbs-status` に 8082 追加。
+- SameSite 対応: HTTP 検証時は `framework.yaml cookie_samesite:none -> lax` + `var/cache` + `var/build` 削除が必要な旨を `Documents/LOCAL_VERIFICATION.md §9` に追記。スクリプト側で `none` 検出時は WARN 表示。HTTPS (`symfony server:start`) では不要。
+- `composer.json` require-dev を Symfony `^6.4||^7.4` / ORM `^2.15||^3.0` / DBAL `^3.6||^4.0` に拡大、`eccube-plugin.yaml` require を `php >=8.2` + `ec-cube ^4.4` に更新。
+- `Tests/Stubs` を 4.4 実型に追従 (`AbstractPluginManager: void` 5件、`TemplateEvent::setParameter/addSnippet`、`AbstractRepository::createQueryBuilder` 等)。
+- README 日英 + バッジを 4.4 (Symfony 7.4 / PHP >=8.2) に更新。
+
+### Security
+- 変更なし (CSRF/キーマスク/ログ匿名化/MCP サニタイズを維持)。
+
 ## [1.1.3] - 2026-09-09
 
 ### Fixed

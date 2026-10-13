@@ -13,24 +13,24 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Controller\Api;
+namespace Plugin\AiChatAssistant44\Controller\Api;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Eccube\Controller\AbstractController;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
-use Plugin\AiChatAssistant42\Entity\Feedback;
-use Plugin\AiChatAssistant42\Repository\ChatLogRepository;
-use Plugin\AiChatAssistant42\Repository\ConfigRepository;
-use Plugin\AiChatAssistant42\Repository\ProductRepository;
-use Plugin\AiChatAssistant42\Service\AiAgentFactory;
-use Plugin\AiChatAssistant42\Service\AiModelRegistry;
-use Plugin\AiChatAssistant42\Service\ChatFlowService;
-use Plugin\AiChatAssistant42\Service\ApiKeyEncryptor;
-use Plugin\AiChatAssistant42\Service\ChatLogger;
-use Plugin\AiChatAssistant42\Service\EmailHashService;
-use Plugin\AiChatAssistant42\Service\EmailReplyService;
-use Plugin\AiChatAssistant42\Service\NotificationService;
-use Plugin\AiChatAssistant42\Service\PageContextService;
+use Plugin\AiChatAssistant44\Entity\Feedback;
+use Plugin\AiChatAssistant44\Repository\ChatLogRepository;
+use Plugin\AiChatAssistant44\Repository\ConfigRepository;
+use Plugin\AiChatAssistant44\Repository\ProductRepository;
+use Plugin\AiChatAssistant44\Service\AiAgentFactory;
+use Plugin\AiChatAssistant44\Service\AiModelRegistry;
+use Plugin\AiChatAssistant44\Service\ChatFlowService;
+use Plugin\AiChatAssistant44\Service\ApiKeyEncryptor;
+use Plugin\AiChatAssistant44\Service\ChatLogger;
+use Plugin\AiChatAssistant44\Service\EmailHashService;
+use Plugin\AiChatAssistant44\Service\EmailReplyService;
+use Plugin\AiChatAssistant44\Service\NotificationService;
+use Plugin\AiChatAssistant44\Service\PageContextService;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -79,7 +79,7 @@ class ChatApiController extends AbstractController
             return $this->chatLogRepository;
         }
         /** @var ChatLogRepository $repo */
-        $repo = $this->entityManager->getRepository(\Plugin\AiChatAssistant42\Entity\ChatLog::class);
+        $repo = $this->entityManager->getRepository(\Plugin\AiChatAssistant44\Entity\ChatLog::class);
 
         return $repo;
     }
@@ -368,7 +368,7 @@ class ChatApiController extends AbstractController
     private function executeChatSession(
         string $userMessage,
         string $sessionId,
-        \Plugin\AiChatAssistant42\Entity\Config $config,
+        \Plugin\AiChatAssistant44\Entity\Config $config,
         string $apiKey,
         ?array $pageContext = null
     ): JsonResponse {
@@ -449,7 +449,7 @@ class ChatApiController extends AbstractController
      */
     private function logChatSuccess(
         string $sessionId,
-        \Plugin\AiChatAssistant42\Entity\Config $config,
+        \Plugin\AiChatAssistant44\Entity\Config $config,
         string $userMessage,
         array $result,
         int $responseTimeMs
@@ -472,7 +472,7 @@ class ChatApiController extends AbstractController
      */
     private function logChatError(
         string $sessionId,
-        \Plugin\AiChatAssistant42\Entity\Config $config,
+        \Plugin\AiChatAssistant44\Entity\Config $config,
         string $userMessage,
         string $errorMessage,
         int $responseTimeMs
@@ -781,7 +781,7 @@ class ChatApiController extends AbstractController
      * 復号失敗（APP_SECRET 変更等）を検出した場合は警告ログを残し、
      * 暗号文をそのままプロバイダへ送らないよう null を返す。
      */
-    private function resolveApiKey(\Plugin\AiChatAssistant42\Entity\Config $config): ?string
+    private function resolveApiKey(\Plugin\AiChatAssistant44\Entity\Config $config): ?string
     {
         $encrypted = match ($config->getProvider()) {
             'openai' => $config->getApiKeyOpenai(),

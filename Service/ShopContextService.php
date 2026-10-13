@@ -13,7 +13,7 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Service;
+namespace Plugin\AiChatAssistant44\Service;
 
 use Eccube\Repository\BaseInfoRepository;
 use Symfony\Component\HttpFoundation\RequestStack;

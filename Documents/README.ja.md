@@ -1,10 +1,10 @@
-# AIチャットアシスタント for EC-CUBE 4.2 / 4.3
+# AIチャットアシスタント for EC-CUBE 4.4
 
-![AIチャットアシスタント for EC-CUBE 4.2/4.3](../Resource/images/readme-hero.png)
+![AIチャットアシスタント for EC-CUBE 4.4](../Resource/images/readme-hero.png)
 
-![EC-CUBE](https://img.shields.io/badge/EC--CUBE-4.2%20%7C%204.3-orange)
-![Symfony](https://img.shields.io/badge/Symfony-5.4%20%7C%206.4-black)
-![PHP](https://img.shields.io/badge/PHP-%3E%3D8.1-777BB4)
+![EC-CUBE](https://img.shields.io/badge/EC--CUBE-4.4-orange)
+![Symfony](https://img.shields.io/badge/Symfony-7.4-black)
+![PHP](https://img.shields.io/badge/PHP-%3E%3D8.2-777BB4)
 ![License](https://img.shields.io/badge/license-GPL--2.0--only-green)
 ![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-2ec9bb)
 ![WebMCP](https://img.shields.io/badge/WebMCP-Supported-2ec9bb)
@@ -325,8 +325,8 @@ GitHub Releaseなどからプラグインパッケージを取得してEC-CUBE�
 CLIの場合：
 
 ```bash
-php bin/console eccube:plugin:install --code=AiChatAssistant42
-php bin/console eccube:plugin:enable --code=AiChatAssistant42
+php bin/console eccube:plugin:install --code=AiChatAssistant44
+php bin/console eccube:plugin:enable --code=AiChatAssistant44
 ```
 
 EC-CUBE管理画面から有効化することもできます。
@@ -678,13 +678,14 @@ composer quality:ci
 
 ## EC-CUBE
 
-* EC-CUBE 4.2（Symfony 5.4）
-* EC-CUBE 4.3（Symfony 6.4）
+* EC-CUBE 4.4（Symfony 7.4）
+
+> 4.2/4.3 用は `AiChatAssistant42` (main 系ブランチ) を使用してください。本ブランチは code 分離 `AiChatAssistant44` の 4.4 対応版です。テーブル `plg_ai_chat_assistant_*` は改名しないためDB引継ぎ不要。`PluginData/AiChatAssistant42/*.json` は自動移行/フォールバックします。
 
 ## PHP
 
 ```text
-PHP >= 8.1
+PHP >= 8.2
 ```
 
 ## データベース
@@ -779,7 +780,7 @@ composer quality:ci
 # プロジェクト構成
 
 ```text
-AiChatAssistant42/
+AiChatAssistant44/
 ├── Controller/
 ├── Entity/
 ├── EventListener/

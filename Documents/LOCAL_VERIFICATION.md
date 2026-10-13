@@ -1,18 +1,19 @@
-# ローカル検証手順（EC-CUBE 4.2/4.3 + Docker）
+# ローカル検証手順（EC-CUBE 4.2/4.3/4.4 + Docker）
 
-本プラグイン `AiChatAssistant42` をローカルの EC-CUBE 環境でインストール・有効化・動作確認する手順です。
-`cosme_eccube4` は PHP 7.4 のため要件（PHP >=8.1）を満たしません。PHP 8.1 (4.2) / 8.2 (4.3) の EC-CUBE 環境を新規に立ち上げることを推奨します。
+本プラグイン `AiChatAssistant44` をローカルの EC-CUBE 環境でインストール・有効化・動作確認する手順です。
+本ブランチは EC-CUBE 4.4 (Symfony 7.4 / PHP 8.2〜8.5) 対応版です。4.2/4.3 用の `AiChatAssistant42` とは code 分離しています (D-01)。
+`cosme_eccube4` は PHP 7.4 のため要件（PHP >=8.2）を満たしません。PHP 8.1 (4.2) / 8.2 (4.3) / 8.3 (4.4) の EC-CUBE 環境を新規に立ち上げることを推奨します。
 
-> **ワンコマンド**: `./bin/verify-docker-install.sh --version both` で 4.2 (8080) + 4.3 (8081) の両方を自動検証できます。審査 3607 の `dep-on-root` / `ContainerInterface` も事前にローカルゲートで検出します。詳細は `bin/verify-docker-install.sh --help` を参照。
+> **ワンコマンド**: `./bin/verify-docker-install.sh --version 4.4` で 4.4 (8082) を自動検証できます。`--version all` で 4.2 (8080) + 4.3 (8081) + 4.4 (8082) の一気通し。`--version both` は既存互換 (4.2+4.3のみ)。審査 3607 の `dep-on-root` / `ContainerInterface` も事前にローカルゲートで検出します。詳細は `bin/verify-docker-install.sh --help` を参照。
 
 ---
 
 ## 0. 前提
 
 - Docker 27.x / Docker Compose v2.31+
-- 本リポジトリ `ec-cube-ai-chat-assistant42` がローカルにクローン済みであること（例: `../ec-cube-ai-chat-assistant42`）
-- ポート 8080 (4.2) / 8081 (4.3) / 4430 が空いていること
-- `PHP_IMAGE` / `ECCUBE_PORT` 環境変数で EC-CUBE 4.2/4.3 を切り替え可能 (`docker-compose.verify.yml` は `${PHP_IMAGE:-php:8.1-apache-bullseye}` / `${ECCUBE_PORT:-8080}`)
+- 本リポジトリ `ec-cube-ai-chat-assistant42` がローカルにクローン済みであること（例: `../ec-cube-ai-chat-assistant42`）。本ブランチ `feature/eccube-44-support` を使用すること。
+- ポート 8080 (4.2) / 8081 (4.3) / 8082 (4.4) / 4430 が空いていること
+- `PHP_IMAGE` / `ECCUBE_PORT` / `PLUGIN_MOUNT` 環境変数で EC-CUBE 4.2/4.3/4.4 を切り替え可能 (`docker-compose.verify.yml` は `${PHP_IMAGE:-php:8.1-apache-bullseye}` / `${ECCUBE_PORT:-8080}` / `${PLUGIN_MOUNT:-AiChatAssistant44}`)。4.4 は `php:8.3-apache-bullseye` + `PLUGIN_MOUNT=AiChatAssistant44` + port 8082。
 
 EC-CUBE 本体は検証用に `/tmp/eccube-verify` にクローンします（既存の `cosme_eccube4` は利用しません）。
 
@@ -45,7 +46,7 @@ docker compose -f docker-compose.verify.yml exec eccube php bin/console doctrine
 docker compose -f docker-compose.verify.yml exec eccube php bin/console doctrine:migrations:migrate --no-interaction
 ```
 
-`docker-compose.verify.yml` は本プラグインを `app/Plugin/AiChatAssistant42` にマウントします。ホスト側で編集した内容が即座にコンテナへ反映されます。
+`docker-compose.verify.yml` は本プラグインを `app/Plugin/AiChatAssistant44` にマウントします。ホスト側で編集した内容が即座にコンテナへ反映されます。
 
 ---
 
@@ -55,13 +56,13 @@ docker compose -f docker-compose.verify.yml exec eccube php bin/console doctrine
 cd /tmp/eccube-verify
 
 # プラグインがマウントされていることを確認
-docker compose -f docker-compose.verify.yml exec eccube ls -la app/Plugin/AiChatAssistant42/eccube-plugin.yaml
+docker compose -f docker-compose.verify.yml exec eccube ls -la app/Plugin/AiChatAssistant44/eccube-plugin.yaml
 
 # インストール
-docker compose -f docker-compose.verify.yml exec eccube php bin/console eccube:plugin:install --code=AiChatAssistant42
+docker compose -f docker-compose.verify.yml exec eccube php bin/console eccube:plugin:install --code=AiChatAssistant44
 
 # 有効化
-docker compose -f docker-compose.verify.yml exec eccube php bin/console eccube:plugin:enable --code=AiChatAssistant42
+docker compose -f docker-compose.verify.yml exec eccube php bin/console eccube:plugin:enable --code=AiChatAssistant44
 
 # キャッシュクリア
 docker compose -f docker-compose.verify.yml exec eccube php bin/console cache:clear --no-warmup
@@ -69,7 +70,7 @@ docker compose -f docker-compose.verify.yml exec eccube php bin/console cache:wa
 ```
 
 期待結果:
-- `install` が `Plugin installed: AiChatAssistant42` で成功
+- `install` が `Plugin installed: AiChatAssistant44` で成功
 - `enable` が `Plugin enabled` で成功
 - `app/PluginData/` 配下に `design_settings.json` が生成される
 
@@ -170,6 +171,17 @@ docker compose -f docker-compose.verify.yml exec eccube sqlite3 var/eccube.db "P
 
 ---
 
+## 9. EC-CUBE 4.4 の SameSite/HTTPS 注意 (必須)
+
+EC-CUBE 4.4.0-alpha-1 ではセッション Cookie に `SameSite=None` を付与するため、HTTP (`php -S` / 本 `docker-compose.verify.yml`) で動かすとインストール後に管理画面へログインできません (公式リリースノートより)。
+
+- HTTP (`php -S` / 本compose) で検証する場合: `app/config/eccube/packages/framework.yaml` の `cookie_samesite: none` を `lax` に変更し、変更後は `var/cache` と `var/build` を削除してください。
+- HTTPS (`symfony server:start` 等) で動かせる環境ではこの変更は不要です。
+- `bin/verify-docker-install.sh --version 4.4` は `framework.yaml` の `cookie_samesite` を検出し、`none` のままの場合は WARN を表示します。WARN が出たら上記切替を行って再検証してください。
+- Playwright 4.4 検証: `E2E_BASE_URL=http://localhost:8082 npx playwright test` (HTTP+lax 前提。V-04/V-05)。
+
+---
+
 ## 6. クリーンアップ
 
 ```bash
@@ -185,7 +197,7 @@ rm -rf /tmp/eccube-verify
 
 | 症状 | 確認コマンド |
 |------|-------------|
-| `eccube:plugin:install` が `code not found` | `ls app/Plugin/AiChatAssistant42/eccube-plugin.yaml` がコンテナ内にあるか |
+| `eccube:plugin:install` が `code not found` | `ls app/Plugin/AiChatAssistant44/eccube-plugin.yaml` がコンテナ内にあるか |
 | 管理画面にメニューが出ない | `php bin/console cache:clear` → ブラウザ再読み込み |
 | APIが 500 | `var/log/dev.log` と `docker compose logs eccube` を確認 |
 | チャットが表示されない | `Resource/config/services.yaml` の `ChatWidgetListener` が `kernel.event_subscriber` として登録されているか |
@@ -199,7 +211,7 @@ rm -rf /tmp/eccube-verify
 
 - 本番では `thch-vape.shop` 固定が残っていないことを確認:
   ```bash
-  grep -r "thch-vape.shop" app/Plugin/AiChatAssistant42 --include="*.php" | wc -l
+  grep -r "thch-vape.shop" app/Plugin/AiChatAssistant44 --include="*.php" | wc -l
   # 0 であること
   ```
 - `EasyArticle` 未導入でもチャットが 200 を返すこと:

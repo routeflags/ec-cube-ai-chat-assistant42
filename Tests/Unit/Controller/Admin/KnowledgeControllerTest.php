@@ -13,12 +13,12 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Unit\Controller\Admin;
+namespace Plugin\AiChatAssistant44\Tests\Unit\Controller\Admin;
 
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use Plugin\AiChatAssistant42\Controller\Admin\KnowledgeController;
-use Plugin\AiChatAssistant42\Repository\KnowledgeRepository;
+use Plugin\AiChatAssistant44\Controller\Admin\KnowledgeController;
+use Plugin\AiChatAssistant44\Repository\KnowledgeRepository;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -87,7 +87,7 @@ class KnowledgeControllerTest extends TestCase
 
     public function testDeleteWithValidCsrfRemovesEntity(): void
     {
-        $existing = $this->createMock(\Plugin\AiChatAssistant42\Entity\Knowledge::class);
+        $existing = $this->createMock(\Plugin\AiChatAssistant44\Entity\Knowledge::class);
         $this->repository->method('find')->with(42)->willReturn($existing);
         $this->repository->expects($this->once())->method('remove')->with($existing);
 

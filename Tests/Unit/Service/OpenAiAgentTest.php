@@ -13,10 +13,10 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Unit\Service;
+namespace Plugin\AiChatAssistant44\Tests\Unit\Service;
 
-use Plugin\AiChatAssistant42\Service\AiAgent\OpenAiAgent;
-use Plugin\AiChatAssistant42\Service\AiModelRegistry;
+use Plugin\AiChatAssistant44\Service\AiAgent\OpenAiAgent;
+use Plugin\AiChatAssistant44\Service\AiModelRegistry;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -32,7 +32,7 @@ class OpenAiAgentTest extends TestCase
     protected function setUp(): void
     {
         $candidates = [
-            dirname(__DIR__, 6) . '/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json',
+            dirname(__DIR__, 6) . '/app/Plugin/AiChatAssistant44/Resource/config/ai_models.json',
             dirname(__DIR__, 4) . '/Resource/config/ai_models.json',
             dirname(__DIR__, 3) . '/Resource/config/ai_models.json',
         ];

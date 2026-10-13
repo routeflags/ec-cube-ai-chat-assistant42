@@ -13,9 +13,9 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Service;
+namespace Plugin\AiChatAssistant44\Service;
 
-use Plugin\AiChatAssistant42\Repository\NotificationRepository;
+use Plugin\AiChatAssistant44\Repository\NotificationRepository;
 use GuzzleHttp\Client as HttpClient;
 use GuzzleHttp\Exception\GuzzleException;
 use Psr\Log\LoggerInterface;
@@ -121,7 +121,7 @@ class NotificationService
 
         $payload = [
             'event' => $event,
-            'plugin' => 'AiChatAssistant42',
+            'plugin' => 'AiChatAssistant44',
             'context' => $context,
             'timestamp' => date('c'),
         ];
@@ -201,7 +201,7 @@ class NotificationService
     {
         try {
             $messageBody = sprintf(
-                "イベント: %s\nプラグイン: AiChatAssistant42\n発生日時: %s\n\nコンテキスト:\n%s",
+                "イベント: %s\nプラグイン: AiChatAssistant44\n発生日時: %s\n\nコンテキスト:\n%s",
                 $event,
                 date('c'),
                 print_r($context, true)

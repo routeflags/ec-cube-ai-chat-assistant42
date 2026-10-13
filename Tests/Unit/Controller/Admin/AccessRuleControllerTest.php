@@ -13,12 +13,12 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Unit\Controller\Admin;
+namespace Plugin\AiChatAssistant44\Tests\Unit\Controller\Admin;
 
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use Plugin\AiChatAssistant42\Controller\Admin\AccessRuleController;
-use Plugin\AiChatAssistant42\Repository\AccessRuleRepository;
+use Plugin\AiChatAssistant44\Controller\Admin\AccessRuleController;
+use Plugin\AiChatAssistant44\Repository\AccessRuleRepository;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
@@ -140,7 +140,7 @@ class AccessRuleControllerTest extends TestCase
 
     public function testEditWithValidTokenUpdatesRule(): void
     {
-        $existing = $this->createMock(\Plugin\AiChatAssistant42\Entity\AccessRule::class);
+        $existing = $this->createMock(\Plugin\AiChatAssistant44\Entity\AccessRule::class);
         $existing->method('getRuleValue')->willReturn('old');
         $existing->method('getRuleType')->willReturn('ip');
         $existing->method('getAction')->willReturn('deny');
@@ -190,7 +190,7 @@ class AccessRuleControllerTest extends TestCase
 
     public function testDeleteWithValidTokenRemovesRule(): void
     {
-        $existing = $this->createMock(\Plugin\AiChatAssistant42\Entity\AccessRule::class);
+        $existing = $this->createMock(\Plugin\AiChatAssistant44\Entity\AccessRule::class);
         $this->repository->method('find')->with(5)->willReturn($existing);
         $this->repository->expects($this->once())->method('delete')->with($existing);
 

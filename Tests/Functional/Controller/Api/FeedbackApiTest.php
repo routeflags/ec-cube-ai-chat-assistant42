@@ -13,23 +13,23 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Functional\Controller\Api;
+namespace Plugin\AiChatAssistant44\Tests\Functional\Controller\Api;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
-use Plugin\AiChatAssistant42\Controller\Api\ChatApiController;
-use Plugin\AiChatAssistant42\Entity\Feedback;
-use Plugin\AiChatAssistant42\Repository\ChatLogRepository;
-use Plugin\AiChatAssistant42\Repository\ConfigRepository;
-use Plugin\AiChatAssistant42\Repository\ProductRepository;
-use Plugin\AiChatAssistant42\Service\AiAgentFactory;
-use Plugin\AiChatAssistant42\Service\AiModelRegistry;
-use Plugin\AiChatAssistant42\Service\ApiKeyEncryptor;
-use Plugin\AiChatAssistant42\Service\ChatFlowService;
-use Plugin\AiChatAssistant42\Service\ChatLogger;
-use Plugin\AiChatAssistant42\Service\EmailReplyService;
-use Plugin\AiChatAssistant42\Service\NotificationService;
+use Plugin\AiChatAssistant44\Controller\Api\ChatApiController;
+use Plugin\AiChatAssistant44\Entity\Feedback;
+use Plugin\AiChatAssistant44\Repository\ChatLogRepository;
+use Plugin\AiChatAssistant44\Repository\ConfigRepository;
+use Plugin\AiChatAssistant44\Repository\ProductRepository;
+use Plugin\AiChatAssistant44\Service\AiAgentFactory;
+use Plugin\AiChatAssistant44\Service\AiModelRegistry;
+use Plugin\AiChatAssistant44\Service\ApiKeyEncryptor;
+use Plugin\AiChatAssistant44\Service\ChatFlowService;
+use Plugin\AiChatAssistant44\Service\ChatLogger;
+use Plugin\AiChatAssistant44\Service\EmailReplyService;
+use Plugin\AiChatAssistant44\Service\NotificationService;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -109,7 +109,7 @@ class FeedbackApiTest extends TestCase
             if ($class === Feedback::class) {
                 return $feedbackRepo;
             }
-            if ($class === \Plugin\AiChatAssistant42\Entity\ChatLog::class) {
+            if ($class === \Plugin\AiChatAssistant44\Entity\ChatLog::class) {
                 return $chatLogRepo;
             }
             return $feedbackRepo;

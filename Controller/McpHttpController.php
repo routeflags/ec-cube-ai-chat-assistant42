@@ -13,13 +13,13 @@ declare(strict_types=1);
  * file that was distributed with this source code.
  */
 
-namespace Plugin\AiChatAssistant42\Controller;
+namespace Plugin\AiChatAssistant44\Controller;
 
-use Plugin\AiChatAssistant42\Repository\ProductRepository;
-use Plugin\AiChatAssistant42\Service\McpHttpService;
-use Plugin\AiChatAssistant42\Service\RateLimitExceededException;
-use Plugin\AiChatAssistant42\Service\RateLimitService;
-use Plugin\AiChatAssistant42\Service\ShopContextService;
+use Plugin\AiChatAssistant44\Repository\ProductRepository;
+use Plugin\AiChatAssistant44\Service\McpHttpService;
+use Plugin\AiChatAssistant44\Service\RateLimitExceededException;
+use Plugin\AiChatAssistant44\Service\RateLimitService;
+use Plugin\AiChatAssistant44\Service\ShopContextService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;

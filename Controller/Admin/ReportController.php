@@ -13,12 +13,12 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Controller\Admin;
+namespace Plugin\AiChatAssistant44\Controller\Admin;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Eccube\Controller\AbstractController;
-use Plugin\AiChatAssistant42\Entity\ChatLog;
-use Plugin\AiChatAssistant42\Repository\ChatLogRepository;
+use Plugin\AiChatAssistant44\Entity\ChatLog;
+use Plugin\AiChatAssistant44\Repository\ChatLogRepository;
 use Symfony\Component\HttpFoundation\Response;
 use DateTimeImmutable;
 
@@ -62,7 +62,7 @@ class ReportController extends AbstractController
         $hourlyDistribution = $this->fetchHourlyDistribution($periodStart, $periodEnd);
         $errorBreakdown = $this->fetchErrorBreakdown($periodStart, $periodEnd);
 
-        return $this->render('@AiChatAssistant42/admin/report.twig', [
+        return $this->render('@AiChatAssistant44/admin/report.twig', [
             'menus' => ['setting', 'ai_chat_assistant', 'ai_chat_assistant_report'],
             'provider_stats' => $providerStats,
             'model_stats' => $modelStats,

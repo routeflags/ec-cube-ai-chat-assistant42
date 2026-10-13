@@ -13,7 +13,7 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Unit\Service;
+namespace Plugin\AiChatAssistant44\Tests\Unit\Service;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
@@ -21,7 +21,7 @@ use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
-use Plugin\AiChatAssistant42\Service\AiAgent\GeminiAgent;
+use Plugin\AiChatAssistant44\Service\AiAgent\GeminiAgent;
 use Psr\Log\LoggerInterface;
 
 /**

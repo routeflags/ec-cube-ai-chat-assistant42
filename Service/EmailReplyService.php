@@ -13,10 +13,10 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Service;
+namespace Plugin\AiChatAssistant44\Service;
 
 use Eccube\Repository\BaseInfoRepository;
-use Plugin\AiChatAssistant42\Repository\ChatLogRepository;
+use Plugin\AiChatAssistant44\Repository\ChatLogRepository;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Integration;
+namespace Plugin\AiChatAssistant44\Tests\Integration;
 
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Yaml\Yaml;
@@ -34,17 +34,17 @@ class ServiceWiringTest extends TestCase
     {
         // 11件を期待 — 新規 Controller 追加時にテストが落ち、漏れを検知できる
         $expected = [
-            'Plugin\AiChatAssistant42\Controller\Admin\AccessRuleController',
-            'Plugin\AiChatAssistant42\Controller\Admin\ChatHistoryController',
-            'Plugin\AiChatAssistant42\Controller\Admin\DashboardController',
-            'Plugin\AiChatAssistant42\Controller\Admin\DesignController',
-            'Plugin\AiChatAssistant42\Controller\Admin\KnowledgeController',
-            'Plugin\AiChatAssistant42\Controller\Admin\NotificationController',
-            'Plugin\AiChatAssistant42\Controller\Admin\ReportController',
-            'Plugin\AiChatAssistant42\Controller\Admin\ScenarioController',
-            'Plugin\AiChatAssistant42\Controller\Api\ChatApiController',
-            'Plugin\AiChatAssistant42\Controller\Api\ModelApiController',
-            'Plugin\AiChatAssistant42\Controller\McpHttpController',
+            'Plugin\AiChatAssistant44\Controller\Admin\AccessRuleController',
+            'Plugin\AiChatAssistant44\Controller\Admin\ChatHistoryController',
+            'Plugin\AiChatAssistant44\Controller\Admin\DashboardController',
+            'Plugin\AiChatAssistant44\Controller\Admin\DesignController',
+            'Plugin\AiChatAssistant44\Controller\Admin\KnowledgeController',
+            'Plugin\AiChatAssistant44\Controller\Admin\NotificationController',
+            'Plugin\AiChatAssistant44\Controller\Admin\ReportController',
+            'Plugin\AiChatAssistant44\Controller\Admin\ScenarioController',
+            'Plugin\AiChatAssistant44\Controller\Api\ChatApiController',
+            'Plugin\AiChatAssistant44\Controller\Api\ModelApiController',
+            'Plugin\AiChatAssistant44\Controller\McpHttpController',
         ];
 
         sort($expected);
@@ -103,8 +103,8 @@ class ServiceWiringTest extends TestCase
                 continue;
             }
             $relative = substr($file->getPathname(), strlen($baseDir) + 1);
-            // Controller/Admin/FooController.php -> Plugin\AiChatAssistant42\Controller\Admin\FooController
-            $fqcn = 'Plugin\\AiChatAssistant42\\Controller\\' . str_replace(['/', '.php'], ['\\', ''], $relative);
+            // Controller/Admin/FooController.php -> Plugin\AiChatAssistant44\Controller\Admin\FooController
+            $fqcn = 'Plugin\\AiChatAssistant44\\Controller\\' . str_replace(['/', '.php'], ['\\', ''], $relative);
             $files[] = $fqcn;
         }
         sort($files);

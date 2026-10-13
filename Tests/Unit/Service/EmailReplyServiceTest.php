@@ -13,15 +13,15 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Unit\Service;
+namespace Plugin\AiChatAssistant44\Tests\Unit\Service;
 
 use Eccube\Entity\BaseInfo;
 use Eccube\Repository\BaseInfoRepository;
 use PHPUnit\Framework\TestCase;
-use Plugin\AiChatAssistant42\Repository\ChatLogRepository;
-use Plugin\AiChatAssistant42\Service\ChatLogger;
-use Plugin\AiChatAssistant42\Service\EmailHashService;
-use Plugin\AiChatAssistant42\Service\EmailReplyService;
+use Plugin\AiChatAssistant44\Repository\ChatLogRepository;
+use Plugin\AiChatAssistant44\Service\ChatLogger;
+use Plugin\AiChatAssistant44\Service\EmailHashService;
+use Plugin\AiChatAssistant44\Service\EmailReplyService;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;

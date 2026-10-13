@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\EventListener;
+namespace Plugin\AiChatAssistant44\EventListener;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Eccube\Event\TemplateEvent;
-use Plugin\AiChatAssistant42\Repository\ConfigRepository;
+use Plugin\AiChatAssistant44\Repository\ConfigRepository;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
@@ -17,7 +17,8 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
  */
 class ChatWidgetListener implements EventSubscriberInterface
 {
-    private const PLUGIN_DATA_PATH = '/app/PluginData/AiChatAssistant42/design_settings.json';
+    private const PLUGIN_DATA_PATH = '/app/PluginData/AiChatAssistant44/design_settings.json';
+    private const LEGACY_PLUGIN_DATA_PATH = '/app/PluginData/AiChatAssistant42/design_settings.json';
     private const LEGACY_PATH = __DIR__ . '/../Resource/config/design_settings.json';
 
     public function __construct(
@@ -31,9 +32,23 @@ class ChatWidgetListener implements EventSubscriberInterface
         if ($this->projectDir !== '') {
             return $this->projectDir . self::PLUGIN_DATA_PATH;
         }
+        return dirname(__DIR__, 3) . '/PluginData/AiChatAssistant44/design_settings.json';
+    }
+
+    /**
+     * S-07: 旧code (AiChatAssistant42) の PluginData をフォールバック参照する。
+     *
+     * テーブルは改名しないためDB移行は不要。JSONのみ新側になければ旧側を読む。
+     */
+    private function getLegacyDesignSettingsPath(): string
+    {
+        if ($this->projectDir !== '') {
+            return $this->projectDir . self::LEGACY_PLUGIN_DATA_PATH;
+        }
         return dirname(__DIR__, 3) . '/PluginData/AiChatAssistant42/design_settings.json';
     }
 
+    #[\Override]
     public static function getSubscribedEvents(): array
     {
         return [
@@ -63,7 +78,7 @@ class ChatWidgetListener implements EventSubscriberInterface
         $event->setParameter('chat_license_title', $designSettings['license_title'] ?? 'ソフトウェアライセンスについて');
         $event->setParameter(
             'chat_license_lead',
-            $designSettings['license_lead'] ?? 'AiChatAssistant42（チャットソフトウェア）の著作権は ROUTE FLAGS Co., Ltd. に帰属し、'
+            $designSettings['license_lead'] ?? 'AiChatAssistant44（チャットソフトウェア）の著作権は ROUTE FLAGS Co., Ltd. に帰属し、'
                 . 'GNU General Public License v2 (GPL-2.0-only) に基づき提供されています。'
         );
         $event->setParameter('chat_license_item1_heading', $designSettings['license_item1_heading'] ?? '著作権');
@@ -76,7 +91,7 @@ class ChatWidgetListener implements EventSubscriberInterface
         $event->setParameter('chat_license_item3_heading', $designSettings['license_item3_heading'] ?? 'オープンソースソフトウェアの利用');
         $event->setParameter(
             'chat_license_item3_body',
-            $designSettings['license_item3_body'] ?? '本ソフトウェアは EC-CUBE 4.2 ほか composer.json 記載のOSSを利用しています。'
+            $designSettings['license_item3_body'] ?? '本ソフトウェアは EC-CUBE 4.4 ほか composer.json 記載のOSSを利用しています。'
         );
         // 将来の利用規約拡張（JSONで後から追加可能、存在時のみ描画）
         if (!empty($designSettings['terms_footer_label'])) {
@@ -88,7 +103,7 @@ class ChatWidgetListener implements EventSubscriberInterface
             $event->setParameter('chat_terms_title', $designSettings['terms_title'] ?? '利用規約');
             $event->setParameter('chat_terms_body', $designSettings['terms_body'] ?? '');
         }
-        $event->addSnippet('@AiChatAssistant42/default/chat_widget.twig');
+        $event->addSnippet('@AiChatAssistant44/default/chat_widget.twig');
     }
 
     /**
@@ -97,25 +112,29 @@ class ChatWidgetListener implements EventSubscriberInterface
     private function loadDesignSettings(): array
     {
         $path = $this->getDesignSettingsPath();
+        // S-07: 新側になければ旧code側 PluginData から引き継ぐ (消失禁止)
+        if (!file_exists($path) && file_exists($this->getLegacyDesignSettingsPath())) {
+            $path = $this->getLegacyDesignSettingsPath();
+        }
         // 永続化パスがなければ旧パスから読む（移行期）
         if (!file_exists($path) && file_exists(self::LEGACY_PATH)) {
             $path = self::LEGACY_PATH;
         }
         if (!file_exists($path)) {
-            return \Plugin\AiChatAssistant42\Service\DesignSettingsSyncService::DEFAULTS;
+            return \Plugin\AiChatAssistant44\Service\DesignSettingsSyncService::DEFAULTS;
         }
 
         $raw = file_get_contents($path);
         if ($raw === false) {
-            return \Plugin\AiChatAssistant42\Service\DesignSettingsSyncService::DEFAULTS;
+            return \Plugin\AiChatAssistant44\Service\DesignSettingsSyncService::DEFAULTS;
         }
         $data = json_decode($raw, true);
         if (!is_array($data)) {
-            return \Plugin\AiChatAssistant42\Service\DesignSettingsSyncService::DEFAULTS;
+            return \Plugin\AiChatAssistant44\Service\DesignSettingsSyncService::DEFAULTS;
         }
         // 未知キー除去 + DEFAULTS 補完で後方互換（旧5キーの PluginData でも license_* が欠落しない）
-        $allowed = array_flip(array_keys(\Plugin\AiChatAssistant42\Service\DesignSettingsSyncService::DEFAULTS));
+        $allowed = array_flip(array_keys(\Plugin\AiChatAssistant44\Service\DesignSettingsSyncService::DEFAULTS));
         $filtered = array_intersect_key($data, $allowed);
-        return array_merge(\Plugin\AiChatAssistant42\Service\DesignSettingsSyncService::DEFAULTS, $filtered);
+        return array_merge(\Plugin\AiChatAssistant44\Service\DesignSettingsSyncService::DEFAULTS, $filtered);
     }
 }

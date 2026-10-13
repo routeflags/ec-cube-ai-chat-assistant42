@@ -13,10 +13,10 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Service;
+namespace Plugin\AiChatAssistant44\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
-use Plugin\AiChatAssistant42\Entity\Config;
+use Plugin\AiChatAssistant44\Entity\Config;
 use Psr\Log\LoggerInterface;
 
 /**

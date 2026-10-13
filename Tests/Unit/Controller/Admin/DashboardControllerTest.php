@@ -13,14 +13,14 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Unit\Controller\Admin;
+namespace Plugin\AiChatAssistant44\Tests\Unit\Controller\Admin;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use Plugin\AiChatAssistant42\Controller\Admin\DashboardController;
-use Plugin\AiChatAssistant42\Entity\Config;
+use Plugin\AiChatAssistant44\Controller\Admin\DashboardController;
+use Plugin\AiChatAssistant44\Entity\Config;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -79,7 +79,7 @@ class DashboardControllerTest extends TestCase
                         ];
                         foreach ($candidates as $candidate) {
                             if (
-                                is_file($candidate . '/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json')
+                                is_file($candidate . '/app/Plugin/AiChatAssistant44/Resource/config/ai_models.json')
                                 || is_file($candidate . '/Resource/config/ai_models.json')
                             ) {
                                 return $candidate;
@@ -118,7 +118,7 @@ class DashboardControllerTest extends TestCase
         $controller = $this->createController();
         $controller->method('render')
             ->willReturnCallback(function (string $template, array $params) use (&$persistedConfig) {
-                $this->assertEquals('@AiChatAssistant42/admin/settings.twig', $template);
+                $this->assertEquals('@AiChatAssistant44/admin/settings.twig', $template);
                 $this->assertArrayHasKey('config', $params);
                 $this->assertInstanceOf(Config::class, $params['config']);
                 $this->assertEquals('openai', $params['config']->getProvider());
@@ -168,7 +168,7 @@ class DashboardControllerTest extends TestCase
         $controller = $this->createController();
         $controller->method('render')
             ->willReturnCallback(function (string $template, array $params) use ($existingConfig) {
-                $this->assertEquals('@AiChatAssistant42/admin/settings.twig', $template);
+                $this->assertEquals('@AiChatAssistant44/admin/settings.twig', $template);
                 $this->assertSame($existingConfig, $params['config']);
                 // 6モデルが渡されること（ai_models.json 由来）
                 $this->assertArrayHasKey('modelsByProvider', $params);
@@ -410,7 +410,7 @@ class DashboardControllerTest extends TestCase
 
     public function testIndexCallsTrySyncIfStaleOnce(): void
     {
-        $syncService = $this->createMock(\Plugin\AiChatAssistant42\Service\AiModelSyncService::class);
+        $syncService = $this->createMock(\Plugin\AiChatAssistant44\Service\AiModelSyncService::class);
         $syncService->expects($this->once())->method('trySyncIfStale')->willReturn(true);
 
         $chatLogRepo = $this->createStubChatLogRepository();
@@ -426,7 +426,7 @@ class DashboardControllerTest extends TestCase
 
     public function testIndexSwallowsSyncExceptionAndStillRenders(): void
     {
-        $syncService = $this->createMock(\Plugin\AiChatAssistant42\Service\AiModelSyncService::class);
+        $syncService = $this->createMock(\Plugin\AiChatAssistant44\Service\AiModelSyncService::class);
         $syncService->expects($this->once())->method('trySyncIfStale')->willThrowException(new \RuntimeException('network down'));
 
         $chatLogRepo = $this->createStubChatLogRepository();
@@ -442,9 +442,9 @@ class DashboardControllerTest extends TestCase
         $this->assertEquals(200, $response->getStatusCode());
     }
 
-    private function createStubChatLogRepository(): \Plugin\AiChatAssistant42\Repository\ChatLogRepository
+    private function createStubChatLogRepository(): \Plugin\AiChatAssistant44\Repository\ChatLogRepository
     {
-        $repo = $this->createMock(\Plugin\AiChatAssistant42\Repository\ChatLogRepository::class);
+        $repo = $this->createMock(\Plugin\AiChatAssistant44\Repository\ChatLogRepository::class);
         $repo->method('fetchKpi')->willReturn(['total' => 0, 'resolved' => 0, 'errors' => 0, 'avg_response_ms' => 0, 'resolution_rate' => 0, 'error_rate' => 0]);
         $repo->method('fetchRecentLogs')->willReturn([]);
         $repo->method('fetchProviderStats')->willReturn([]);

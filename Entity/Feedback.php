@@ -13,8 +13,9 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Entity;
+namespace Plugin\AiChatAssistant44\Entity;
 
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -22,42 +23,29 @@ use Doctrine\ORM\Mapping as ORM;
  *
  * ユーザーが「解決できました / 解決できません」でフィードバックした結果を
  * session_id 単位で記録する。同一 session_id で重複投稿は 409 で拒否する。
- *
- * @ORM\Entity
- * @ORM\Table(name="plg_ai_chat_assistant_feedback",
- *     uniqueConstraints={
- *         @ORM\UniqueConstraint(name="uniq_session_feedback", columns={"session_id"})
- *     },
- *     indexes={
- *         @ORM\Index(name="idx_feedback", columns={"feedback"}),
- *         @ORM\Index(name="idx_feedback_created_at", columns={"created_at"})
- *     }
- * )
  */
+#[ORM\Entity]
+#[ORM\Table(name: 'plg_ai_chat_assistant_feedback')]
+#[ORM\UniqueConstraint(name: 'uniq_session_feedback', columns: ['session_id'])]
+#[ORM\Index(name: 'idx_feedback', columns: ['feedback'])]
+#[ORM\Index(name: 'idx_feedback_created_at', columns: ['created_at'])]
 class Feedback extends \Eccube\Entity\AbstractEntity
 {
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(type="integer", options={"unsigned":true})
-     */
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(type: Types::INTEGER, options: ['unsigned' => true])]
     private ?int $id = null;
 
-    /**
-     * @ORM\Column(type="string", length=64)
-     */
+    #[ORM\Column(type: Types::STRING, length: 64)]
     private string $session_id;
 
     /**
      * フィードバック種別: positive / negative
-     *
-     * @ORM\Column(type="string", length=16)
      */
+    #[ORM\Column(type: Types::STRING, length: 16)]
     private string $feedback;
 
-    /**
-     * @ORM\Column(type="datetimetz")
-     */
+    #[ORM\Column(type: Types::DATETIMETZ_MUTABLE)]
     private ?\DateTimeInterface $created_at = null;
 
     public function getId(): ?int

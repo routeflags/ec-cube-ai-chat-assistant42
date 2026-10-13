@@ -13,8 +13,9 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Entity;
+namespace Plugin\AiChatAssistant44\Entity;
 
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -22,137 +23,93 @@ use Doctrine\ORM\Mapping as ORM;
  *
  * ユーザーの質問・AI の返答・使用ツール・応答時間を記録し、
  * サポート品質の分析やモデル比較に活用する。
- *
- * @ORM\Entity
- * @ORM\Table(name="plg_ai_chat_assistant_log")
  */
+#[ORM\Entity]
+#[ORM\Table(name: 'plg_ai_chat_assistant_log')]
 class ChatLog extends \Eccube\Entity\AbstractEntity
 {
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(type="bigint", options={"unsigned":true})
-     */
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(type: Types::BIGINT, options: ['unsigned' => true])]
     private ?int $id = null;
 
-    /**
-     * @ORM\Column(type="string", length=64)
-     */
+    #[ORM\Column(type: Types::STRING, length: 64)]
     private string $session_id;
 
-    /**
-     * @ORM\Column(type="string", length=45, nullable=true)
-     */
+    #[ORM\Column(type: Types::STRING, length: 45, nullable: true)]
     private ?string $client_ip = null;
 
-    /**
-     * @ORM\Column(type="string", length=32)
-     */
+    #[ORM\Column(type: Types::STRING, length: 32)]
     private string $provider;
 
-    /**
-     * @ORM\Column(type="string", length=128)
-     */
+    #[ORM\Column(type: Types::STRING, length: 128)]
     private string $model;
 
-    /**
-     * @ORM\Column(type="text")
-     */
+    #[ORM\Column(type: Types::TEXT)]
     private string $user_message;
 
-    /**
-     * @ORM\Column(type="text")
-     */
+    #[ORM\Column(type: Types::TEXT)]
     private string $assistant_reply;
 
-    /**
-     * @ORM\Column(type="json", nullable=true)
-     */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $tools_used = null;
 
-    /**
-     * @ORM\Column(type="integer", nullable=true, options={"unsigned":true})
-     */
+    #[ORM\Column(type: Types::INTEGER, nullable: true, options: ['unsigned' => true])]
     private ?int $response_time_ms = null;
 
-    /**
-     * @ORM\Column(type="integer", nullable=true, options={"unsigned":true})
-     */
+    #[ORM\Column(type: Types::INTEGER, nullable: true, options: ['unsigned' => true])]
     private ?int $token_input = null;
 
-    /**
-     * @ORM\Column(type="integer", nullable=true, options={"unsigned":true})
-     */
+    #[ORM\Column(type: Types::INTEGER, nullable: true, options: ['unsigned' => true])]
     private ?int $token_output = null;
 
-    /**
-     * @ORM\Column(type="text", nullable=true)
-     */
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $error_message = null;
 
-    /**
-     * @ORM\Column(type="smallint", nullable=true)
-     */
+    #[ORM\Column(type: Types::SMALLINT, nullable: true)]
     private ?int $satisfaction_rating = null;
 
-    /**
-     * @ORM\Column(type="smallint", options={"default":0})
-     */
+    #[ORM\Column(type: Types::SMALLINT, options: ['default' => 0])]
     private int $is_resolved = 0;
 
-    /**
-     * @ORM\Column(type="string", length=32, nullable=true)
-     */
+    #[ORM\Column(type: Types::STRING, length: 32, nullable: true)]
     private ?string $error_type = null;
 
-    /**
-     * @ORM\Column(type="integer", nullable=true, options={"unsigned":true})
-     */
+    #[ORM\Column(type: Types::INTEGER, nullable: true, options: ['unsigned' => true])]
     private ?int $product_id = null;
 
-    /**
-     * @ORM\Column(type="integer", nullable=true, options={"unsigned":true})
-     */
+    #[ORM\Column(type: Types::INTEGER, nullable: true, options: ['unsigned' => true])]
     private ?int $order_id = null;
 
     /**
      * メール返信先アドレス（平文・非推奨: 互換保持のみ。保存時は hash+enc を使用）。
-     *
      * @deprecated I-30 対応で平文保存を廃止。新規保存は email_reply_address_hash + enc を使用。
-     * @ORM\Column(type="string", length=255, nullable=true)
      */
+    #[ORM\Column(type: Types::STRING, length: 255, nullable: true)]
     private ?string $email_reply_address = null;
 
     /**
      * メール返信先のハッシュ（HMAC-SHA256, 64hex）。集計・レート制限・検索用（不可逆）。
-     *
-     * @ORM\Column(type="string", length=64, nullable=true, options={"comment":"hmac_sha256(normalized_email, APP_SECRET pepper) 64hex"})
      */
+    #[ORM\Column(type: Types::STRING, length: 64, nullable: true, options: ['comment' => 'hmac_sha256(normalized_email, APP_SECRET pepper) 64hex'])]
     private ?string $email_reply_address_hash = null;
 
     /**
      * メール返信先の暗号文（AES-256-GCM, base64(nonce12+cipher+tag16)）。送信時に復号。30日で自動削除。
-     *
-     * @ORM\Column(type="text", nullable=true, options={"comment":"AES-256-GCM encrypted email, purge after 30 days"})
      */
+    #[ORM\Column(type: Types::TEXT, nullable: true, options: ['comment' => 'AES-256-GCM encrypted email, purge after 30 days'])]
     private ?string $email_reply_address_enc = null;
 
     /**
      * メール返信の完了日時。
      */
-    /**
-     * @ORM\Column(type="datetimetz", nullable=true)
-     */
+    #[ORM\Column(type: Types::DATETIMETZ_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $email_replied_at = null;
 
-    /**
-     * @ORM\Column(type="datetimetz")
-     */
+    #[ORM\Column(type: Types::DATETIMETZ_MUTABLE)]
     private ?\DateTimeInterface $created_at = null;
 
-    /**
-     * @ORM\Column(type="datetimetz", nullable=true)
-     */
+    #[ORM\Column(type: Types::DATETIMETZ_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $synced_at = null;
 
     public function getId(): ?int

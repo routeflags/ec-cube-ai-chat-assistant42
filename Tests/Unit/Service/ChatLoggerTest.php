@@ -13,11 +13,11 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Unit\Service;
+namespace Plugin\AiChatAssistant44\Tests\Unit\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
-use Plugin\AiChatAssistant42\Entity\ChatLog;
-use Plugin\AiChatAssistant42\Service\ChatLogger;
+use Plugin\AiChatAssistant44\Entity\ChatLog;
+use Plugin\AiChatAssistant44\Service\ChatLogger;
 use PHPUnit\Framework\TestCase;
 
 /**

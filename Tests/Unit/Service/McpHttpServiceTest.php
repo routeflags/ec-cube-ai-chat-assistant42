@@ -13,12 +13,12 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Unit\Service;
+namespace Plugin\AiChatAssistant44\Tests\Unit\Service;
 
 use PHPUnit\Framework\TestCase;
-use Plugin\AiChatAssistant42\Repository\ProductRepository;
-use Plugin\AiChatAssistant42\Service\McpHttpService;
-use Plugin\AiChatAssistant42\Service\ShopContextService;
+use Plugin\AiChatAssistant44\Repository\ProductRepository;
+use Plugin\AiChatAssistant44\Service\McpHttpService;
+use Plugin\AiChatAssistant44\Service\ShopContextService;
 
 /**
  * McpHttpService::buildWellKnownPayload() の表示名解決を検証する。

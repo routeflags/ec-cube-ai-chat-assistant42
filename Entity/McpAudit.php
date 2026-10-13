@@ -13,8 +13,9 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Entity;
+namespace Plugin\AiChatAssistant44\Entity;
 
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -22,47 +23,32 @@ use Doctrine\ORM\Mapping as ORM;
  *
  * tool名・結果区分・所要時間・エラーコードのみ記録し、
  * 引数・応答内容・個人情報は記録しない（WebMCP設計書 PREMISES-4）。
- *
- * @ORM\Entity
- * @ORM\Table(name="plg_ai_chat_assistant_mcp_audit")
  */
+#[ORM\Entity]
+#[ORM\Table(name: 'plg_ai_chat_assistant_mcp_audit')]
 class McpAudit extends \Eccube\Entity\AbstractEntity
 {
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(type="bigint", options={"unsigned":true})
-     */
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(type: Types::BIGINT, options: ['unsigned' => true])]
     private ?int $id = null;
 
-    /**
-     * @ORM\Column(type="string", length=64)
-     */
+    #[ORM\Column(type: Types::STRING, length: 64)]
     private string $tool_name;
 
-    /**
-     * @ORM\Column(type="string", length=16)
-     */
+    #[ORM\Column(type: Types::STRING, length: 16)]
     private string $result;
 
-    /**
-     * @ORM\Column(type="string", length=32, nullable=true)
-     */
+    #[ORM\Column(type: Types::STRING, length: 32, nullable: true)]
     private ?string $error_code = null;
 
-    /**
-     * @ORM\Column(type="integer", nullable=true, options={"unsigned":true})
-     */
+    #[ORM\Column(type: Types::INTEGER, nullable: true, options: ['unsigned' => true])]
     private ?int $duration_ms = null;
 
-    /**
-     * @ORM\Column(type="string", length=64, nullable=true)
-     */
+    #[ORM\Column(type: Types::STRING, length: 64, nullable: true)]
     private ?string $client_ip_hash = null;
 
-    /**
-     * @ORM\Column(type="datetimetz")
-     */
+    #[ORM\Column(type: Types::DATETIMETZ_MUTABLE)]
     private ?\DateTimeInterface $created_at = null;
 
     public function getId(): ?int

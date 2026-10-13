@@ -1,16 +1,21 @@
 #!/bin/bash
-# bin/verify-docker-install.sh - EC-CUBE 4.2/4.3 両対応の docker compose インストール試験
+# bin/verify-docker-install.sh - EC-CUBE 4.2/4.3/4.4 対応の docker compose インストール試験
 #
 # 審査 3607 で検出された 4.2 dep-on-root / 4.3 ContainerInterface を
 # EC-CUBE 本体にマウントして eccube:plugin:install する結合試験で再現する。
+# 4.4 (Symfony 7.4 / PHP 8.2〜8.5) は port 8082 + php:8.3-apache 系で追加 (T-11/V-04)。
+# 既存 4.2(8080)/4.3(8081) の振る舞いは維持する。
 #
 # Usage:
-#   ./bin/verify-docker-install.sh                          # both (4.2 + 4.3)
-#   ./bin/verify-docker-install.sh --version 4.2            # 4.2 のみ (PHP 8.1)
-#   ./bin/verify-docker-install.sh --version 4.3            # 4.3 のみ (PHP 8.2)
+#   ./bin/verify-docker-install.sh                          # both (4.2 + 4.3, 既存互換)
+#   ./bin/verify-docker-install.sh --version 4.2            # 4.2 のみ (PHP 8.1, port 8080, code AiChatAssistant42)
+#   ./bin/verify-docker-install.sh --version 4.3            # 4.3 のみ (PHP 8.2, port 8081, code AiChatAssistant42)
+#   ./bin/verify-docker-install.sh --version 4.4            # 4.4 のみ (PHP 8.3, port 8082, code AiChatAssistant44)
+#   ./bin/verify-docker-install.sh --version all            # 4.2 + 4.3 + 4.4
 #   ./bin/verify-docker-install.sh --version 4.2 --keep     # 終了時に down -v しない
 #   ./bin/verify-docker-install.sh --version both --quick   # unit のみ (docker省略)
-#   PLUGIN_DIR=/path/to/plugin ./bin/verify-docker-install.sh --version 4.3
+#   PLUGIN_DIR=/path/to/plugin ./bin/verify-docker-install.sh --version 4.4
+#   PLUGIN_CODE=AiChatAssistant44 ./bin/verify-docker-install.sh --version 4.4  # 上書き可
 #
 set -euo pipefail
 
@@ -26,7 +31,12 @@ while [[ $# -gt 0 ]]; do
     --keep) KEEP=1; shift ;;
     --quick) QUICK=1; shift ;;
     -h|--help)
-      echo "Usage: $0 [--version 4.2|4.3|both] [--keep] [--quick]"
+      echo "Usage: $0 [--version 4.2|4.3|4.4|both|all] [--keep] [--quick]"
+      echo "  4.2  -> EC-CUBE 4.2 + php:8.1-apache-bullseye + port 8080 (code AiChatAssistant42)"
+      echo "  4.3  -> EC-CUBE 4.3 + php:8.2-apache-bullseye + port 8081 (code AiChatAssistant42)"
+      echo "  4.4  -> EC-CUBE 4.4 + php:8.3-apache-bullseye + port 8082 (code AiChatAssistant44)"
+      echo "  both -> 4.2 + 4.3 (既存互換。4.4は含まない)"
+      echo "  all  -> 4.2 + 4.3 + 4.4"
       exit 0
       ;;
     *) echo "[ERROR] Unknown arg: $1" >&2; exit 1 ;;
@@ -79,30 +89,42 @@ run_one_version() {
   local eccube_branch
   local port
   local tmpdir
+  local plugin_code
+  local plugin_mount
 
   case "$ver" in
-    4.2) php_image="php:8.1-apache-bullseye"; eccube_branch="4.2"; port="8080" ;;
-    4.3) php_image="php:8.2-apache-bullseye"; eccube_branch="4.3"; port="8081" ;;
+    4.2) php_image="php:8.1-apache-bullseye"; eccube_branch="4.2"; port="8080"; plugin_code="${PLUGIN_CODE:-AiChatAssistant42}"; plugin_mount="${PLUGIN_MOUNT:-AiChatAssistant42}" ;;
+    4.3) php_image="php:8.2-apache-bullseye"; eccube_branch="4.3"; port="8081"; plugin_code="${PLUGIN_CODE:-AiChatAssistant42}"; plugin_mount="${PLUGIN_MOUNT:-AiChatAssistant42}" ;;
+    4.4) php_image="${PHP_IMAGE_44:-php:8.3-apache-bullseye}"; eccube_branch="${ECCUBE_BRANCH_44:-4.4}"; port="8082"; plugin_code="${PLUGIN_CODE:-AiChatAssistant44}"; plugin_mount="${PLUGIN_MOUNT:-AiChatAssistant44}" ;;
     *) echo "[ERROR] unsupported version: $ver" >&2; exit 1 ;;
   esac
 
   tmpdir="/tmp/eccube-verify-${ver}"
   echo ""
   echo "======================================================================"
-  echo "=== [${ver}] EC-CUBE ${ver} + ${php_image} (port ${port}) ==="
+  echo "=== [${ver}] EC-CUBE ${ver} + ${php_image} (port ${port}, code ${plugin_code}) ==="
   echo "======================================================================"
   echo "tmpdir: $tmpdir"
   echo "plugin: $PLUGIN_DIR"
+  echo "plugin_code: $plugin_code / mount: app/Plugin/$plugin_mount"
 
   # 1. EC-CUBE 本体を用意 (既存なら再利用、なければ clone)
+  # 4.4 は alpha 期のため branch `4.4` が無ければ tag `4.4.0-alpha-1` にフォールバックする。
   if [[ ! -d "$tmpdir/.git" ]]; then
     echo "[${ver} 1/7] git clone -b $eccube_branch EC-CUBE -> $tmpdir"
     rm -rf "$tmpdir"
-    git clone -b "$eccube_branch" https://github.com/EC-CUBE/ec-cube.git "$tmpdir"
+    if ! git clone -b "$eccube_branch" https://github.com/EC-CUBE/ec-cube.git "$tmpdir"; then
+      if [[ "$ver" == "4.4" ]]; then
+        echo "[WARN] branch $eccube_branch が無いため tag 4.4.0-alpha-1 で再試行" >&2
+        git clone -b "4.4.0-alpha-1" https://github.com/EC-CUBE/ec-cube.git "$tmpdir"
+      else
+        exit 1
+      fi
+    fi
   else
     echo "[${ver} 1/7] EC-CUBE 既存 $tmpdir を再利用 (git fetch)"
     git -C "$tmpdir" fetch origin "$eccube_branch" --depth 1 || true
-    git -C "$tmpdir" checkout "$eccube_branch" || true
+    git -C "$tmpdir" checkout "$eccube_branch" || git -C "$tmpdir" checkout "4.4.0-alpha-1" || true
   fi
 
   # 2. compose 定義と env を配置
@@ -112,10 +134,10 @@ run_one_version() {
   # .env は compose の env_file ではなく EC-CUBE 本体用。compose 側は environment 直書きのため不要だが一応配置
 
   # 3. 起動
-  echo "[${ver} 3/7] docker compose up -d --build (PHP_IMAGE=$php_image, PLUGIN_DIR=$PLUGIN_DIR, PORT=$port)"
+  echo "[${ver} 3/7] docker compose up -d --build (PHP_IMAGE=$php_image, PLUGIN_DIR=$PLUGIN_DIR, PORT=$port, MOUNT=$plugin_mount)"
   (
     cd "$tmpdir"
-    PHP_IMAGE="$php_image" PLUGIN_DIR="$PLUGIN_DIR" ECCUBE_PORT="$port" docker compose -f docker-compose.verify.yml up -d --build
+    PHP_IMAGE="$php_image" PLUGIN_DIR="$PLUGIN_DIR" PLUGIN_MOUNT="$plugin_mount" ECCUBE_PORT="$port" docker compose -f docker-compose.verify.yml up -d --build
     echo "  -> waiting for eccube container..."
     for i in $(seq 1 30); do
       if docker compose -f docker-compose.verify.yml exec -T eccube php -v > /dev/null 2>&1; then
@@ -140,10 +162,20 @@ run_one_version() {
   }
 
   # 5. plugin install / enable — 審査再現の核心
-  echo "[${ver} 5/7] eccube:plugin:install --code=AiChatAssistant42 (審査再現)"
-  docker compose -f "$tmpdir/docker-compose.verify.yml" exec -T eccube php bin/console eccube:plugin:install --code=AiChatAssistant42
+  echo "[${ver} 5/7] eccube:plugin:install --code=${plugin_code} (審査再現)"
+  docker compose -f "$tmpdir/docker-compose.verify.yml" exec -T eccube php bin/console eccube:plugin:install --code="$plugin_code"
   echo "[${ver} 5b] eccube:plugin:enable"
-  docker compose -f "$tmpdir/docker-compose.verify.yml" exec -T eccube php bin/console eccube:plugin:enable --code=AiChatAssistant42
+  docker compose -f "$tmpdir/docker-compose.verify.yml" exec -T eccube php bin/console eccube:plugin:enable --code="$plugin_code"
+
+  # 5c. SameSite 検出 (4.4): HTTP + cookie_samesite:none では管理画面ログイン不可。WARN表示。
+  if [[ "$ver" == "4.4" ]]; then
+    SAMESITE="$(docker compose -f "$tmpdir/docker-compose.verify.yml" exec -T eccube grep -E "cookie_samesite" app/config/eccube/packages/framework.yaml 2>/dev/null || true)"
+    echo "[${ver} 5c] SameSite check: $SAMESITE"
+    if echo "$SAMESITE" | grep -q "none"; then
+      echo "[WARN] 4.4 は SameSite=None のため HTTP (php -S / 本compose) では管理画面ログイン不可。" >&2
+      echo "[WARN] HTTP検証時は framework.yaml の cookie_samesite:none -> lax + var/cache + var/build 削除が必要。HTTPS(symfony server:start)では不要。詳細は Documents/LOCAL_VERIFICATION.md §9 参照。" >&2
+    fi
+  fi
 
   # 6. cache + debug — 4.3 ContainerInterface をここで検出
   echo "[${ver} 6/7] cache:clear --no-warmup && cache:warmup (4.3 ContainerInterface gate)"
@@ -151,7 +183,7 @@ run_one_version() {
   docker compose -f "$tmpdir/docker-compose.verify.yml" exec -T eccube php bin/console cache:warmup
 
   echo "[${ver} 6b] debug:container ChatApiController --show-arguments"
-  docker compose -f "$tmpdir/docker-compose.verify.yml" exec -T eccube php bin/console debug:container 'Plugin\AiChatAssistant42\Controller\Api\ChatApiController' --show-arguments | head -n 50
+  docker compose -f "$tmpdir/docker-compose.verify.yml" exec -T eccube php bin/console debug:container "Plugin\\${plugin_code}\\Controller\\Api\\ChatApiController" --show-arguments | head -n 50
 
   echo "[${ver} 6c] debug:router | grep ai_chat (expect 28)"
   ROUTE_COUNT="$(docker compose -f "$tmpdir/docker-compose.verify.yml" exec -T eccube php bin/console debug:router | grep -c ai_chat || true)"
@@ -185,8 +217,10 @@ run_one_version() {
 case "$VERSION" in
   4.2) run_one_version "4.2" ;;
   4.3) run_one_version "4.3" ;;
+  4.4) run_one_version "4.4" ;;
   both) run_one_version "4.2"; run_one_version "4.3" ;;
-  *) echo "[ERROR] --version は 4.2|4.3|both のみ" >&2; exit 1 ;;
+  all) run_one_version "4.2"; run_one_version "4.3"; run_one_version "4.4" ;;
+  *) echo "[ERROR] --version は 4.2|4.3|4.4|both|all のみ" >&2; exit 1 ;;
 esac
 
 echo ""

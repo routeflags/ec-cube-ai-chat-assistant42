@@ -13,10 +13,10 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Controller\Api;
+namespace Plugin\AiChatAssistant44\Controller\Api;
 
 use Eccube\Controller\AbstractController;
-use Plugin\AiChatAssistant42\Service\AiModelRegistry;
+use Plugin\AiChatAssistant44\Service\AiModelRegistry;
 use Symfony\Component\HttpFoundation\JsonResponse;
 
 /**

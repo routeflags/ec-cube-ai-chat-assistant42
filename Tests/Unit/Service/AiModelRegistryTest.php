@@ -13,9 +13,9 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Unit\Service;
+namespace Plugin\AiChatAssistant44\Tests\Unit\Service;
 
-use Plugin\AiChatAssistant42\Service\AiModelRegistry;
+use Plugin\AiChatAssistant44\Service\AiModelRegistry;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -31,7 +31,7 @@ class AiModelRegistryTest extends TestCase
     {
         // EC-CUBE ルート (app/Plugin/...) とプラグイン単体リポジトリ (Resource/...) の両方に対応
         $candidates = [
-            dirname(__DIR__, 6) . '/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json',
+            dirname(__DIR__, 6) . '/app/Plugin/AiChatAssistant44/Resource/config/ai_models.json',
             dirname(__DIR__, 4) . '/Resource/config/ai_models.json',
             dirname(__DIR__, 3) . '/Resource/config/ai_models.json',
         ];
@@ -343,8 +343,8 @@ class AiModelRegistryTest extends TestCase
     public function testResolveConfigPathPrefersPluginDataOverResource(): void
     {
         $tmpBase = sys_get_temp_dir() . '/.ai_model_registry_test_' . uniqid('', true);
-        $pluginDataPath = $tmpBase . '/app/PluginData/AiChatAssistant42/ai_models.json';
-        $resourcePath = $tmpBase . '/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json';
+        $pluginDataPath = $tmpBase . '/app/PluginData/AiChatAssistant44/ai_models.json';
+        $resourcePath = $tmpBase . '/app/Plugin/AiChatAssistant44/Resource/config/ai_models.json';
 
         // PluginData に 11モデル、Resource に 10モデルを用意
         $basePayload = json_decode(file_get_contents(dirname(__DIR__, 3) . '/Resource/config/ai_models.json'), true);
@@ -378,8 +378,8 @@ class AiModelRegistryTest extends TestCase
     public function testResolveConfigPathFallsBackToResourceWhenPluginDataMissing(): void
     {
         $tmpBase = sys_get_temp_dir() . '/.ai_model_registry_test_' . uniqid('', true);
-        $pluginDataPath = $tmpBase . '/app/PluginData/AiChatAssistant42/ai_models.json';
-        $resourcePath = $tmpBase . '/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json';
+        $pluginDataPath = $tmpBase . '/app/PluginData/AiChatAssistant44/ai_models.json';
+        $resourcePath = $tmpBase . '/app/Plugin/AiChatAssistant44/Resource/config/ai_models.json';
 
         $basePayload = json_decode(file_get_contents(dirname(__DIR__, 3) . '/Resource/config/ai_models.json'), true);
         $this->assertIsArray($basePayload);

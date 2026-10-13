@@ -13,8 +13,9 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Entity;
+namespace Plugin\AiChatAssistant44\Entity;
 
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -22,55 +23,44 @@ use Doctrine\ORM\Mapping as ORM;
  *
  * エラー閾値や未解決件数など、トリガー条件に応じて
  * メール・Webhook・LINE など経由で管理者に通知を送信する。
- *
- * @ORM\Entity
- * @ORM\Table(name="plg_ai_chat_assistant_notification")
  */
+#[ORM\Entity]
+#[ORM\Table(name: 'plg_ai_chat_assistant_notification')]
 class Notification extends \Eccube\Entity\AbstractEntity
 {
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(type="integer", options={"unsigned":true})
-     */
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(type: Types::INTEGER, options: ['unsigned' => true])]
     private ?int $id = null;
 
     /**
      * 通知チャネル種別 (email / webhook / line)。
-     *
-     * @ORM\Column(type="string", length=32)
      */
+    #[ORM\Column(type: Types::STRING, length: 32)]
     private string $notification_type;
 
     /**
      * トリガーとなるイベント識別子。
-     *
-     * @ORM\Column(type="string", length=64)
      */
+    #[ORM\Column(type: Types::STRING, length: 64)]
     private string $trigger_event;
 
     /**
      * 通知設定の JSON (宛先 URL, ヘッダー, メッセージテンプレート等)。
-     *
-     * @ORM\Column(type="json", nullable=true)
      */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $config_json = null;
 
     /**
      * 有効フラグ (1=有効, 0=無効)。
-     *
-     * @ORM\Column(type="smallint", options={"default":1})
      */
+    #[ORM\Column(type: Types::SMALLINT, options: ['default' => 1])]
     private int $is_active = 1;
 
-    /**
-     * @ORM\Column(type="datetimetz")
-     */
+    #[ORM\Column(type: Types::DATETIMETZ_MUTABLE)]
     private ?\DateTimeInterface $create_date = null;
 
-    /**
-     * @ORM\Column(type="datetimetz")
-     */
+    #[ORM\Column(type: Types::DATETIMETZ_MUTABLE)]
     private ?\DateTimeInterface $update_date = null;
 
     public function getId(): ?int

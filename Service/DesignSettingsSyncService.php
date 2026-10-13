@@ -13,7 +13,7 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Service;
+namespace Plugin\AiChatAssistant44\Service;
 
 use LogicException;
 
@@ -21,7 +21,7 @@ use LogicException;
  * design_settings.json のリモート同期を担うサービス。
  *
  * - 取得元: https://routeflags.com/dist/ec_chat/design_settings.json (REMOTE_URL)
- * - 保存先: app/PluginData/AiChatAssistant42/design_settings.json (永続領域)
+ * - 保存先: app/PluginData/AiChatAssistant44/design_settings.json (永続領域)
  * - 同期間隔: TTL 86400秒 (1日1回)、管理画面アクセス時にのみ trySyncIfStale() が呼ばれる
  * - 対象キー: license_* のみをリモート正本としてマージ、widget_* はローカル保持
  * - 排他: flock(LOCK_EX|LOCK_NB) で多重起動を防止
@@ -33,9 +33,9 @@ use LogicException;
 class DesignSettingsSyncService extends AbstractPluginDataSyncService
 {
     public const REMOTE_URL = 'https://routeflags.com/dist/ec_chat/design_settings.json';
-    public const PLUGIN_DATA_PATH = '/app/PluginData/AiChatAssistant42/design_settings.json';
-    public const META_PATH = '/app/PluginData/AiChatAssistant42/.design_settings.meta.json';
-    public const LOCK_PATH = '/app/PluginData/AiChatAssistant42/.design_settings.sync.lock';
+    public const PLUGIN_DATA_PATH = '/app/PluginData/AiChatAssistant44/design_settings.json';
+    public const META_PATH = '/app/PluginData/AiChatAssistant44/.design_settings.meta.json';
+    public const LOCK_PATH = '/app/PluginData/AiChatAssistant44/.design_settings.sync.lock';
 
     /** リモートが正本となるキー (license_*) */
     public const REMOTE_MANAGED_KEYS = [
@@ -59,7 +59,7 @@ class DesignSettingsSyncService extends AbstractPluginDataSyncService
         'assistant_display_name' => '商品アドバイザー',
         'license_footer_label' => 'ライセンスについて',
         'license_title' => 'ソフトウェアライセンスについて',
-        'license_lead' => 'AiChatAssistant42（チャットソフトウェア）の著作権は '
+        'license_lead' => 'AiChatAssistant44（チャットソフトウェア）の著作権は '
             . '<a href="https://blog.routeflags.com/%e5%88%a9%e7%94%a8%e8%a6%8f%e7%b4%84/"'
             . ' target="_blank" rel="noopener">ROUTE FLAGS Co., Ltd.</a> に帰属し、'
             . 'GNU General Public License v2 (GPL-2.0-only) に基づき提供されています。',
@@ -243,8 +243,14 @@ class DesignSettingsSyncService extends AbstractPluginDataSyncService
     private function loadExistingData(): array
     {
         $dataPath = $this->getDataPath();
+        // S-07: 新側になければ旧code (AiChatAssistant42) の PluginData から引き継ぐ (消失禁止)
         if (!file_exists($dataPath)) {
-            return self::DEFAULTS;
+            $legacy = $this->projectDir . '/app/PluginData/AiChatAssistant42/design_settings.json';
+            if (is_file($legacy)) {
+                $dataPath = $legacy;
+            } else {
+                return self::DEFAULTS;
+            }
         }
         $raw = file_get_contents($dataPath);
         if ($raw === false) {

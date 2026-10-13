@@ -13,9 +13,9 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Service\AiAgent;
+namespace Plugin\AiChatAssistant44\Service\AiAgent;
 
-use Plugin\AiChatAssistant42\Service\AiAgentInterface;
+use Plugin\AiChatAssistant44\Service\AiAgentInterface;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use Psr\Log\LoggerInterface;

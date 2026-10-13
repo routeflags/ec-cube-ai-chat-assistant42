@@ -13,7 +13,7 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Twig;
+namespace Plugin\AiChatAssistant44\Twig;
 
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFilter;

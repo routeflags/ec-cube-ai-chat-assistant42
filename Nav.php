@@ -13,13 +13,14 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42;
+namespace Plugin\AiChatAssistant44;
 
 use Eccube\Common\EccubeNav;
 
 class Nav implements EccubeNav
 {
-    public static function getNav()
+    #[\Override]
+    public static function getNav(): array
     {
         return [
             'setting' => [

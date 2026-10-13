@@ -13,12 +13,12 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Unit\Service;
+namespace Plugin\AiChatAssistant44\Tests\Unit\Service;
 
 use PHPUnit\Framework\TestCase;
-use Plugin\AiChatAssistant42\Entity\Notification;
-use Plugin\AiChatAssistant42\Repository\NotificationRepository;
-use Plugin\AiChatAssistant42\Service\NotificationService;
+use Plugin\AiChatAssistant44\Entity\Notification;
+use Plugin\AiChatAssistant44\Repository\NotificationRepository;
+use Plugin\AiChatAssistant44\Service\NotificationService;
 use Psr\Log\NullLogger;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;

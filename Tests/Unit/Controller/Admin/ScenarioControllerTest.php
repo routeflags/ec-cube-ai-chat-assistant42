@@ -13,12 +13,12 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Unit\Controller\Admin;
+namespace Plugin\AiChatAssistant44\Tests\Unit\Controller\Admin;
 
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use Plugin\AiChatAssistant42\Controller\Admin\ScenarioController;
-use Plugin\AiChatAssistant42\Repository\ScenarioRepository;
+use Plugin\AiChatAssistant44\Controller\Admin\ScenarioController;
+use Plugin\AiChatAssistant44\Repository\ScenarioRepository;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -67,7 +67,7 @@ class ScenarioControllerTest extends TestCase
 
     public function testDeleteWithValidCsrfRemovesEntity(): void
     {
-        $existing = $this->createMock(\Plugin\AiChatAssistant42\Entity\Scenario::class);
+        $existing = $this->createMock(\Plugin\AiChatAssistant44\Entity\Scenario::class);
         $this->repository->method('find')->with(7)->willReturn($existing);
         $this->repository->expects($this->once())->method('remove')->with($existing);
 

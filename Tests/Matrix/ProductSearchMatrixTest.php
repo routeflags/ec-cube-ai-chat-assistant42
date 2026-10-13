@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Tests\Matrix;
+namespace Plugin\AiChatAssistant44\Tests\Matrix;
 
 use Doctrine\DBAL\DriverManager;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use PHPUnit\Framework\TestCase;
-use Plugin\AiChatAssistant42\Repository\ProductRepository;
+use Plugin\AiChatAssistant44\Repository\ProductRepository;
 
 /**
  * 商品検索の DB マトリクステスト。

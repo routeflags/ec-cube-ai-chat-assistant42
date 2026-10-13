@@ -13,9 +13,9 @@ declare(strict_types=1);
  * file that was distributed with this source code.
  */
 
-namespace Plugin\AiChatAssistant42\Service;
+namespace Plugin\AiChatAssistant44\Service;
 
-use Plugin\AiChatAssistant42\Repository\ProductRepository;
+use Plugin\AiChatAssistant44\Repository\ProductRepository;
 
 /**
  * MCP (Model Context Protocol) サーバーサービス。

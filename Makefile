@@ -1,4 +1,4 @@
-# AiChatAssistant42 — DB matrix testing / packaging / verification envs / ship
+# AiChatAssistant44 — DB matrix testing / packaging / verification envs / ship
 #
 # MySQL / PostgreSQL は常時起動が重いため、必要なときだけ brew services で
 # 起動・停止する。SQLite はファイルのみでサービス不要。
@@ -12,7 +12,8 @@
 #   make test-unit           # 既存の高速suite（DB不要）
 #   make verify             # verify-plugin.sh（5 checks）
 #   make package            # Store提出用tarballを作成（PACKAGE_OUTで上書き可）
-#   make dbs-fetch          # 検証用EC-CUBE実体が無い場合のみ取得（git clone -b 4.2 --depth 1 ×3。dbs/{sqlite,mysql,pg}/ はgit管理外）
+#   make dbs-fetch          # 検証用EC-CUBE実体が無い場合のみ取得（git clone -b $(DBS_BRANCH) --depth 1 ×3。dbs/{sqlite,mysql,pg}/ はgit管理外）
+#   make dbs-fetch DBS_BRANCH=4.4  # 4.4系を取得 (既定は4.2。alpha期は tag 4.4.0-alpha-1 も可)
 #   make dbs-up             # 検証用DB別環境（sqlite/mysql/pg）を起動
 #   make dbs-wait           # 起動時プロビジョニング完了待ち（up直後に必須）
 #   make dbs-down           # 検証用DB別環境を停止（データ保持）
@@ -25,12 +26,13 @@
 MYSQL_SVC ?= mysql@8.0
 PG_SVC ?= postgresql@18
 PHPUNIT ?= php vendor/bin/phpunit
-PACKAGE_OUT ?= AiChatAssistant42-verify.tar.gz
+PACKAGE_OUT ?= AiChatAssistant44-verify.tar.gz
 
 # 検証用DB別環境（Tests/Docker/dbs 配下に永続化。/tmp は再起動で消えるため使用しない）
 DBS_DIR ?= Tests/Docker/dbs
 DBS_COMPOSE ?= docker-compose.dbs.yml
 DBS_PROJECT ?= eccube-verify-dbs
+DBS_BRANCH ?= 4.2
 DBS_SERVICES ?= eccube-sqlite eccube-mysql eccube-pg
 
 .PHONY: db-up db-wait db-down db-status test-matrix test-matrix-chaos test-unit verify package dbs-fetch dbs-up dbs-wait dbs-down dbs-status dbs-install ship bump tag
@@ -80,7 +82,7 @@ package:
 dbs-fetch:
 	for d in sqlite mysql pg; do \
 	  if [ -d "$(DBS_DIR)/$$d" ]; then echo "$$d exists, skip"; \
-	  else git clone -b 4.2 --depth 1 https://github.com/EC-CUBE/ec-cube.git $(DBS_DIR)/$$d; fi; \
+	  else git clone -b $(DBS_BRANCH) --depth 1 https://github.com/EC-CUBE/ec-cube.git $(DBS_DIR)/$$d || git clone -b 4.4.0-alpha-1 --depth 1 https://github.com/EC-CUBE/ec-cube.git $(DBS_DIR)/$$d; fi; \
 	done
 
 dbs-up:
@@ -106,7 +108,7 @@ dbs-down:
 
 dbs-status:
 	docker compose -p $(DBS_PROJECT) -f $(DBS_DIR)/$(DBS_COMPOSE) ps
-	for p in 8088 8089 8090; do printf "%s front:%s\n" $$p $$(curl -s -o /dev/null -w "%{http_code}" http://localhost:$$p/); done
+	for p in 8082 8088 8089 8090; do printf "%s front:%s\n" $$p $$(curl -s -o /dev/null -w "%{http_code}" http://localhost:$$p/); done
 
 dbs-install:
 	for s in $(DBS_SERVICES); do \

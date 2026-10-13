@@ -13,7 +13,7 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Service;
+namespace Plugin\AiChatAssistant44\Service;
 
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\TransferException;
@@ -150,7 +150,7 @@ abstract class AbstractPluginDataSyncService
     private function buildRequest(array $meta): array
     {
         $headers = [
-            'User-Agent' => 'AiChatAssistant42/1.0 (+https://github.com/routeflags/ec-cube-ai-chat-assistant42)',
+            'User-Agent' => 'AiChatAssistant44/1.0 (+https://github.com/routeflags/ec-cube-ai-chat-assistant42)',
             'Accept' => 'application/json',
         ];
         if (!empty($meta['etag'])) {

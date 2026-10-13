@@ -13,11 +13,11 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Controller\Admin;
+namespace Plugin\AiChatAssistant44\Controller\Admin;
 
 use Eccube\Controller\AbstractController;
-use Plugin\AiChatAssistant42\Entity\AccessRule;
-use Plugin\AiChatAssistant42\Repository\AccessRuleRepository;
+use Plugin\AiChatAssistant44\Entity\AccessRule;
+use Plugin\AiChatAssistant44\Repository\AccessRuleRepository;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -49,7 +49,7 @@ class AccessRuleController extends AbstractController
     {
         $rules = $this->accessRuleRepository->findAllActive();
 
-        return $this->render('@AiChatAssistant42/admin/access_rule.twig', [
+        return $this->render('@AiChatAssistant44/admin/access_rule.twig', [
             'rules' => $rules,
             'rule_types' => self::RULE_TYPES,
             'actions' => self::ACTIONS,

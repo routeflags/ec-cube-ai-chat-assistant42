@@ -13,8 +13,9 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Entity;
+namespace Plugin\AiChatAssistant44\Entity;
 
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -22,55 +23,44 @@ use Doctrine\ORM\Mapping as ORM;
  *
  * IP アドレス・利用時間帯・禁止キーワードなど、
  * ユーザーの入力をフィルタリングしてチャットへのアクセスを制御する。
- *
- * @ORM\Entity
- * @ORM\Table(name="plg_ai_chat_assistant_access_rule")
  */
+#[ORM\Entity]
+#[ORM\Table(name: 'plg_ai_chat_assistant_access_rule')]
 class AccessRule extends \Eccube\Entity\AbstractEntity
 {
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(type="integer", options={"unsigned":true})
-     */
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(type: Types::INTEGER, options: ['unsigned' => true])]
     private ?int $id = null;
 
     /**
      * ルール種別 (ip / time / block_keyword)。
-     *
-     * @ORM\Column(type="string", length=32)
      */
+    #[ORM\Column(type: Types::STRING, length: 32)]
     private string $rule_type;
 
     /**
      * ルール値 (IP アドレス, 時間帯範囲, 禁止キーワード等)。
-     *
-     * @ORM\Column(type="string", length=255)
      */
+    #[ORM\Column(type: Types::STRING, length: 255)]
     private string $rule_value;
 
     /**
      * 適用アクション (deny / throttle / allow)。
-     *
-     * @ORM\Column(type="string", length=32, options={"default":"deny"})
      */
+    #[ORM\Column(type: Types::STRING, length: 32, options: ['default' => 'deny'])]
     private string $action = 'deny';
 
     /**
      * 有効フラグ (1=有効, 0=無効)。
-     *
-     * @ORM\Column(type="smallint", options={"default":1})
      */
+    #[ORM\Column(type: Types::SMALLINT, options: ['default' => 1])]
     private int $is_active = 1;
 
-    /**
-     * @ORM\Column(type="datetimetz")
-     */
+    #[ORM\Column(type: Types::DATETIMETZ_MUTABLE)]
     private ?\DateTimeInterface $create_date = null;
 
-    /**
-     * @ORM\Column(type="datetimetz")
-     */
+    #[ORM\Column(type: Types::DATETIMETZ_MUTABLE)]
     private ?\DateTimeInterface $update_date = null;
 
     public function getId(): ?int

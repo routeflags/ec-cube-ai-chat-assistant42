@@ -13,11 +13,11 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Controller\Admin;
+namespace Plugin\AiChatAssistant44\Controller\Admin;
 
 use Eccube\Controller\AbstractController;
-use Plugin\AiChatAssistant42\Entity\Scenario;
-use Plugin\AiChatAssistant42\Repository\ScenarioRepository;
+use Plugin\AiChatAssistant44\Entity\Scenario;
+use Plugin\AiChatAssistant44\Repository\ScenarioRepository;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -50,7 +50,7 @@ class ScenarioController extends AbstractController
         if ($keyword === '') {
             $entities = $this->scenarioRepository->findAll();
 
-            return $this->render('@AiChatAssistant42/admin/scenario.twig', [
+            return $this->render('@AiChatAssistant44/admin/scenario.twig', [
                 'entities' => $entities,
                 'keyword' => $keyword,
             ]);
@@ -65,7 +65,7 @@ class ScenarioController extends AbstractController
             ->getQuery()
             ->getResult();
 
-        return $this->render('@AiChatAssistant42/admin/scenario.twig', [
+        return $this->render('@AiChatAssistant44/admin/scenario.twig', [
             'entities' => $entities,
             'keyword' => $keyword,
         ]);
@@ -135,7 +135,7 @@ class ScenarioController extends AbstractController
             return $this->redirectToRoute('admin_ai_chat_assistant_scenario_index');
         }
 
-        return $this->render('@AiChatAssistant42/admin/scenario_form.twig', [
+        return $this->render('@AiChatAssistant44/admin/scenario_form.twig', [
             'form' => $form->createView(),
             'scenario' => $scenario,
         ]);
@@ -207,7 +207,7 @@ class ScenarioController extends AbstractController
             return $this->redirectToRoute('admin_ai_chat_assistant_scenario_index');
         }
 
-        return $this->render('@AiChatAssistant42/admin/scenario_form.twig', [
+        return $this->render('@AiChatAssistant44/admin/scenario_form.twig', [
             'form' => $form->createView(),
             'scenario' => $scenario,
         ]);

@@ -13,9 +13,9 @@
 
 declare(strict_types=1);
 
-namespace Plugin\AiChatAssistant42\Command;
+namespace Plugin\AiChatAssistant44\Command;
 
-use Plugin\AiChatAssistant42\Service\LogSyncService;
+use Plugin\AiChatAssistant44\Service\LogSyncService;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
