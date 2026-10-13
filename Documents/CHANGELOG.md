@@ -19,6 +19,10 @@
 ### Changed
 - [破壊的変更] MCPツール `search_products` を `aichat_search_products` に改名 (公式MCPの同名ツールとの衝突回避)。旧名での `tools/call` はエラー (`isError: true`) になります。AIチャットの function calling 名も同一定義のため連動して変更されます。
 
+### Fixed
+- [4.4] `UTCDateTimeTzType` (DBAL 4) が `DateTimeImmutable` を受け付けない問題を修正: エンティティの日付setter 15件で可変 `DateTime` に正規化、`ChatLogRepository` の日付引数 15件も同様。チャット履歴保存の `EntityManagerClosed` 500を解消 (MySQL/PG/SQLiteのMatrix 45件で検証)。
+- チャット履歴保存の失敗が元のエラーを隠さないよう `logChatSuccess` / `logChatError` を堅牢化 (DB例外時は monolog のみ)。
+
 ### Security
 - 変更なし (CSRF/キーマスク/ログ匿名化/MCP サニタイズを維持)。
 

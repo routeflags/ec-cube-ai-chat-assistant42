@@ -53,6 +53,7 @@ class ChatLogRepository extends AbstractRepository
      */
     public function countRecentBySession(string $sessionId, DateTimeImmutable $since): int
     {
+        $since = $since instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($since) : $since;
         return (int) $this->createQueryBuilder('log')
             ->select('COUNT(log.id)')
             ->where('log.session_id = :sid')
@@ -68,6 +69,7 @@ class ChatLogRepository extends AbstractRepository
      */
     public function countRecentByIp(string $ip, DateTimeImmutable $since): int
     {
+        $since = $since instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($since) : $since;
         return (int) $this->createQueryBuilder('log')
             ->select('COUNT(log.id)')
             ->where('log.client_ip = :ip')
@@ -83,6 +85,7 @@ class ChatLogRepository extends AbstractRepository
      */
     public function countEmailReplyBySession(string $sessionId, DateTimeImmutable $since): int
     {
+        $since = $since instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($since) : $since;
         return (int) $this->createQueryBuilder('log')
             ->select('COUNT(log.id)')
             ->where('log.session_id = :sid')
@@ -99,6 +102,7 @@ class ChatLogRepository extends AbstractRepository
      */
     public function countEmailReplyByIp(string $ip, DateTimeImmutable $since): int
     {
+        $since = $since instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($since) : $since;
         return (int) $this->createQueryBuilder('log')
             ->select('COUNT(log.id)')
             ->where('log.client_ip = :ip')
@@ -251,6 +255,7 @@ class ChatLogRepository extends AbstractRepository
      */
     public function purgeExpiredEmailEnc(DateTimeImmutable $before): int
     {
+        $before = $before instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($before) : $before;
         return (int) $this->createQueryBuilder('log')
             ->update()
             ->set('log.email_reply_address_enc', ':null')
@@ -294,6 +299,8 @@ class ChatLogRepository extends AbstractRepository
      */
     public function fetchHourlyDistribution(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
+        $start = $start instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($start) : $start;
+        $end = $end instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($end) : $end;
         $conn = $this->entityManager->getConnection();
         $platform = $conn->getDatabasePlatform();
 
@@ -535,6 +542,8 @@ class ChatLogRepository extends AbstractRepository
      */
     public function fetchKpi(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
+        $start = $start instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($start) : $start;
+        $end = $end instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($end) : $end;
         $qb = $this->createQueryBuilder('log');
         $qb->select('
             COUNT(log.id) AS total,
@@ -588,6 +597,8 @@ class ChatLogRepository extends AbstractRepository
      */
     public function fetchProviderStats(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
+        $start = $start instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($start) : $start;
+        $end = $end instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($end) : $end;
         return $this->createQueryBuilder('log')
             ->select('
                 log.provider AS provider,
@@ -615,6 +626,8 @@ class ChatLogRepository extends AbstractRepository
      */
     public function fetchModelStats(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
+        $start = $start instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($start) : $start;
+        $end = $end instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($end) : $end;
         return $this->createQueryBuilder('log')
             ->select('
                 log.model AS model,
@@ -644,6 +657,8 @@ class ChatLogRepository extends AbstractRepository
      */
     public function fetchErrorBreakdown(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
+        $start = $start instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($start) : $start;
+        $end = $end instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($end) : $end;
         return $this->createQueryBuilder('log')
             ->select('
                 COALESCE(log.error_type, \'unknown\') AS error_type,

@@ -454,17 +454,22 @@ class ChatApiController extends AbstractController
         array $result,
         int $responseTimeMs
     ): void {
-        $this->chatLogger->log([
-            'session_id' => $sessionId,
-            'provider' => $config->getProvider(),
-            'model' => $config->getModel(),
-            'user_message' => $userMessage,
-            'assistant_reply' => $result['reply'],
-            'tools_used' => $result['tools_used'],
-            'response_time_ms' => $responseTimeMs,
-            'token_input' => $result['token_input'] ?? null,
-            'token_output' => $result['token_output'] ?? null,
-        ]);
+        // 履歴保存の失敗は応答を壊さない (DB例外時は monolog のみ)
+        try {
+            $this->chatLogger->log([
+                'session_id' => $sessionId,
+                'provider' => $config->getProvider(),
+                'model' => $config->getModel(),
+                'user_message' => $userMessage,
+                'assistant_reply' => $result['reply'],
+                'tools_used' => $result['tools_used'],
+                'response_time_ms' => $responseTimeMs,
+                'token_input' => $result['token_input'] ?? null,
+                'token_output' => $result['token_output'] ?? null,
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->warning('Chat success logging failed', ['error' => $e->getMessage(), 'session_id' => $sessionId]);
+        }
     }
 
     /**
@@ -478,15 +483,20 @@ class ChatApiController extends AbstractController
         int $responseTimeMs
     ): void {
         $safeErrorMessage = $this->redactedMessage($errorMessage);
-        $this->chatLogger->log([
-            'session_id' => $sessionId,
-            'provider' => $config->getProvider(),
-            'model' => $config->getModel(),
-            'user_message' => $userMessage,
-            'assistant_reply' => '',
-            'response_time_ms' => $responseTimeMs,
-            'error_message' => $safeErrorMessage,
-        ]);
+        // 履歴保存の失敗は元のエラーを隠さない (DB例外時は monolog のみ)
+        try {
+            $this->chatLogger->log([
+                'session_id' => $sessionId,
+                'provider' => $config->getProvider(),
+                'model' => $config->getModel(),
+                'user_message' => $userMessage,
+                'assistant_reply' => '',
+                'response_time_ms' => $responseTimeMs,
+                'error_message' => $safeErrorMessage,
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->warning('Chat error logging failed', ['error' => $e->getMessage(), 'session_id' => $sessionId]);
+        }
     }
 
     /**
