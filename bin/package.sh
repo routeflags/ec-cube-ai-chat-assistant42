@@ -70,6 +70,7 @@ INCLUDE_FILES=(
     EventListener
     EventSubscriber
     Nav.php
+    PluginManager.php
     Repository
     Resource
     Service
@@ -181,6 +182,7 @@ fi
 REQUIRED_IN_ARCHIVE=(
     "composer.json"
     "eccube-plugin.yaml"
+    "PluginManager.php"
     "Resource/config/services.yaml"
     "README.md"
 )
