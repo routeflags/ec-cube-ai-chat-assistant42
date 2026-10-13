@@ -56,6 +56,20 @@
   right: auto;
   left: 24px;
 }
+/* 右中央 — トグルは右辺中央、パネルはその左に中央揃え。
+   transform を使わず top: calc() で配置する (hover/active の scale、
+   パネル open アニメーションの forwards transform と競合させないため) */
+.ai-chat-assistant--right-center .chat-toggle {
+  top: calc(50% - var(--chat-toggle-size) / 2);
+  bottom: auto;
+  right: 24px;
+}
+.ai-chat-assistant--right-center .chat-panel {
+  top: calc(50% - var(--chat-panel-height) / 2);
+  bottom: auto;
+  right: calc(24px + var(--chat-toggle-size) + 12px);
+  transform-origin: center right;
+}
 
 /* サイズクラス */
 .chat-toggle--small {

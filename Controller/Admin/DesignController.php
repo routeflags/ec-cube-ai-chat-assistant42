@@ -264,8 +264,8 @@ class DesignController extends AbstractController
         if (isset($input['widget_size']) && !in_array($input['widget_size'], ['small', 'medium', 'large'], true)) {
             $errors[] = 'ウィジェットサイズは small / medium / large のいずれかで指定してください。';
         }
-        if (isset($input['position']) && !in_array($input['position'], ['bottom-right', 'bottom-left'], true)) {
-            $errors[] = '表示位置は bottom-right / bottom-left のいずれかで指定してください。';
+        if (isset($input['position']) && !in_array($input['position'], ['bottom-right', 'bottom-left', 'right-center'], true)) {
+            $errors[] = '表示位置は bottom-right / bottom-left / right-center のいずれかで指定してください。';
         }
         if (isset($input['greeting_message']) && mb_strlen((string) $input['greeting_message']) > 500) {
             $errors[] = '挨拶メッセージは500文字以内で入力してください。';

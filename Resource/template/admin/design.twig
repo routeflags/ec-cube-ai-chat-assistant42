@@ -44,6 +44,7 @@
     .design-preview__widget--large { width: 72px; height: 72px; font-size: 28px; }
     .design-preview__position--bottom-right { bottom: 20px; right: 20px; }
     .design-preview__position--bottom-left { bottom: 20px; left: 20px; }
+    .design-preview__position--right-center { top: 50%; right: 20px; transform: translateY(-50%); }
     .design-preview__panel {
         position: absolute;
         width: 320px;
@@ -135,6 +136,11 @@
                                            id="pos_bottom_left"
                                            {{ design_settings.position == 'bottom-left' ? 'checked' : '' }} />
                                     <label class="btn btn-outline-secondary" for="pos_bottom_left">左下</label>
+
+                                    <input type="radio" class="btn-check" name="position" value="right-center"
+                                           id="pos_right_center"
+                                           {{ design_settings.position == 'right-center' ? 'checked' : '' }} />
+                                    <label class="btn btn-outline-secondary" for="pos_right_center">右中央</label>
                                 </div>
                             </div>
                         </div>
@@ -242,7 +248,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var positionInputs = document.querySelectorAll('input[name="position"]');
     for (var j = 0; j < positionInputs.length; j++) {
         positionInputs[j].addEventListener('change', function() {
-            previewWidget.classList.remove('design-preview__position--bottom-right', 'design-preview__position--bottom-left');
+            previewWidget.classList.remove('design-preview__position--bottom-right', 'design-preview__position--bottom-left', 'design-preview__position--right-center');
             previewWidget.classList.add('design-preview__position--' + this.value);
         });
     }
