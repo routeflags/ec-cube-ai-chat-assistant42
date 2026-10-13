@@ -13,6 +13,7 @@
 
 namespace Plugin\AiChatAssistant42;
 
+use Eccube\Common\EccubeConfig;
 use Eccube\Plugin\AbstractPluginManager;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface as SymfonyContainerInterface;
@@ -47,10 +48,7 @@ class PluginManager extends AbstractPluginManager
     {
         $pluginCode = $this->resolvePluginCode($meta);
         $this->logPluginAction('disable', $pluginCode, $container);
-        $projectDir = '';
-        if ($container instanceof SymfonyContainerInterface && $container->hasParameter('kernel.project_dir')) {
-            $projectDir = (string) $container->getParameter('kernel.project_dir');
-        }
+        $projectDir = $this->resolveProjectDir($container);
         if ($pluginCode === '' && $projectDir === '') {
             return;
         }
@@ -82,20 +80,63 @@ class PluginManager extends AbstractPluginManager
         }
     }
 
+    /**
+     * projectDir 解決 (4.2/4.3/4.4 三対応)。
+     *
+     * 解決順: (1) SymfonyContainerInterface::getParameter('kernel.project_dir') (既存維持)
+     * → (2) EccubeConfig['kernel.project_dir'] フォールバック (店舗版の経路)。
+     * いずれも取得失敗時は '' を返し、呼び出し側は早期 return する (有効化を妨げない)。
+     */
+    private function resolveProjectDir(ContainerInterface $container): string
+    {
+        if ($container instanceof SymfonyContainerInterface && $container->hasParameter('kernel.project_dir')) {
+            return (string) $container->getParameter('kernel.project_dir');
+        }
+        try {
+            if ($container->has(EccubeConfig::class)) {
+                $eccubeConfig = $container->get(EccubeConfig::class);
+                if ($eccubeConfig instanceof EccubeConfig && $eccubeConfig->has('kernel.project_dir')) {
+                    return (string) $eccubeConfig['kernel.project_dir'];
+                }
+            }
+        } catch (\Throwable $e) {
+            // 解決失敗は無視（プラグイン有効化を妨げない）
+        }
+
+        return '';
+    }
+
+    /**
+     * PluginService と同等の plugin_html パス解決 (projectDir と同じ優先順)。
+     */
+    private function resolvePluginHtmlDir(ContainerInterface $container, string $projectDir): string
+    {
+        $pluginHtmlDir = $projectDir . '/html/plugin';
+        if ($container instanceof SymfonyContainerInterface && $container->hasParameter('eccube.plugin_html_realdir')) {
+            return rtrim((string) $container->getParameter('eccube.plugin_html_realdir'), '/');
+        }
+        try {
+            if ($container->has(EccubeConfig::class)) {
+                $eccubeConfig = $container->get(EccubeConfig::class);
+                if ($eccubeConfig instanceof EccubeConfig && $eccubeConfig->has('eccube.plugin_html_realdir')) {
+                    return rtrim((string) $eccubeConfig['eccube.plugin_html_realdir'], '/');
+                }
+            }
+        } catch (\Throwable $e) {
+            // 解決失敗は無視
+        }
+
+        return $pluginHtmlDir;
+    }
+
     private function copyAssets(ContainerInterface $container): void
     {
-        $projectDir = '';
-        if ($container instanceof SymfonyContainerInterface && $container->hasParameter('kernel.project_dir')) {
-            $projectDir = (string) $container->getParameter('kernel.project_dir');
-        }
+        $projectDir = $this->resolveProjectDir($container);
         if ($projectDir === '') {
             return;
         }
         // PluginService と同等のパス解決
-        $pluginHtmlDir = $projectDir . '/html/plugin';
-        if ($container instanceof SymfonyContainerInterface && $container->hasParameter('eccube.plugin_html_realdir')) {
-            $pluginHtmlDir = rtrim((string) $container->getParameter('eccube.plugin_html_realdir'), '/');
-        }
+        $pluginHtmlDir = $this->resolvePluginHtmlDir($container, $projectDir);
 
         $source = $projectDir . '/app/Plugin/AiChatAssistant42/Resource/assets';
         // フォールバック: 本リポジトリ直下で動作させる場合（単体テスト等）

@@ -74,7 +74,7 @@
 
             {# ── デザイン設定フォーム ── #}
             <form method="post" action="{{ url('admin_ai_chat_assistant_design_save') }}">
-                <input type="hidden" name="_token" value="{{ csrf_token(constant('Eccube\\Common\\Constant::TOKEN_NAME')) }}" />
+                <input type="hidden" name="_token" value="{{ csrf_token(constant('Eccube\\Common\\Constant::TOKEN_NAME')) }}">
                 <div class="card rounded border-0 mb-4">
                     <div class="card-header">
                         <span class="card-title">ウィジェットデザイン設定</span>
@@ -89,13 +89,13 @@
                                            name="widget_color"
                                            value="{{ design_settings.widget_color }}"
                                            class="form-control form-control-color"
-                                           id="widget_color_input" />
+                                           id="widget_color_input">
                                     <input type="text"
                                            value="{{ design_settings.widget_color }}"
                                            class="form-control"
                                            id="widget_color_text"
                                            pattern="^#[0-9A-Fa-f]{6}$"
-                                           maxlength="7" />
+                                           maxlength="7">
                                 </div>
                                 <small class="form-text text-muted">チャットボタンの背景色を設定します。</small>
                             </div>
@@ -112,7 +112,7 @@
                                                name="widget_size"
                                                value="{{ size }}"
                                                id="size_{{ size }}"
-                                               {{ design_settings.widget_size == size ? 'checked' : '' }} />
+                                               {{ design_settings.widget_size == size ? 'checked' : '' }}>
                                         <label class="btn btn-outline-secondary" for="size_{{ size }}">
                                             {% if size == 'small' %}小{% elseif size == 'medium' %}中{% else %}大{% endif %}
                                         </label>
@@ -128,12 +128,12 @@
                                 <div class="btn-group" role="group">
                                     <input type="radio" class="btn-check" name="position" value="bottom-right"
                                            id="pos_bottom_right"
-                                           {{ design_settings.position == 'bottom-right' ? 'checked' : '' }} />
+                                           {{ design_settings.position == 'bottom-right' ? 'checked' : '' }}>
                                     <label class="btn btn-outline-secondary" for="pos_bottom_right">右下</label>
 
                                     <input type="radio" class="btn-check" name="position" value="bottom-left"
                                            id="pos_bottom_left"
-                                           {{ design_settings.position == 'bottom-left' ? 'checked' : '' }} />
+                                           {{ design_settings.position == 'bottom-left' ? 'checked' : '' }}>
                                     <label class="btn btn-outline-secondary" for="pos_bottom_left">左下</label>
                                 </div>
                             </div>
@@ -159,7 +159,7 @@
                                        name="assistant_display_name"
                                        class="form-control"
                                        value="{{ design_settings.assistant_display_name|default('商品アドバイザー') }}"
-                                       maxlength="50" />
+                                       maxlength="50">
                                 <small class="form-text text-muted">チャットヘッダーに表示される名称です（例: 商品アドバイザー、コンシェルジュ、スタッフAI）。</small>
                             </div>
                         </div>

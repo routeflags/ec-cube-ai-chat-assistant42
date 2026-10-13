@@ -23,7 +23,7 @@
                 </div>
                 <div class="card-body">
                     <form method="post" action="{{ url('admin_ai_chat_assistant_notification_create') }}">
-                        <input type="hidden" name="_token" value="{{ csrf_token(constant('Eccube\\Common\\Constant::TOKEN_NAME')) }}" />
+                        <input type="hidden" name="_token" value="{{ csrf_token(constant('Eccube\\Common\\Constant::TOKEN_NAME')) }}">
                         <div class="row mb-3">
                             <label class="col-sm-3 col-form-label">
                                 <div class="d-inline-block">
@@ -69,13 +69,13 @@
                                     </div>
                                 </label>
                                 <div class="col-sm-9">
-                                    <input type="email" name="email_to" class="form-control" placeholder="admin@example.com" required />
+                                    <input type="email" name="email_to" class="form-control" placeholder="admin@example.com" required>
                                 </div>
                             </div>
                             <div class="row mb-3">
                                 <label class="col-sm-3 col-form-label">件名</label>
                                 <div class="col-sm-9">
-                                    <input type="text" name="email_subject" class="form-control" value="[AI Chat Assistant] 通知" />
+                                    <input type="text" name="email_subject" class="form-control" value="[AI Chat Assistant] 通知">
                                 </div>
                             </div>
                         </div>
@@ -90,13 +90,13 @@
                                     </div>
                                 </label>
                                 <div class="col-sm-9">
-                                    <input type="url" name="webhook_url" class="form-control" placeholder="https://hooks.example.com/notify" required />
+                                    <input type="url" name="webhook_url" class="form-control" placeholder="https://hooks.example.com/notify" required>
                                 </div>
                             </div>
                             <div class="row mb-3">
                                 <label class="col-sm-3 col-form-label">カスタムヘッダー</label>
                                 <div class="col-sm-9">
-                                    <input type="text" name="webhook_headers" class="form-control" placeholder='{"Authorization": "Bearer xxx"}' />
+                                    <input type="text" name="webhook_headers" class="form-control" placeholder='{"Authorization": "Bearer xxx"}'>
                                     <small class="form-text text-muted">JSON 形式で指定してください。</small>
                                 </div>
                             </div>
@@ -112,7 +112,7 @@
                                     </div>
                                 </label>
                                 <div class="col-sm-9">
-                                    <input type="text" name="line_channel_access_token" class="form-control" required />
+                                    <input type="text" name="line_channel_access_token" class="form-control" required>
                                 </div>
                             </div>
                             <div class="row mb-3">
@@ -123,7 +123,7 @@
                                     </div>
                                 </label>
                                 <div class="col-sm-9">
-                                    <input type="text" name="line_user_id" class="form-control" required />
+                                    <input type="text" name="line_user_id" class="form-control" required>
                                 </div>
                             </div>
                         </div>
@@ -200,7 +200,7 @@
                                         <td class="align-middle">
                                             <form method="post" action="{{ url('admin_ai_chat_assistant_notification_delete', { id: notification.id }) }}" style="display: inline;"
                                                   onsubmit="return confirm('この通知ルールを削除してもよろしいですか？');">
-                                                <input type="hidden" name="_token" value="{{ csrf_token(constant('Eccube\\Common\\Constant::TOKEN_NAME')) }}" />
+                                                <input type="hidden" name="_token" value="{{ csrf_token(constant('Eccube\\Common\\Constant::TOKEN_NAME')) }}">
                                                 <button type="submit" class="btn btn-sm btn-outline-ec-delete">削除</button>
                                             </form>
                                         </td>

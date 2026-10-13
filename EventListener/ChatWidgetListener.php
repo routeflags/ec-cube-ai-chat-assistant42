@@ -89,6 +89,9 @@ class ChatWidgetListener implements EventSubscriberInterface
             $event->setParameter('chat_terms_body', $designSettings['terms_body'] ?? '');
         }
         $event->addSnippet('@AiChatAssistant42/default/chat_widget.twig');
+        // WebMCP discovery (C2): <link rel="mcp"> は head 出力 (body 配置は HTML 的に不正のため廃止)
+        // HTTP Link ヘッダ (McpHttpController::wellKnown) と Discovery 文書は維持
+        $event->addAsset('@AiChatAssistant42/default/mcp_link.twig');
     }
 
     /**

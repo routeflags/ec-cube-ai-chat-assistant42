@@ -171,6 +171,12 @@ run_one_version() {
     exit 1
   fi
 
+  echo "[${ver} 7b] HTML検証ゲート C4 (bin/lint-html.sh: void-style再発防止。静的チェック・docker不要)"
+  "$PLUGIN_DIR/bin/lint-html.sh" || {
+    echo "[ERROR] HTML検証ゲート (C4) が失敗しました" >&2
+    exit 1
+  }
+
   echo ""
   echo "=== [${ver}] PASSED ==="
 
