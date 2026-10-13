@@ -240,6 +240,7 @@ CYCLE_TMPDIR=/tmp/eccube-cycle-4.4 CYCLE_PORT=8083 CYCLE_PROJECT=eccube-cycle-44
 - T-C2: 各遷移で `dtb_plugin` 行 / `plg_ai_chat_assistant_*` / `html/plugin` assets / `PluginData/*.json` (S-07) を検証。uninstall は `--uninstall-force` あり (管理画面 `PluginController::uninstall` は force=true が既定。forceなしはディレクトリ残存のため非等価)。保持検証は marker JSON (`cycle_marker.json`) で行う`plg_*` は本体がdrop、JSONは保持 (現 `PluginManager::uninstall` は no-op) のため reinstall は移行/fallback検証になる
 - T-C3: `/.well-known/mcp.json` (200+tools==7)・`GET /`・`GET /admin` (302許容)・API smoke (非500) を実測
 - T-C4: `ai_chat` ルート >=20 (理想28)・API非500の既存ゲートを維持。`--version 4.4 --keep/--quick/--doctor` は従来通り green
+- `console` は root 実行のため、T-C2 と 9/9 の後に `var/` が root 所有へ戻ります。T-C3 の HTTP 実測前 (6d) と reinstall 後 (9c) に `chown -R www-data var/` を入れています。root 所有の `var/runtime` では `Eccube\Cache\WriteFailsafeFilesystemAdapter` が保存を静かに諦めるためレート制限が fail-open になり (E2E T-07 が通らない)、`var/build` は 500 の原因になります
 - T-C5: チャットログ書込経路 (`Entity` → `flush()` → DBAL 型変換) を実測。使い捨てシナリオ + (必要なら) 一時的な `Config.is_enabled=1` で `/chat` をシナリオ一致させ、`plg_ai_chat_assistant_log` に `created_at` 付きの行が1行 INSERT されたことを確認する。API キー不要で `ChatLogger::log()` に到達できる唯一の経路。検査中の設定行・シナリオ・ログ行は終了時に削除/復元する
 
 ### bindマウント制約 (必読): `rmdir ... Device or resource busy` について
@@ -257,7 +258,7 @@ Store提出用 tarball (`make ship` / `bin/package.sh`) を作成する前に、
 | # | 関門 | コマンド | 証跡 |
 |---|------|---------|------|
 | G-1 | フルサイクル `--cycle` (T-C1〜T-C5) green | `./bin/verify-docker-install.sh --version 4.4 --cycle` (§10) | ログの `T-C1`〜`T-C5` 完走 + `admin 500なし` + `7g -> OK (created_at 付きで 1 行 INSERT された)` |
-| G-2 | E2E (T-01〜T-09) green | `E2E_BASE_URL=http://localhost:8083 npm run test:e2e` (T-09は `E2E_ADMIN_ID`/`E2E_ADMIN_PASSWORD` 上書き可、既定 `admin`/`password` は docker verify env限定) | `42 passed` (T-09: 管理9画面 200) |
+| G-2 | E2E (T-01〜T-09) green | `E2E_BASE_URL=http://localhost:8083 npm run test:e2e` (T-09は `E2E_ADMIN_ID`/`E2E_ADMIN_PASSWORD` 上書き可、既定 `admin`/`password` は docker verify env限定) | `43 passed` (T-09: 管理9画面 200) |
 | G-3 | Matrix 本番一致 (DBAL 4 / ORM 3) green | `make test-matrix` (内蔵 `matrix-guard` が DBAL4/ORM3 を検証。`composer.json` require-dev は `^4.0`/`^3.0`/`^7.4` に固定) | `matrix-guard: OK (DBAL4/ORM3)` + `Tests/Matrix` green |
 
 - `make ship` (`verify → test-unit → test-matrix → package`) は G-3 を含みますが、G-1 (`--cycle`) と G-2 (E2E) は docker 実機が必要なため別途実行し、本節の表をチェックリストとして使ってください。

@@ -235,6 +235,12 @@ run_one_version() {
     exit 1
   fi
 
+  # 6d. 権限補正 (6/7 の console=root 実行で var/ が root 所有に戻るため。
+  #     root 所有の var/runtime では WriteFailsafeFilesystemAdapter が保存を静かに諦め、
+  #     レート制限が fail-open になる。var/build は 500 の原因)
+  echo "[${ver} 6d] chown -R www-data var/"
+  docker compose -f "$tmpdir/docker-compose.verify.yml" exec -T eccube bash -c "chown -R www-data var/" || exit 1
+
   # 7. 任意: API smoke (429/403/400 は許容、500 のみ NG)
   echo "[${ver} 7/7] API smoke (expect not 500)"
   HTTP_CODE="$(docker compose -f "$tmpdir/docker-compose.verify.yml" exec -T eccube curl -s -o /tmp/api_smoke.json -w "%{http_code}" -X POST http://localhost/api/ai-chat-assistant/chat -H "Content-Type: application/json" -d '{"message":"hello","session_id":"docker-verify-smoke"}' || echo "000")"
@@ -759,6 +765,12 @@ CYCLE_YML
 
   # --- T-C3: HTTP実測 (Discovery + front + API smoke + route数) ---
   echo "[4.4-cycle 7/9] T-C3/T-C4 HTTP + routes + API smoke"
+  # 権限補正 (T-C2 の console=root 実行で var/ が root 所有に戻るため。root 所有の
+  # var/runtime では WriteFailsafeFilesystemAdapter が保存を静かに諦め、レート制限が
+  # fail-open になり E2E T-07 が通らない。var/build は 500 の原因)
+  echo "[4.4-cycle 6d] chown -R www-data var/"
+  dc_cycle exec -T eccube bash -c "chown -R www-data var/" || exit 1
+
   echo "[cycle 7a] debug:router | grep ai_chat (expect >=20)"
   ROUTE_COUNT="$(dc_cycle exec -T eccube php bin/console debug:router | grep -c ai_chat || true)"
   echo "  -> ai_chat routes: $ROUTE_COUNT"
@@ -862,6 +874,11 @@ CYCLE_YML
     exit 1
   }
   echo "  -> OK (marker 引継ぎ)"
+  # 権限補正 (9/9 の console=root 実行で var/ が root 所有に戻るため。--keep で残した
+  # 環境をそのまま E2E (Playwright) で使えるようにする)
+  echo "[4.4-cycle 9c] chown -R www-data var/"
+  dc_cycle exec -T eccube bash -c "chown -R www-data var/" || exit 1
+
   echo "[cycle 9b] reinstall API smoke (expect not 500)"
   HTTP_CODE2="$(dc_cycle exec -T eccube curl -s -o /tmp/api_smoke2.json -w "%{http_code}" -X POST http://localhost/api/ai-chat-assistant/chat -H "Content-Type: application/json" -d '{"message":"hello","session_id":"docker-cycle-reinstall"}' || echo "000")"
   echo "  -> HTTP $HTTP_CODE2"
