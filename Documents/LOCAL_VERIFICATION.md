@@ -177,6 +177,7 @@ EC-CUBE 4.4.0-alpha-1 ではセッション Cookie に `SameSite=None` を付与
 
 - HTTP (`php -S` / 本compose) で検証する場合: `app/config/eccube/packages/framework.yaml` の `cookie_samesite: none` を `lax` に変更し、変更後は `var/cache` と `var/build` を削除してください。
 - HTTPS (`symfony server:start` 等) で動かせる環境ではこの変更は不要です。
+- `var/cache` を削除 (または `cache:clear`) した直後は HTMLPurifier のシリアライザ基底ディレクトリが無いため、フロントの `Block/news.twig` で warning が例外化して **500** になります (dev のみ。EC-CUBE 本体の `%kernel.cache_dir%/htmlpurifier` を誰も作り直さないため)。`mkdir -p var/cache/dev/htmlpurifier && chown -R www-data var/cache/dev/htmlpurifier` で復旧してください
 - `bin/verify-docker-install.sh --version 4.4` は `framework.yaml` の `cookie_samesite` を検出し、`none` のままの場合は WARN を表示します。WARN が出たら上記切替を行って再検証してください。
 - Playwright 4.4 検証: `E2E_BASE_URL=http://localhost:8082 npx playwright test` (HTTP+lax 前提。V-04/V-05)。
 
