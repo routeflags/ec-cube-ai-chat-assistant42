@@ -219,7 +219,7 @@ class ProductRepositoryTest extends AbstractWebTestCase
         $this->assertCount(7, $tools);
 
         $toolNames = array_column($tools, 'name');
-        $this->assertContains('search_products', $toolNames);
+        $this->assertContains('aichat_search_products', $toolNames);
         $this->assertContains('get_product_detail', $toolNames);
         $this->assertContains('get_stock', $toolNames);
         $this->assertContains('get_categories', $toolNames);
@@ -232,9 +232,9 @@ class ProductRepositoryTest extends AbstractWebTestCase
     //  executeTool
     // ================================================================
 
-    public function testExecuteToolRoutesToSearchProducts(): void
+    public function testExecuteToolRoutesToAichatSearchProducts(): void
     {
-        $result = $this->productRepository->executeTool('search_products', [
+        $result = $this->productRepository->executeTool('aichat_search_products', [
             'keyword' => 'テスト',
             'limit' => 5,
         ]);

@@ -30,7 +30,7 @@ final class ProductToolDefinition
     private const DEFINITIONS = [
         [
             'type' => 'function',
-            'name' => 'search_products',
+            'name' => 'aichat_search_products',
             'description' => '商品をキーワードとカテゴリで検索します。'
                 . '商品名・検索ワード・商品コードが対象です。'
                 . '返却される価格は税抜価格です（EC-CUBE の price02 は税抜保存）。'

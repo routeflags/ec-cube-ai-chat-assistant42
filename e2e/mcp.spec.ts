@@ -93,13 +93,13 @@ test.describe('T-01 Discovery GET /.well-known/mcp.json', () => {
     expect(body.tools.length).toBe(7);
     const names = body.tools.map((t: { name: string }) => t.name).sort();
     expect(names).toEqual([
+      'aichat_search_products',
       'get_categories',
       'get_category_products',
       'get_product_detail',
       'get_stock',
       'get_tags',
       'search_by_tag',
-      'search_products',
     ]);
 
     await api.dispose();
@@ -197,7 +197,7 @@ test.describe('T-03 POST /mcp tools/list', () => {
 // ---------------------------------------------------------------------------
 test.describe('T-04 POST /mcp tools/call x7', () => {
   const calls: Array<{ name: string; args: Record<string, unknown> }> = [
-    { name: 'search_products', args: { keyword: 'CBD', limit: 2 } },
+    { name: 'aichat_search_products', args: { keyword: 'CBD', limit: 2 } },
     { name: 'get_product_detail', args: { product_id: 1 } },
     { name: 'get_stock', args: { product_id: 1 } },
     { name: 'get_categories', args: {} },
@@ -232,6 +232,23 @@ test.describe('T-04 POST /mcp tools/call x7', () => {
       await api.dispose();
     });
   }
+
+  test('tools/call search_products (old name) → 200 + isError:true', async () => {
+    // 公式MCPとの衝突回避で aichat_search_products に改名済み。旧名はエラーになること。
+    const api = await request.newContext();
+    const res = await postMcp(api, {
+      jsonrpc: '2.0',
+      id: 3,
+      method: 'tools/call',
+      params: { name: 'search_products', arguments: { keyword: 'CBD' } },
+    });
+
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    expect(body.result?.isError).toBe(true);
+
+    await api.dispose();
+  });
 });
 
 // ---------------------------------------------------------------------------

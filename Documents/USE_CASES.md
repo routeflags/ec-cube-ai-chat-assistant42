@@ -434,7 +434,7 @@ php bin/console app:ai-chat-assistant
 
 | ツール名 | 説明 | 入力 | 出力 |
 |---------|------|------|------|
-| search_products | 商品検索 | keyword, category, min_price, max_price | 商品リスト |
+| aichat_search_products | 商品検索 | keyword, category, min_price, max_price | 商品リスト |
 | get_product_detail | 商品詳細 | product_id | 商品情報 |
 | check_stock | 在庫確認 | product_id | 在庫数・状態 |
 
@@ -464,7 +464,7 @@ php bin/console app:ai-chat-assistant
 {
   "success": true,
   "reply": "おすすめの CBD リキッドは以下の3商品です...",
-  "tools_used": ["search_products"]
+  "tools_used": ["aichat_search_products"]
 }
 ```
 

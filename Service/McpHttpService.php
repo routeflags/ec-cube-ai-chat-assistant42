@@ -279,10 +279,11 @@ class McpHttpService
                     ],
                 ],
                 'notes' => [
-                    'Both servers expose a tool named search_products, '
-                    . 'but they are different servers/endpoints with different auth '
-                    . 'and schemas. Tool names in this server are unchanged '
-                    . 'for compatibility; compare serverInfo.name and the endpoint URL '
+                    'Our product-search tool is named aichat_search_products '
+                    . '(renamed from search_products to avoid confusion with the '
+                    . 'EC-CUBE MCP Server tool of the same name). '
+                    . 'Calls to the old name return an error; '
+                    . 'compare serverInfo.name and the endpoint URL '
                     . 'when registering clients.',
                 ],
             ],

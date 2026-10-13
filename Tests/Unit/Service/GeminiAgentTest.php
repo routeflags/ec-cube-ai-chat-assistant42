@@ -138,7 +138,7 @@ class GeminiAgentTest extends TestCase
 
         $tools = [
             [
-                'name' => 'search_products',
+                'name' => 'aichat_search_products',
                 'description' => '検索',
                 'inputSchema' => [
                     'type' => 'object',
@@ -167,7 +167,7 @@ class GeminiAgentTest extends TestCase
         $toolsA = [
             [
                 'functionDeclaration' => [
-                    'name' => 'search_products',
+                    'name' => 'aichat_search_products',
                     'description' => '検索A',
                     'parameters' => [
                         'type' => 'object',
@@ -178,7 +178,7 @@ class GeminiAgentTest extends TestCase
         ];
 
         $convertedA = $this->invokeConvertTools($agent, $toolsA);
-        self::assertSame('search_products', $convertedA[0]['name']);
+        self::assertSame('aichat_search_products', $convertedA[0]['name']);
         self::assertSame('検索A', $convertedA[0]['description']);
         self::assertArrayHasKey('keyword', $convertedA[0]['parameters']['properties']);
 
@@ -224,14 +224,14 @@ class GeminiAgentTest extends TestCase
 
         // 通常の args はそのまま
         $partsWithArgs = [
-            ['functionCall' => ['name' => 'search_products', 'args' => ['keyword' => 'test', 'limit' => 10]]],
+            ['functionCall' => ['name' => 'aichat_search_products', 'args' => ['keyword' => 'test', 'limit' => 10]]],
         ];
         $callsWithArgs = $this->invokeExtractFunctionCalls($agent, $partsWithArgs);
         self::assertSame(['keyword' => 'test', 'limit' => 10], $callsWithArgs[0]['args']);
 
         // 非配列 args は [] にフォールバック
         $partsInvalid = [
-            ['functionCall' => ['name' => 'search_products', 'args' => 'invalid']],
+            ['functionCall' => ['name' => 'aichat_search_products', 'args' => 'invalid']],
         ];
         $callsInvalid = $this->invokeExtractFunctionCalls($agent, $partsInvalid);
         self::assertSame([], $callsInvalid[0]['args']);
@@ -259,7 +259,7 @@ class GeminiAgentTest extends TestCase
             ],
             [
                 'functionCall' => [
-                    'name' => 'search_products',
+                    'name' => 'aichat_search_products',
                     'args' => ['keyword' => 'test'],
                 ],
                 'thoughtSignature' => 'sig-func-xyz789',
@@ -283,7 +283,7 @@ class GeminiAgentTest extends TestCase
 
         $tools = [
             [
-                'name' => 'search_products',
+                'name' => 'aichat_search_products',
                 'description' => '商品を検索',
                 'inputSchema' => [
                     'type' => 'object',
@@ -299,7 +299,7 @@ class GeminiAgentTest extends TestCase
         $result = $agent->chat('テストメッセージ', $tools, $toolExecutor);
 
         self::assertSame('検索結果をお届けします', $result['reply']);
-        self::assertSame(['search_products'], $result['tools_used']);
+        self::assertSame(['aichat_search_products'], $result['tools_used']);
 
         // 2回目のリクエストで contents に 1回目の model parts が thoughtSignature 付きで round-trip されていること
         self::assertCount(2, $history, '2回の API 呼び出しが記録されているべき');
@@ -335,7 +335,7 @@ class GeminiAgentTest extends TestCase
         // 2つ目の functionCall part が thoughtSignature を保持しつつ args も含む
         $functionCallPart = $parts[1];
         self::assertSame('sig-func-xyz789', $functionCallPart['thoughtSignature'] ?? null);
-        self::assertSame('search_products', $functionCallPart['functionCall']['name'] ?? null);
+        self::assertSame('aichat_search_products', $functionCallPart['functionCall']['name'] ?? null);
         self::assertSame(['keyword' => 'test'], $functionCallPart['functionCall']['args'] ?? null);
     }
 
@@ -404,7 +404,7 @@ class GeminiAgentTest extends TestCase
         $prop->setValue($agent, $client);
 
         $tools = [
-            ['name' => 'search_products', 'description' => '検索', 'inputSchema' => ['type' => 'object', 'properties' => ['keyword' => ['type' => 'string']]]],
+            ['name' => 'aichat_search_products', 'description' => '検索', 'inputSchema' => ['type' => 'object', 'properties' => ['keyword' => ['type' => 'string']]]],
             ['name' => 'get_tags', 'description' => 'タグ', 'inputSchema' => ['type' => 'object', 'properties' => []]],
         ];
 
@@ -439,7 +439,7 @@ class GeminiAgentTest extends TestCase
         $prop->setValue($agent, $client);
 
         $tools = [
-            ['name' => 'search_products', 'description' => '検索', 'inputSchema' => ['type' => 'object', 'properties' => []]],
+            ['name' => 'aichat_search_products', 'description' => '検索', 'inputSchema' => ['type' => 'object', 'properties' => []]],
         ];
 
         try {
@@ -454,7 +454,7 @@ class GeminiAgentTest extends TestCase
     public function testChatAllowsKnownTool(): void
     {
         $firstParts = [
-            ['functionCall' => ['name' => 'search_products', 'args' => ['keyword' => 'a']]],
+            ['functionCall' => ['name' => 'aichat_search_products', 'args' => ['keyword' => 'a']]],
         ];
         $firstResponse = $this->makeGeminiResponse($firstParts, 'FUNCTION_CALL');
         $secondResponse = $this->makeGeminiResponse([['text' => 'ok']], 'STOP');
@@ -468,13 +468,13 @@ class GeminiAgentTest extends TestCase
         $prop->setValue($agent, $client);
 
         $tools = [
-            ['name' => 'search_products', 'description' => '検索', 'inputSchema' => ['type' => 'object', 'properties' => ['keyword' => ['type' => 'string']]]],
+            ['name' => 'aichat_search_products', 'description' => '検索', 'inputSchema' => ['type' => 'object', 'properties' => ['keyword' => ['type' => 'string']]]],
         ];
 
         $result = $agent->chat('hello', $tools, fn (string $n, array $a): array => [['id' => 1]]);
 
         self::assertSame('ok', $result['reply']);
-        self::assertSame(['search_products'], $result['tools_used']);
+        self::assertSame(['aichat_search_products'], $result['tools_used']);
     }
 
     // ================================================================
@@ -526,7 +526,7 @@ class GeminiAgentTest extends TestCase
         // テキスト + thought + functionCall が混在するケース
         $firstParts = [
             ['text' => '少し考えます', 'thought' => true, 'thoughtSignature' => 'sig-text-1'],
-            ['functionCall' => ['name' => 'search_products', 'args' => ['keyword' => 'v']]],
+            ['functionCall' => ['name' => 'aichat_search_products', 'args' => ['keyword' => 'v']]],
         ];
         $firstResponse = $this->makeGeminiResponse($firstParts, 'FUNCTION_CALL');
         $secondResponse = $this->makeGeminiResponse([['text' => 'done']], 'STOP');
@@ -542,7 +542,7 @@ class GeminiAgentTest extends TestCase
         $prop->setValue($agent, $client);
 
         $tools = [
-            ['name' => 'search_products', 'description' => '検索', 'inputSchema' => ['type' => 'object', 'properties' => ['keyword' => ['type' => 'string']]]],
+            ['name' => 'aichat_search_products', 'description' => '検索', 'inputSchema' => ['type' => 'object', 'properties' => ['keyword' => ['type' => 'string']]]],
         ];
 
         $result = $agent->chat('hi', $tools, fn (string $n, array $a): array => []);

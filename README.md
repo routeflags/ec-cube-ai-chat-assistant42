@@ -232,10 +232,10 @@ needs to be disabled.
 | Auth | none (public storefront) | OAuth2 via api44 (`mcp:*:read` scopes) |
 | Tools | 7 storefront tools | 11 admin read-only tools |
 
-Both servers expose a tool named `search_products`, but they are different
-servers with different auth and schemas. **Tool names in this plugin are
-intentionally unchanged for compatibility** — check `serverInfo.name` and the
-endpoint URL when registering clients to avoid confusion.
+The EC-CUBE MCP Server exposes a tool named `search_products`. To avoid confusion,
+this plugin's product-search tool is named **`aichat_search_products`**
+(renamed from `search_products`; calls to the old name return an error).
+Check `serverInfo.name` and the endpoint URL when registering clients.
 
 ---
 

@@ -75,7 +75,7 @@ class OpenAiAgentTest extends TestCase
             [
                 'type' => 'function',
                 'function' => [
-                    'name' => 'search_products',
+                    'name' => 'aichat_search_products',
                     'description' => 'search',
                     'parameters' => [
                         'type' => 'object',

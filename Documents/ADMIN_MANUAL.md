@@ -419,7 +419,7 @@ A: ブラウザのキャッシュをクリアしてから、フロントペー�
 | フィードバック | `POST /api/ai-chat-assistant/feedback` | 公開 | セッション検証 |
 | モデル一覧 | `GET /api/ai-chat-assistant/models` | 公開 | 認証不要（公開情報のみ） |
 | ダッシュボード等 | `/%eccube_admin_route%/ai-chat-assistant/*` | 管理者 | `isTokenValid`（CSRF）+ `isCsrfTokenValid`（*_token 個別ID）、管理者認証必須 |
-| MCPサーバ (本プラグイン) | `POST /mcp`・`GET /.well-known/mcp.json` (+エイリアス `GET /.well-known/mcp`) | 公開 | 認証不要（店舗公開商品検索）。RateLimit + 監査ログ。公式MCP (`POST /{管理画面URL}/mcp`、OAuth2必須) とは別サーバとして共存。ツール名は互換のため不変 |
+| MCPサーバ (本プラグイン) | `POST /mcp`・`GET /.well-known/mcp.json` (+エイリアス `GET /.well-known/mcp`) | 公開 | 認証不要（店舗公開商品検索）。RateLimit + 監査ログ。公式MCP (`POST /{管理画面URL}/mcp`、OAuth2必須) とは別サーバとして共存。商品検索ツールは `aichat_search_products` に改名済み (旧名との衝突回避) |
 | モデル/デザイン同期 | `routeflags.com/dist/ec_chat/*` | その他（サーバ間） | HTTPS限定（`scheme==='https'` 検証）、`verify:true`、`allow_redirects` は https のみ/Webhookは禁止、`NO_PRIV_RANGE|NO_RES_RANGE` でSSRF防止 |
 
 ## 付録C: 公開側に複製されるファイル一覧（ガイドライン §2-1 ファイル構成）

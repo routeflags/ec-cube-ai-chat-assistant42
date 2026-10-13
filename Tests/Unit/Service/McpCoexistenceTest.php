@@ -26,7 +26,9 @@ use Plugin\AiChatAssistant44\Service\McpHttpService;
  * - 本プラグインは #[McpTool] / mcp.tool を追加しない (追加時は本テストが赤になり承認契機)
  * - routes.yaml は /admin/mcp を定義しない (コア動作不変)
  *
- * 破壊的変更 (ツール名・パス変更) は本テストの対象外ではなく禁止事項として扱う。
+ * 公式MCPの同名ツール search_products との衝突回避のため、
+ * 本プラグインの商品検索ツールは aichat_search_products に改名済み
+ * (承認済みの破壊的変更)。旧名呼び出しはエラーになること。
  */
 class McpCoexistenceTest extends TestCase
 {
@@ -57,8 +59,8 @@ class McpCoexistenceTest extends TestCase
         $this->assertStringContainsString('OAuth2', (string) $servers[1]['auth']);
 
         $notes = implode("\n", $payload['coexistence']['notes'] ?? []);
-        $this->assertStringContainsString('search_products', $notes);
-        $this->assertStringContainsString('unchanged', $notes);
+        $this->assertStringContainsString('aichat_search_products', $notes);
+        $this->assertStringContainsString('renamed', $notes);
     }
 
     public function testPluginAddsNoCoreMcpToolRegistrations(): void

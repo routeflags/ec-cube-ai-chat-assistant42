@@ -36,7 +36,7 @@ class RateLimitServiceTest extends TestCase
         $service = new RateLimitService($cache);
 
         // IPv6 形式の IP でも PSR-6 合法キーで通ること
-        $service->enforce('2001:db8::1', 'search_products');
+        $service->enforce('2001:db8::1', 'aichat_search_products');
         $service->enforce('192.168.1.1', 'get_stock');
         $service->enforce('unknown', 'default');
 
@@ -49,7 +49,7 @@ class RateLimitServiceTest extends TestCase
         $service = new RateLimitService($cache);
 
         // FilesystemAdapter で InvalidArgumentException が出ないこと（回帰: ":" を含むと 500）
-        $service->enforce('2001:db8::1', 'search_products');
+        $service->enforce('2001:db8::1', 'aichat_search_products');
         $service->enforce('192.168.0.1/24', 'get_stock');
         $service->enforce('unknown', 'well_known');
 

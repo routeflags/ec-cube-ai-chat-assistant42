@@ -16,6 +16,9 @@
 - Matrix 本番一致: `make matrix-guard` (installed.json の DBAL4/ORM3 検証) を `test-matrix`/`test-matrix-chaos` の前提化 (DBAL3 green の誤保証防止)。
 - リリース必須ゲート: `Documents/LOCAL_VERIFICATION.md §11` に `--cycle` (T-C1〜T-C4) + E2E (T-01〜T-09) + Matrix (DBAL4/ORM3) の green を Store提出前の必須関門として明記。4.2系への反映は見送り (理由を §11 に記録)。
 
+### Changed
+- [破壊的変更] MCPツール `search_products` を `aichat_search_products` に改名 (公式MCPの同名ツールとの衝突回避)。旧名での `tools/call` はエラー (`isError: true`) になります。AIチャットの function calling 名も同一定義のため連動して変更されます。
+
 ### Security
 - 変更なし (CSRF/キーマスク/ログ匿名化/MCP サニタイズを維持)。
 

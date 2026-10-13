@@ -76,7 +76,7 @@ class ChatLoggerTest extends TestCase
             'model' => 'claude-sonnet-4-20250514',
             'user_message' => '商品を検索して',
             'assistant_reply' => '検索結果をお示しします。',
-            'tools_used' => ['search_products'],
+            'tools_used' => ['aichat_search_products'],
             'response_time_ms' => 1500,
             'token_input' => 100,
             'token_output' => 200,
@@ -91,7 +91,7 @@ class ChatLoggerTest extends TestCase
         $this->assertEquals('claude-sonnet-4-20250514', $persistedEntity->getModel());
         $this->assertEquals('商品を検索して', $persistedEntity->getUserMessage());
         $this->assertEquals('検索結果をお示しします。', $persistedEntity->getAssistantReply());
-        $this->assertEquals(['search_products'], $persistedEntity->getToolsUsed());
+        $this->assertEquals(['aichat_search_products'], $persistedEntity->getToolsUsed());
         $this->assertEquals(1500, $persistedEntity->getResponseTimeMs());
         $this->assertEquals(100, $persistedEntity->getTokenInput());
         $this->assertEquals(200, $persistedEntity->getTokenOutput());

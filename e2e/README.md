@@ -22,7 +22,7 @@ Playwright の `request` API で再現する真の HTTP e2e。`McpHttpController
 | T-01 | `GET /.well-known/mcp.json` → 200 | `T-01 Discovery` 2 tests | `application/json` + `tools.length==7` + `transport.type==streamable-http` + `serverInfo.name==ec-mcp` + CORS `*` + `Cache-Control: public,max-age=300` + `Vary: Origin` + alias `/.well-known/mcp` |
 | T-02 | `POST /mcp initialize` → 200 | `T-02 Connection` 2 tests | `result.serverInfo.name==ec-mcp` + `protocolVersion 2024-11-05` + `notifications/initialized → 204` |
 | T-03 | `POST /mcp tools/list` → 7件 | `T-03 tools/list` 1 test | 7件 + wellKnown と一致 (diff) |
-| T-04 | `POST /mcp tools/call x7` → 200 | `T-04 tools/call x7` 7 tests | `search_products/get_product_detail/get_stock/get_categories/get_category_products/get_tags/search_by_tag` → 200 + `content[0].type==text` + JSON valid |
+| T-04 | `POST /mcp tools/call x7` → 200 | `T-04 tools/call x7` 7 tests + 旧名1 test (旧名 `search_products` → 200 + `isError:true`) | `aichat_search_products/get_product_detail/get_stock/get_categories/get_category_products/get_tags/search_by_tag` → 200 + `content[0].type==text` + JSON valid |
 | T-05 | エラー | `T-05 Error handling` 9 tests | invalid json -32700, method欠落 -32600, unknown -32601, unknown_tool isError:true, jsonrpc:"1.0" -32600, batch [] -32600, text/plain 415, GET /mcp 405 + Allow: POST, OPTIONS 204 + Allow-Methods/Headers + Max-Age |
 | T-06 | CORS | `T-06 CORS` 3 tests | `Origin: https://evil.com` で `ACAO:*` + `Vary: Origin` が 3エンドポイントで返る |
 | T-07 | RateLimit | `T-07 RateLimit` 1 test | `well_known 120` を別バケットで 121回目に 429 + `Retry-After:60` + `X-RateLimit-*` |

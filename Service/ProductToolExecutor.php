@@ -40,7 +40,7 @@ class ProductToolExecutor
     public function execute(string $name, array $args): array
     {
         return match ($name) {
-            'search_products' => $this->executeSearchProducts($args),
+            'aichat_search_products' => $this->executeSearchProducts($args),
             'get_product_detail' => $this->executeGetProductDetail($args),
             'get_stock' => $this->executeGetStock($args),
             'get_categories' => $this->executeGetCategories($args),
