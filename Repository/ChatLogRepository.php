@@ -15,6 +15,8 @@ declare(strict_types=1);
 
 namespace Plugin\AiChatAssistant44\Repository;
 
+use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
+use Doctrine\DBAL\Platforms\SqlitePlatform;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Eccube\Repository\AbstractRepository;
@@ -293,13 +295,15 @@ class ChatLogRepository extends AbstractRepository
     public function fetchHourlyDistribution(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
         $conn = $this->entityManager->getConnection();
-        $platform = strtolower($conn->getDatabasePlatform()->getName());
+        $platform = $conn->getDatabasePlatform();
 
+        // DBAL 4 で AbstractPlatform::getName() が廃止されたため instanceof で判定する。
+        // SqlitePlatform (DBAL 3) / SQLitePlatform (DBAL 4) の双方に対応する。
+        // 未知のクラスに対する instanceof は false を返すため安全。
         $hourExpr = 'HOUR(created_at)';
-        if (str_contains($platform, 'sqlite')) {
+        if ($platform instanceof SqlitePlatform || $platform instanceof \Doctrine\DBAL\Platforms\SQLitePlatform) {
             $hourExpr = "CAST(strftime('%H', created_at) AS INTEGER)";
-        }
-        if (str_contains($platform, 'pgsql') || str_contains($platform, 'postgres')) {
+        } elseif ($platform instanceof PostgreSQLPlatform) {
             $hourExpr = 'CAST(EXTRACT(HOUR FROM created_at) AS INTEGER)';
         }
 
