@@ -245,6 +245,10 @@ run_one_version() {
     exit 1
   fi
 
+  # 7b. チャットログ書込経路 (T-C5)。7/7 の API スモークは「500 でなければ OK」の
+  #     ため API キー未設定の環境では書込経路に入らず素通りする。ここで実際に書き込ませる。
+  chat_write_path_check "[${ver} 7b]" docker compose -f "$tmpdir/docker-compose.verify.yml"
+
   echo ""
   echo "=== [${ver}] PASSED ==="
 
@@ -254,6 +258,119 @@ run_one_version() {
   else
     echo "[${ver} keep] --keep 指定のためコンテナを残します: cd $tmpdir && docker compose -f docker-compose.verify.yml ps"
   fi
+}
+
+# チャットログ書込経路の実書き込み検査 (T-C5)。
+#
+# 守るもの: ChatLogger::log() は created_at に new DateTimeImmutable() を入れ、
+# EntityManager::flush() で DBAL の型変換を通る。EC-CUBE 4.4 は datetimetz を
+# Eccube\Doctrine\DBAL\Types\UTCDateTimeTzType (= DBAL 4 の DateTimeTzType) に
+# マップし、DBAL 4 は DateTimeImmutable を拒否する (InvalidType) ため 500 になる。
+#
+# 既存の API スモークでは検知できない: スモークの判定は「500 でなければ OK
+# (429/403/400 は許容)」で、プラグイン既定 (Config.is_enabled=0) や API キー未設定の
+# 環境では /chat が 403/400 で早期リターンし書込経路に入らない。そこでここでは
+# (1) Config を検査中だけ有効化し (行が無ければ最小行を作成)、(2) 使い捨てシナリオを1件入れ、
+# (3) 一致メッセージを撃ち、(4) created_at 付きのログ行が INSERT されたかを DB で
+# 確認する。シナリオ一致は API キー不要で chatLogger->log() に到達できる唯一の経路。
+# 終了時は Config と検査データを元に戻す。
+#
+# 引数: $1 = ログ接頭辞 / $2.. = docker compose 実行の前置
+#       (例: docker compose -f "$tmpdir/docker-compose.verify.yml")
+chat_write_path_check() {
+  local tag="$1"
+  shift
+  local -a cw=("$@")
+  local keyword='__verify_chat_write_path__'
+  local reply='chat-write-path-ok'
+  local session code body rows created rc prev_enabled config_id
+
+  # DB ファイルを特定する。DATABASE_URL の sqlite パスは EC-CUBE/Doctrine 側で
+  # project dir 基準に解決されるため URL 文字列からは一意に決められない。
+  # ここでは「プラグインのテーブルを持つ .db 実ファイル」を探す。
+  local db
+  db="$("${cw[@]}" exec -T -u www-data eccube sh -c '
+    for f in /var/www/html/var/eccube.db /var/eccube.db /var/www/html/eccube.db \
+             $(ls -1 /var/www/html/var/*.db /var/*.db 2>/dev/null); do
+      [ -s "$f" ] || continue
+      if sqlite3 "$f" "SELECT 1 FROM plg_ai_chat_assistant_log LIMIT 1" >/dev/null 2>&1; then
+        echo "$f"
+        exit 0
+      fi
+    done
+    exit 1
+  ' 2>/dev/null || true)"
+
+  if [[ -z "$db" ]]; then
+    echo "[WARN] ${tag} プラグインの sqlite DB を特定できないため書込経路検査をスキップ (この環境は未検証)"
+    return 0
+  fi
+  echo "${tag} チャットログ書込経路: シナリオ一致 → ChatLogger → flush → DBAL 型変換 (db: ${db})"
+
+  # Config が無い (管理画面で未保存) か is_enabled=0 の場合は /chat が 403 で
+  # 早期リターンする。検査中だけ最小の設定行を作る / 有効化する。
+  prev_enabled="$("${cw[@]}" exec -T -u www-data eccube sqlite3 -cmd '.timeout 5000' "$db" \
+    "SELECT is_enabled FROM plg_ai_chat_assistant_config LIMIT 1;" 2>/dev/null || true)"
+  config_id=""
+  if [[ -z "$prev_enabled" ]]; then
+    config_id="$("${cw[@]}" exec -T -u www-data eccube sqlite3 -cmd '.timeout 5000' "$db" \
+      "INSERT INTO plg_ai_chat_assistant_config (is_enabled, create_date, update_date) VALUES (1, datetime('now'), datetime('now')); SELECT last_insert_rowid();" | tr -d '\r\n')"
+    echo "  (設定行が無いため検査中のみ最小の設定行を作る: id=${config_id})"
+  elif [[ "$prev_enabled" != "1" ]]; then
+    "${cw[@]}" exec -T -u www-data eccube sqlite3 -cmd '.timeout 5000' "$db" \
+      "UPDATE plg_ai_chat_assistant_config SET is_enabled = 1;" >/dev/null
+    echo "  (Config.is_enabled=$prev_enabled のため検査中のみ有効化する)"
+  fi
+
+  # 再実行を決定的にするため前回の残骸を消してから、使い捨てシナリオを1件入れる
+  "${cw[@]}" exec -T -u www-data eccube sqlite3 -cmd '.timeout 5000' "$db" \
+    "DELETE FROM plg_ai_chat_assistant_scenario WHERE trigger_keyword = '$keyword';" >/dev/null
+  "${cw[@]}" exec -T -u www-data eccube sqlite3 -cmd '.timeout 5000' "$db" \
+    "INSERT INTO plg_ai_chat_assistant_scenario (trigger_keyword, trigger_type, response_text, response_type, priority, is_active, create_date, update_date) VALUES ('$keyword', 'exact', '$reply', 'text', 1000, 1, datetime('now'), datetime('now'));" >/dev/null
+
+  # セッションは毎回新しい UUID にしてレート制限 (session/IP) を踏まない
+  session="$("${cw[@]}" exec -T eccube sh -c 'cat /proc/sys/kernel/random/uuid' | tr -d '\r\n')"
+  code="$("${cw[@]}" exec -T eccube curl -s -o /tmp/chat_write_path.json -w "%{http_code}" \
+    -X POST http://localhost/api/ai-chat-assistant/chat \
+    -H "Content-Type: application/json" \
+    -d "{\"message\":\"$keyword\",\"session_id\":\"$session\"}" || echo "000")"
+  body="$("${cw[@]}" exec -T eccube cat /tmp/chat_write_path.json 2>/dev/null || true)"
+  echo "  response: HTTP $code $(printf '%s' "$body" | head -c 300 | tr -d '\n')"
+
+  rc=0
+  if [[ "$code" != "200" || "$body" != *"$reply"* ]]; then
+    echo "[ERROR] ${tag} シナリオ一致の /chat が 200 を返しません (HTTP $code)。書込経路に到達できていません" >&2
+    rc=1
+  else
+    rows="$("${cw[@]}" exec -T -u www-data eccube sqlite3 -cmd '.timeout 5000' "$db" "SELECT COUNT(*) FROM plg_ai_chat_assistant_log WHERE session_id = '$session' AND user_message = '$keyword' AND created_at IS NOT NULL;")"
+    created="$("${cw[@]}" exec -T -u www-data eccube sqlite3 -cmd '.timeout 5000' "$db" "SELECT COALESCE(MAX(created_at), 'NULL') FROM plg_ai_chat_assistant_log WHERE session_id = '$session';")"
+    echo "  plg_ai_chat_assistant_log: rows=$rows created_at=$created"
+    if [[ "$rows" != "1" ]]; then
+      echo "[ERROR] ${tag} チャットログが書けていません (期待 1 行 / 実際 $rows 行)" >&2
+      echo "        ChatLogger::log() → flush() → DBAL 型変換 (datetimetz × DateTimeImmutable) を疑うこと" >&2
+      rc=1
+    fi
+  fi
+
+  # 後始末 (成否にかかわらず必ず通る)
+  "${cw[@]}" exec -T -u www-data eccube sqlite3 -cmd '.timeout 5000' "$db" \
+    "DELETE FROM plg_ai_chat_assistant_scenario WHERE trigger_keyword = '$keyword';" >/dev/null 2>&1 || true
+  if [[ -n "$config_id" ]]; then
+    "${cw[@]}" exec -T -u www-data eccube sqlite3 -cmd '.timeout 5000' "$db" \
+      "DELETE FROM plg_ai_chat_assistant_config WHERE id = $config_id;" >/dev/null 2>&1 || true
+  elif [[ "$prev_enabled" != "1" ]]; then
+    "${cw[@]}" exec -T -u www-data eccube sqlite3 -cmd '.timeout 5000' "$db" \
+      "UPDATE plg_ai_chat_assistant_config SET is_enabled = $prev_enabled;" >/dev/null 2>&1 || true
+  fi
+
+  if [[ "$rc" -eq 0 ]]; then
+    "${cw[@]}" exec -T -u www-data eccube sqlite3 -cmd '.timeout 5000' "$db" \
+      "DELETE FROM plg_ai_chat_assistant_log WHERE session_id = '$session';" >/dev/null 2>&1 || true
+    echo "  -> OK (created_at 付きで 1 行 INSERT された)"
+  else
+    "${cw[@]}" exec -T eccube sh -c 'tail -n 20 var/log/dev/*.log 2>/dev/null || true' || true
+  fi
+  return "$rc"
 }
 
 # 死活監視 (--doctor) / 修復 (--fix)。構築は行わない。未構築の版は SKIP。
@@ -688,6 +805,9 @@ CYCLE_YML
     echo "[ERROR] HTML検証ゲート (C4) が失敗しました" >&2
     exit 1
   fi
+
+  # --- T-C5: チャットログ書込経路 (Entity→flush→DBAL 型変換を通す) ---
+  chat_write_path_check "[cycle 7g]" docker compose -p "$CYCLE_PROJECT" -f "$CYCLE_TMPDIR/docker-compose.cycle.yml"
 
   # --- T-C2 続き: uninstall → reinstall ---
   # 管理画面 (Admin Store PluginController::uninstall) は pluginService->uninstall($Plugin) = force=true。

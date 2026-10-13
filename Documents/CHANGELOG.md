@@ -14,7 +14,8 @@
 - README 日英 + バッジを 4.4 (Symfony 7.4 / PHP >=8.2) に更新。
 - E2E 管理画面スモーク (T-09): `e2e/mcp.spec.ts` に admin ログイン→管理9画面 (`dashboard|history|report|settings|knowledge|scenario|access|design|notification`) の 200 確認を追加 (計42テスト)。`E2E_ADMIN_ID`/`E2E_ADMIN_PASSWORD` で上書き可 (既定 `admin`/`password` は docker verify env限定)。T-01〜T-08 非破壊・graceful skip維持。
 - Matrix 本番一致: `make matrix-guard` (installed.json の DBAL4/ORM3 検証) を `test-matrix`/`test-matrix-chaos` の前提化 (DBAL3 green の誤保証防止)。
-- リリース必須ゲート: `Documents/LOCAL_VERIFICATION.md §11` に `--cycle` (T-C1〜T-C4) + E2E (T-01〜T-09) + Matrix (DBAL4/ORM3) の green を Store提出前の必須関門として明記。4.2系への反映は見送り (理由を §11 に記録)。
+- リリース必須ゲート: `Documents/LOCAL_VERIFICATION.md §11` に `--cycle` (T-C1〜T-C5) + E2E (T-01〜T-09) + Matrix (DBAL4/ORM3) の green を Store提出前の必須関門として明記。4.2系への反映は見送り (理由を §11 に記録)。
+- 書込経路スモーク (T-C5): フルサイクル (7g) と `--version` (7b) に、シナリオ一致 → `ChatLogger::log()` → `flush()` → DBAL 型変換まで実際に書き込ませ、`plg_ai_chat_assistant_log` に `created_at` 付きの行が入ることを DB で確認する検査を追加。API キー未設定 / `Config.is_enabled=0` / 設定行なしの環境では従来の API スモークが 403/400 で早期リターンし書込経路に入らないため `UTCDateTimeTzType` 不具合を検知できなかった (検査中のみ Config を有効化し、終了時に元に戻す)。
 
 ### Changed
 - [破壊的変更] MCPツール `search_products` を `aichat_search_products` に改名 (公式MCPの同名ツールとの衝突回避)。旧名での `tools/call` はエラー (`isError: true`) になります。AIチャットの function calling 名も同一定義のため連動して変更されます。
