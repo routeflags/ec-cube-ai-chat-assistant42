@@ -247,3 +247,19 @@ CYCLE_TMPDIR=/tmp/eccube-cycle-4.4 CYCLE_PORT=8083 CYCLE_PROJECT=eccube-cycle-44
 - これはマウント環境固有の制約であり、製品バグではありません。管理画面から再現した場合は試験環境の構成を見直してください
 - `--cycle` は tarball配置 (マウント無し) の独立環境を既定とし、実行前に `/proc/mounts` で `app/Plugin/AiChatAssistant44` を検出します。検出時は uninstall を SKIP し、理由を表示して `SKIPPED (bind mount detected)` で終了します
 - 稼働中デバッグ環境 (`/tmp/eccube-verify-4.4`, port 8082) は `--cycle` の保護対象です。`CYCLE_TMPDIR=/tmp/eccube-verify-*` と `CYCLE_PORT=8080/8081/8082` は拒否されます
+
+## 11. リリース必須ゲート (必読)
+
+Store提出用 tarball (`make ship` / `bin/package.sh`) を作成する前に、以下3点の green を必須関門とします。
+1つでも red/skip (環境不備による skip を含む) のままリリースしないこと。
+
+| # | 関門 | コマンド | 証跡 |
+|---|------|---------|------|
+| G-1 | フルサイクル `--cycle` (T-C1〜T-C4) green | `./bin/verify-docker-install.sh --version 4.4 --cycle` (§10) | ログの `T-C1`〜`T-C4` 完走 + `admin 500なし` |
+| G-2 | E2E (T-01〜T-09) green | `E2E_BASE_URL=http://localhost:8083 npm run test:e2e` (T-09は `E2E_ADMIN_ID`/`E2E_ADMIN_PASSWORD` 上書き可、既定 `admin`/`password` は docker verify env限定) | `42 passed` (T-09: 管理9画面 200) |
+| G-3 | Matrix 本番一致 (DBAL 4 / ORM 3) green | `make test-matrix` (内蔵 `matrix-guard` が DBAL4/ORM3 を検証。`composer.json` require-dev は `^4.0`/`^3.0`/`^7.4` に固定) | `matrix-guard: OK (DBAL4/ORM3)` + `Tests/Matrix` green |
+
+- `make ship` (`verify → test-unit → test-matrix → package`) は G-3 を含みますが、G-1 (`--cycle`) と G-2 (E2E) は docker 実機が必要なため別途実行し、本節の表をチェックリストとして使ってください。
+- `composer.lock` は plugin ではコミットしない方針 (`.gitignore`) のため、本番一致は `composer.json` の範囲固定 + `make matrix-guard` の二重化で担保します。DBAL 3 系での green を DBAL 4 の保証とみなさないこと (`getName()` 500 の再発防止)。
+- 4.2系への反映は見送り。理由: (1) 4.2本番相当は DBAL3/ORM2/Symfony6.4 (`AiChatAssistant42` の `composer.json` が `^3.6`/`^2.15`/`^6.4` に固定) のため DBAL4固定化は移植対象外、(2) 4.2 の `verify-docker-install.sh` に `--cycle` 基盤が無いため T-C1〜T-C4 移植は別途infra移植が必要、(3) 4.2 の e2e は T-01〜T-08 で green 維持中であり T-09 移植は別issueで判断する。
+

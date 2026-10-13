@@ -15,7 +15,7 @@ Playwright の `request` API で再現する真の HTTP e2e。`McpHttpController
 配置: `e2e/mcp.spec.ts` + `playwright.config.ts`。EC-CUBE 4.2 制約
 (`Resource/config/routes.yaml` 手書き) を壊さず、既存の Unit/Integration と seam を分ける。
 
-## シナリオ対応 (8タスク / 10シナリオ → 33テスト)
+## シナリオ対応 (9タスク → 42テスト)
 
 | Spec | 設計 §5.1 | テスト | 検証 |
 |------|-----------|--------|------|
@@ -26,7 +26,8 @@ Playwright の `request` API で再現する真の HTTP e2e。`McpHttpController
 | T-05 | エラー | `T-05 Error handling` 9 tests | invalid json -32700, method欠落 -32600, unknown -32601, unknown_tool isError:true, jsonrpc:"1.0" -32600, batch [] -32600, text/plain 415, GET /mcp 405 + Allow: POST, OPTIONS 204 + Allow-Methods/Headers + Max-Age |
 | T-06 | CORS | `T-06 CORS` 3 tests | `Origin: https://evil.com` で `ACAO:*` + `Vary: Origin` が 3エンドポイントで返る |
 | T-07 | RateLimit | `T-07 RateLimit` 1 test | `well_known 120` を別バケットで 121回目に 429 + `Retry-After:60` + `X-RateLimit-*` |
-| T-08 | 7ページ非破壊 | `T-08 7ページ非破壊` 8 tests | `GET /, /products/list, /products/detail/{1,17}, /guide/articles, /guide/column/... , /news/category/cannabis, /news/1405` が 500 にしない (200 + html を期待、fixture 無しでは 404/302 も許容) |
+| T-08 | 7ページ非破壊 |
+| T-09 | 管理画面スモーク (admin login → 9画面 200) | `T-09 管理画面スモーク` 9 tests | `GET /admin/` (302追従) → `GET /admin/login` から `_csrf_token` 取得 → `POST /admin/login` (`login_id`/`password`/`_csrf_token` → 302) → `/admin/ai-chat-assistant/{dashboard,history,report,settings,knowledge,scenario,access,design,notification}` が 200 + `text/html` (never 500)。管理者は `E2E_ADMIN_ID`/`E2E_ADMIN_PASSWORD` で上書き可 (既定 `admin`/`password` は docker verify env限定の公開可能な既定値) | `T-08 7ページ非破壊` 8 tests | `GET /, /products/list, /products/detail/{1,17}, /guide/articles, /guide/column/... , /news/category/cannabis, /news/1405` が 500 にしない (200 + html を期待、fixture 無しでは 404/302 も許容) |
 
 > **Note:** `limit clamp / 空keyword / stock:null 曖昧化` は `ProductRepository` の Unit で担保。e2e では 7件全て 200 のみを検証。
 > `get_stock 60` の 61回ループは時間costのため `RateLimitServiceTest` 8件で代替し、e2e では `well_known` のみ 429 を実証。
@@ -112,7 +113,7 @@ e2e は Docker 上でのみ実行する explicit な `npm run test:e2e` に分�
 
 ## 成果物
 
-- `e2e/mcp.spec.ts` — 33 tests, 8タスク分 10シナリオ
+- `e2e/mcp.spec.ts` — 42 tests, 8タスク分 10シナリオ
 - `playwright.config.ts` — `E2E_BASE_URL` 対応, `workers:1, fullyParallel:false`
 - `package.json` — `playwright` devDependency + `test:e2e` スクリプト
 - `e2e/README.md` — 本ファイル

@@ -15,6 +15,7 @@ declare(strict_types=1);
 
 namespace Plugin\AiChatAssistant44\Repository;
 
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
@@ -676,7 +677,7 @@ class ProductRepository extends AbstractRepository
             ->from('dtb_product_image')
             ->where('product_id IN (:product_ids)')
             ->orderBy('sort_no', 'ASC')
-            ->setParameter('product_ids', $productIds, \Doctrine\DBAL\Connection::PARAM_INT_ARRAY);
+            ->setParameter('product_ids', $productIds, ArrayParameterType::INTEGER);
 
         $rows = $qb->executeQuery()->fetchAllAssociative();
 

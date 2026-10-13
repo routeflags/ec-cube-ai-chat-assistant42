@@ -492,3 +492,98 @@ test.describe('T-08 7ページ非破壊', () => {
     });
   }
 });
+
+// ---------------------------------------------------------------------------
+// T-09: 管理画面スモーク → ログイン → 管理9画面が 200 + text/html (never 500)
+// ---------------------------------------------------------------------------
+// 実績ある手順: GET /admin/ (302追従) → GET /admin/login から _csrf_token 取得
+// → POST /admin/login (login_id/password/_csrf_token) → 302 → セッション確立
+// → 管理9画面 (/admin/ai-chat-assistant/dashboard|history|report|settings|
+//    knowledge|scenario|access|design|notification) の 200 確認。
+// 管理者ID/パスワードは環境変数で上書き可 (E2E_ADMIN_ID / E2E_ADMIN_PASSWORD)。
+// 既定値 admin/password は docker verify env 限定の公開可能な既定値であり、
+// 本番情報は入れないこと。T-01〜T-08 とは独立した describe のため非破壊。
+// ---------------------------------------------------------------------------
+test.describe('T-09 管理画面スモーク (admin login → 9画面 200)', () => {
+  const adminPaths = [
+    '/admin/ai-chat-assistant/dashboard',
+    '/admin/ai-chat-assistant/history',
+    '/admin/ai-chat-assistant/report',
+    '/admin/ai-chat-assistant/settings',
+    '/admin/ai-chat-assistant/knowledge',
+    '/admin/ai-chat-assistant/scenario',
+    '/admin/ai-chat-assistant/access',
+    '/admin/ai-chat-assistant/design',
+    '/admin/ai-chat-assistant/notification',
+  ];
+
+  // docker verify env 限定の公開可能な既定値 (本番情報は入れない)。上書き可。
+  const adminId = process.env.E2E_ADMIN_ID || 'admin';
+  const adminPassword = process.env.E2E_ADMIN_PASSWORD || 'password';
+
+  let api: Awaited<ReturnType<typeof request.newContext>>;
+
+  test.beforeAll(async () => {
+    api = await request.newContext();
+
+    // 1. GET /admin/ (302追従) → ログイン画面に到達すること
+    const top = await api.get(`${baseURL}/admin/`);
+    expect(top.status(), 'GET /admin/ follows 302 to login page (200)').toBe(200);
+
+    // 2. GET /admin/login から _csrf_token 取得
+    const loginPage = await api.get(`${baseURL}/admin/login`);
+    expect(loginPage.status(), 'GET /admin/login => 200').toBe(200);
+    const loginHtml = await loginPage.text();
+    const tokenMatch =
+      loginHtml.match(/name="_csrf_token"\s+value="([^"]+)"/) ||
+      loginHtml.match(/value="([^"]+)"\s+name="_csrf_token"/);
+    expect(tokenMatch?.[1], 'login form has _csrf_token').toBeTruthy();
+
+    // 3. POST /admin/login (login_id/password/_csrf_token) → 302 でセッション確立。
+    //    maxRedirects: 0 で 302 自体を検証する (追従すると成功/失敗の区別が付かないため)。
+    const login = await api.post(`${baseURL}/admin/login`, {
+      form: { login_id: adminId, password: adminPassword, _csrf_token: tokenMatch![1] },
+      maxRedirects: 0,
+    });
+    expect(login.status(), 'POST /admin/login => 302 on success (200 means bad credentials or CSRF)').toBe(302);
+
+    // 4. セッション確立の裏付け: GET /admin/ がログイン画面ではないこと
+    //    (未認証なら login_id フィールドを持つログイン画面に戻される)。
+    const authed = await api.get(`${baseURL}/admin/`);
+    expect(authed.status(), 'authed GET /admin/ => 200').toBe(200);
+    const authedHtml = await authed.text();
+    expect(
+      authedHtml,
+      'authed /admin/ must not be the login page (check E2E_ADMIN_ID/E2E_ADMIN_PASSWORD)',
+    ).not.toMatch(/name="login_id"/);
+  });
+
+  test.afterAll(async () => {
+    await api?.dispose();
+  });
+
+  for (const path of adminPaths) {
+    test(`GET ${path} → 200 + text/html, never 500`, async () => {
+      const res = await api.get(`${baseURL}${path}`, {
+        headers: { Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' },
+      });
+
+      const status = res.status();
+      const ct = res.headers()['content-type'] || '';
+
+      // 未認証リダイレクト (302→login) はログイン失敗を意味する。即 fail で原因を明示。
+      expect(status, `${path} must not redirect to login (session not established)`).not.toBe(302);
+      expect(status, `${path} should not be 500`).not.toBe(500);
+      expect(status, `${path} should not be 502/503`).not.toBe(502);
+      expect(status, `${path} should not be 503`).not.toBe(503);
+      expect(status, `${path} should be 200`).toBe(200);
+      expect(ct, `${path} content-type`).toMatch(/text\/html/i);
+      const text = await res.text();
+      expect(text.length).toBeGreaterThan(100);
+      expect(text.toLowerCase()).toMatch(/<html|<!doctype/);
+
+      // 管理9画面いずれもプラグインの管理基盤で描画されること (Nav 経由の到達性)。
+      // 9画面共通フッタ/ナビの存在までは assert しない (デザイン変更に弱いため 200+html をもって合格)。
+    });
+  }
+});

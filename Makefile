@@ -35,7 +35,7 @@ DBS_PROJECT ?= eccube-verify-dbs
 DBS_BRANCH ?= 4.2
 DBS_SERVICES ?= eccube-sqlite eccube-mysql eccube-pg
 
-.PHONY: db-up db-wait db-down db-status test-matrix test-matrix-chaos test-unit verify package dbs-fetch dbs-up dbs-wait dbs-down dbs-status dbs-install ship bump tag
+.PHONY: db-up db-wait db-down db-status matrix-guard test-matrix test-matrix-chaos test-unit verify package dbs-fetch dbs-up dbs-wait dbs-down dbs-status dbs-install ship bump tag
 
 db-up:
 	brew services start $(MYSQL_SVC)
@@ -64,10 +64,19 @@ db-status:
 	mysqladmin -uroot status 2>&1 | head -c 120; echo
 	pg_isready || true
 
-test-matrix: db-up db-wait
+# 本番一致ガード: 4.4 の本番相当は DBAL 4 / ORM 3 / Symfony 7.4。
+# composer.json require-dev を ^4.0/^3.0/^7.4 に固定済みだが、vendor が古い解決の
+# まま残っていると DBAL 3 での green が DBAL 4 の保証にならない (getName() 500 の
+# 再発)。Matrix 実行前に installed.json の major を検証し、不一致なら fail-fast
+# する。composer.lock は plugin ではコミットしない方針 (.gitignore) のため、
+# 範囲固定 + 本ガードの二重化で担保する。
+matrix-guard:
+	php -r '$$f = "vendor/composer/installed.json"; if (!file_exists($$f)) { fwrite(STDERR, "matrix-guard: vendor/ が無い。composer install/update を先に実行すること\n"); exit(1); } $$pkgs = json_decode(file_get_contents($$f), true)["packages"]; $$need = ["doctrine/dbal" => "4", "doctrine/orm" => "3"]; foreach ($$need as $$name => $$major) { $$found = null; foreach ($$pkgs as $$p) { if ($$p["name"] === $$name) { $$found = ltrim($$p["version"], "v"); break; } } if ($$found === null) { fwrite(STDERR, "matrix-guard: $$name が vendor/ に無い\n"); exit(1); } echo "$$name=$$found\n"; if (explode(".", $$found)[0] !== $$major) { fwrite(STDERR, "matrix-guard: $$name は本番相当 major $$major が必須 (現在 $$found)。composer update $$name を実行すること\n"); exit(1); } } echo "matrix-guard: OK (DBAL4/ORM3)\n";'
+
+test-matrix: db-up db-wait matrix-guard
 	$(PHPUNIT) Tests/Matrix
 
-test-matrix-chaos: db-up db-wait
+test-matrix-chaos: db-up db-wait matrix-guard
 	MATRIX_CHAOS=1 $(PHPUNIT) Tests/Matrix
 
 test-unit:

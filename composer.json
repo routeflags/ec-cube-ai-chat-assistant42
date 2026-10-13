@@ -37,15 +37,15 @@
         "phpstan/phpstan": "^2.2",
         "phpmd/phpmd": "^2.15",
         "phpmetrics/phpmetrics": "^2.11",
-        "symfony/mailer": "^6.4||^7.4",
-        "symfony/mime": "^6.4||^7.4",
-        "symfony/yaml": "^6.4||^7.0",
-        "doctrine/orm": "^2.15||^3.0",
-        "doctrine/dbal": "^3.6||^4.0",
-        "symfony/http-foundation": "^6.4||^7.4",
-        "symfony/http-kernel": "^6.4||^7.4",
-        "symfony/routing": "^6.4||^7.4",
-        "symfony/cache": "^6.4||^7.0"
+        "symfony/mailer": "^7.4",
+        "symfony/mime": "^7.4",
+        "symfony/yaml": "^7.4",
+        "doctrine/orm": "^3.0",
+        "doctrine/dbal": "^4.0",
+        "symfony/http-foundation": "^7.4",
+        "symfony/http-kernel": "^7.4",
+        "symfony/routing": "^7.4",
+        "symfony/cache": "^7.4"
     },
     "autoload": {
         "psr-4": {

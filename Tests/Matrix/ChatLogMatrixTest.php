@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace Plugin\AiChatAssistant44\Tests\Matrix;
 
 use Doctrine\DBAL\DriverManager;
+use Doctrine\DBAL\Platforms\AbstractPlatform;
+use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
+use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
+use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use PHPUnit\Framework\TestCase;
@@ -31,14 +35,14 @@ class ChatLogMatrixTest extends TestCase
     public function provideDatabases(): iterable
     {
         $candidates = [
-            'sqlite' => ['url' => 'sqlite:///' . (getenv('MATRIX_SQLITE_PATH') ?: '/tmp/matrix_ai_chat_test.db')],
-            'mysql' => ['url' => getenv('MATRIX_MYSQL_URL') ?: 'mysql://root@127.0.0.1:3306/matrix_test'],
-            'pgsql' => ['url' => getenv('MATRIX_PGSQL_URL') ?: sprintf('pgsql://%s@127.0.0.1:5432/matrix_test', getenv('USER') ?: 'postgres')],
+            'sqlite' => self::sqliteParams(),
+            'mysql' => self::tcpParams('pdo_mysql', self::rawMysqlUrl(), 3306),
+            'pgsql' => self::tcpParams('pdo_pgsql', self::rawPgsqlUrl(), 5432),
         ];
 
         foreach (['mysql' => 'ensureMysql', 'pgsql' => 'ensurePgsql'] as $label => $method) {
             try {
-                $this->{$method}($candidates[$label]['url']);
+                $this->{$method}($label === 'mysql' ? self::rawMysqlUrl() : self::rawPgsqlUrl());
             } catch (\Throwable $e) {
                 fwrite(STDERR, sprintf("[matrix] %s setup failed: %s\n", $label, substr($e->getMessage(), 0, 120)));
             }
@@ -48,7 +52,9 @@ class ChatLogMatrixTest extends TestCase
         foreach ($candidates as $label => $params) {
             try {
                 $conn = DriverManager::getConnection($params);
-                $conn->connect();
+                // DBAL 4 で Connection::connect() が protected になったため
+                // 公開 API のクエリで到達確認する (失敗時は例外 → skip)。
+                $conn->fetchOne('SELECT 1');
                 $conn->close();
                 $reachable[$label] = $params;
             } catch (\Throwable $e) {
@@ -111,6 +117,68 @@ class ChatLogMatrixTest extends TestCase
         $admin->close();
     }
 
+
+    /**
+     * DBAL 4 は DriverManager の 'url' 解析を廃止したため driver 明示で接続する
+     * (DBAL 3 でも同一形式が有効なので両対応)。'url' のままだと全DB skip になり
+     * green の誤保証になるため、matrix-guard (DBAL4/ORM3) と併せて本形式を必須とする。
+     *
+     * @return array<string, mixed>
+     */
+    private static function sqliteParams(): array
+    {
+        return ['driver' => 'pdo_sqlite', 'path' => getenv('MATRIX_SQLITE_PATH') ?: '/tmp/matrix_ai_chat_test.db'];
+    }
+
+    private static function rawMysqlUrl(): string
+    {
+        return getenv('MATRIX_MYSQL_URL') ?: 'mysql://root@127.0.0.1:3306/matrix_test';
+    }
+
+    private static function rawPgsqlUrl(): string
+    {
+        return getenv('MATRIX_PGSQL_URL') ?: sprintf('pgsql://%s@127.0.0.1:5432/matrix_test', getenv('USER') ?: 'postgres');
+    }
+
+    /**
+     * 'mysql://user:pass@host:port/dbname' 形式を driver 明示の接続パラメータに変換する。
+     *
+     * @return array<string, mixed>
+     */
+    private static function tcpParams(string $driver, string $url, int $defaultPort): array
+    {
+        $parts = parse_url($url) ?: [];
+
+        return [
+            'driver' => $driver,
+            'host' => $parts['host'] ?? '127.0.0.1',
+            'port' => isset($parts['port']) ? (int) $parts['port'] : $defaultPort,
+            'dbname' => isset($parts['path']) ? ltrim($parts['path'], '/') : 'matrix_test',
+            'user' => isset($parts['user']) ? urldecode($parts['user']) : '',
+            'password' => isset($parts['pass']) ? urldecode($parts['pass']) : '',
+        ];
+    }
+
+    /**
+     * DBAL 4 で AbstractPlatform::getName() が廃止されたため instanceof で判定する
+     * (AbstractMySQLPlatform で MySQL/MariaDB 双方・SQLitePlatform に対応。
+     * 存在しないクラスへの instanceof は false を返すため安全)。
+     */
+    private static function platformName(AbstractPlatform $platform): string
+    {
+        if ($platform instanceof AbstractMySQLPlatform) {
+            return 'mysql';
+        }
+        if ($platform instanceof SQLitePlatform) {
+            return 'sqlite';
+        }
+        if ($platform instanceof PostgreSQLPlatform) {
+            return 'pgsql';
+        }
+
+        return strtolower((new \ReflectionClass($platform))->getShortName());
+    }
+
     private function repositoryFor(string $label, array $params): ChatLogRepository
     {
         $this->seedDatabase($label, $params);
@@ -125,13 +193,13 @@ class ChatLogMatrixTest extends TestCase
 
     private function seedDatabase(string $label, array $params): void
     {
-        $key = $label . '|' . $params['url'];
+        $key = $label . '|' . json_encode($params);
         if (isset(self::$seeded[$key])) {
             return;
         }
 
         $conn = DriverManager::getConnection($params);
-        $platform = strtolower($conn->getDatabasePlatform()->getName());
+        $platform = self::platformName($conn->getDatabasePlatform());
         $autoId = str_contains($platform, 'mysql') ? 'INT AUTO_INCREMENT PRIMARY KEY'
             : (str_contains($platform, 'sqlite') ? 'INTEGER PRIMARY KEY AUTOINCREMENT' : 'SERIAL PRIMARY KEY');
 
