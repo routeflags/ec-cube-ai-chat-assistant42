@@ -24,14 +24,20 @@ PLUGIN_DIR="${PLUGIN_DIR:-$PLUGIN_DIR_DEFAULT}"
 VERSION="both"
 KEEP=0
 QUICK=0
+DOCTOR=0
+FIX=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --version) VERSION="$2"; shift 2 ;;
     --keep) KEEP=1; shift ;;
     --quick) QUICK=1; shift ;;
+    --doctor) DOCTOR=1; shift ;;
+    --fix) FIX=1; shift ;;
     -h|--help)
-      echo "Usage: $0 [--version 4.2|4.3|4.4|both|all] [--keep] [--quick]"
+      echo "Usage: $0 [--version 4.2|4.3|4.4|both|all] [--keep] [--quick] [--doctor] [--fix]"
+      echo "  --doctor       # 死活監視: コンテナ・フロント応答・var/所有者・memory.ini を点検"
+      echo "  --fix          # 修復: var/ を www-data へ chown (root console 実行後の 500 対策)"
       echo "  4.2  -> EC-CUBE 4.2 + php:8.1-apache-bullseye + port 8080 (code AiChatAssistant42)"
       echo "  4.3  -> EC-CUBE 4.3 + php:8.2-apache-bullseye + port 8081 (code AiChatAssistant42)"
       echo "  4.4  -> EC-CUBE 4.4 + php:8.3-apache-bookworm + port 8082 (code AiChatAssistant44)"
@@ -227,6 +233,69 @@ run_one_version() {
     echo "[${ver} keep] --keep 指定のためコンテナを残します: cd $tmpdir && docker compose -f docker-compose.verify.yml ps"
   fi
 }
+
+# 死活監視 (--doctor) / 修復 (--fix)。構築は行わない。未構築の版は SKIP。
+doctor_versions() {
+  case "$VERSION" in
+    4.2|4.3|4.4) echo "$VERSION" ;;
+    both) echo "4.2 4.3" ;;
+    all) echo "4.2 4.3 4.4" ;;
+    *) echo "[ERROR] --version は 4.2|4.3|4.4|both|all のみ" >&2; exit 1 ;;
+  esac
+}
+
+doctor_one_version() {
+  local ver="$1" port tmpdir fail=0
+  case "$ver" in
+    4.2) port="8080" ;;
+    4.3) port="8081" ;;
+    4.4) port="8082" ;;
+  esac
+  tmpdir="/tmp/eccube-verify-${ver}"
+  echo "=== [${ver}] doctor (port ${port}) ==="
+  if [[ ! -d "$tmpdir" ]]; then
+    echo "  -> SKIP (未構築: $tmpdir が無い)"
+    return 0
+  fi
+  if ! docker compose -f "$tmpdir/docker-compose.verify.yml" exec -T eccube true 2>/dev/null; then
+    echo "  -> NG: container not running"; fail=1
+  else
+    echo "  -> OK: container running"
+  fi
+  local http
+  http="$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "http://localhost:${port}/" || echo "000")"
+  if [[ "$http" == "200" ]]; then
+    echo "  -> OK: front HTTP 200"
+  else
+    echo "  -> NG: front HTTP $http"; fail=1
+  fi
+  local bad
+  bad="$(docker compose -f "$tmpdir/docker-compose.verify.yml" exec -T eccube bash -c 'find var/cache var/build var/log -maxdepth 4 ! -user www-data 2>/dev/null | head -n 5' || true)"
+  if [[ -z "$bad" ]]; then
+    echo "  -> OK: var/ ownership (all www-data)"
+  else
+    echo "  -> NG: non-www-data files under var/: $bad"; fail=1
+  fi
+  if docker compose -f "$tmpdir/docker-compose.verify.yml" exec -T eccube test -f /usr/local/etc/php/conf.d/zz-memory-limit.ini 2>/dev/null; then
+    echo "  -> OK: memory_limit ini present"
+  else
+    echo "  -> NG: memory_limit ini missing"; fail=1
+  fi
+  return $fail
+}
+
+if [[ "$DOCTOR" -eq 1 || "$FIX" -eq 1 ]]; then
+  overall=0
+  for v in $(doctor_versions); do
+    if [[ "$FIX" -eq 1 && -d "/tmp/eccube-verify-${v}" ]]; then
+      echo "=== [${v}] fix: chown -R www-data var/ ==="
+      docker compose -f "/tmp/eccube-verify-${v}/docker-compose.verify.yml" exec -T eccube bash -c "chown -R www-data var/" || overall=1
+    fi
+    doctor_one_version "$v" || overall=1
+  done
+  if [[ "$overall" -eq 0 ]]; then echo "=== doctor: ALL HEALTHY ==="; else echo "=== doctor: FAILURES DETECTED ===" >&2; fi
+  exit $overall
+fi
 
 case "$VERSION" in
   4.2) run_one_version "4.2" ;;
