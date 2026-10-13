@@ -12,6 +12,7 @@
 #   make test-unit           # 既存の高速suite（DB不要）
 #   make verify             # verify-plugin.sh（5 checks）
 #   make package            # Store提出用tarballを作成（PACKAGE_OUTで上書き可）
+#   make package-versions   # 4.4 / 4.3・4.2 を別々に packages（BRANCH_44/BRANCH_42/OUT_DIRで上書き可）
 #   make dbs-fetch          # 検証用EC-CUBE実体が無い場合のみ取得（git clone -b 4.2 --depth 1 ×3。dbs/{sqlite,mysql,pg}/ はgit管理外）
 #   make dbs-up             # 検証用DB別環境（sqlite/mysql/pg）を起動
 #   make dbs-wait           # 起動時プロビジョニング完了待ち（up直後に必須）
@@ -33,7 +34,7 @@ DBS_COMPOSE ?= docker-compose.dbs.yml
 DBS_PROJECT ?= eccube-verify-dbs
 DBS_SERVICES ?= eccube-sqlite eccube-mysql eccube-pg
 
-.PHONY: db-up db-wait db-down db-status test-matrix test-matrix-chaos test-unit verify package dbs-fetch dbs-up dbs-wait dbs-down dbs-status dbs-install ship bump tag
+.PHONY: db-up db-wait db-down db-status test-matrix test-matrix-chaos test-unit verify package package-versions dbs-fetch dbs-up dbs-wait dbs-down dbs-status dbs-install ship bump tag
 
 db-up:
 	brew services start $(MYSQL_SVC)
@@ -76,6 +77,11 @@ verify:
 
 package:
 	./bin/package.sh --output $(PACKAGE_OUT)
+
+PACKAGE_VERSIONS_OUT ?= dist
+
+package-versions:
+	./bin/package-versions.sh --out $(PACKAGE_VERSIONS_OUT)
 
 dbs-fetch:
 	for d in sqlite mysql pg; do \
