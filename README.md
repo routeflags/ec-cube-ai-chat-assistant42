@@ -217,6 +217,29 @@ MCP clients and AI agents can use this endpoint to discover the MCP Server endpo
 
 ---
 
+### Coexistence with the official MCP server (EC-CUBE 4.4 core + api44)
+
+This plugin's server (`ec-mcp`, `POST /mcp`, public storefront) coexists as a
+**separate server** with the official admin MCP server
+(`EC-CUBE MCP Server`, `POST /{admin_route}/mcp`, OAuth2 required via api44).
+No route, service ID, table, PluginData, or Twig collisions exist, so neither
+needs to be disabled.
+
+|  | This plugin (`ec-mcp`) | Official server (`EC-CUBE MCP Server`) |
+|---|---|---|
+| Endpoint | `POST /mcp` | `POST /{admin_route}/mcp` |
+| Discovery | `GET /.well-known/mcp.json` (includes a `coexistence` note) | core `mcp.yaml` |
+| Auth | none (public storefront) | OAuth2 via api44 (`mcp:*:read` scopes) |
+| Tools | 7 storefront tools | 11 admin read-only tools |
+
+Both servers expose a tool named `search_products`, but they are different
+servers with different auth and schemas. **Tool names in this plugin are
+intentionally unchanged for compatibility** — check `serverInfo.name` and the
+endpoint URL when registering clients to avoid confusion.
+
+---
+
+
 ## WebMCP
 
 The plugin also supports **WebMCP**.

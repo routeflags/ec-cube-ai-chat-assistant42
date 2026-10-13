@@ -219,6 +219,27 @@ MCPクライアントやAIエージェントが、MCP Serverのエンドポイ�
 
 ---
 
+### 公式MCPサーバ (EC-CUBE 4.4コア + api44) との共存
+
+本プラグインのサーバ (`ec-mcp`、`POST /mcp`、店舗公開) は、公式の管理系MCPサー
+バ (`EC-CUBE MCP Server`、`POST /{管理画面URL}/mcp`、api44経由のOAuth2必須) と
+**別サーバとして共存**します。ルート名・サービスID・テーブル・PluginData・Twig
+の重複はないため、どちらかを無効化する必要はありません。
+
+|  | 本プラグイン (`ec-mcp`) | 公式サーバ (`EC-CUBE MCP Server`) |
+|---|---|---|
+| エンドポイント | `POST /mcp` | `POST /{管理画面URL}/mcp` |
+| Discovery | `GET /.well-known/mcp.json` (`coexistence` 注記付き) | コア `mcp.yaml` |
+| 認証 | なし (店舗公開) | OAuth2必須 (api44、`mcp:*:read` 系scope) |
+| ツール | 店舗向け7ツール | 管理参照向け11ツール |
+
+両サーバに同名ツール `search_products` がありますが、別サーバ・別認証・別スキー
+マです。**本プラグインのツール名は互換性のため意図的に変更していません**。クラ
+イアント登録時は `serverInfo.name` とエンドポイントURLを確認してください。
+
+---
+
+
 ## WebMCP
 
 WebMCPにも対応しています。

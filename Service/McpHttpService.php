@@ -255,6 +255,37 @@ class McpHttpService
             ],
             'baseUrl' => $baseUrl,
             'tools' => $mcpTools,
+            // 共存注記 (additive のみ。既存キーは不変。ツール名・パス変更なし)。
+            // 公式MCP (コア4.4 + api44: POST /{admin_route}/mcp, OAuth2必須) とは
+            // 別サーバ・別エンドポイントとして共存する。未知キーを無視するクライ
+            // アントへの互換性影響はない。詳細は Documents/plans/dev/20261013_mcp-coexistence_plan.md
+            'description' => 'EC-CUBE storefront public MCP server ('
+                . self::SERVER_NAME
+                . '). Coexists with the official admin MCP server '
+                . '(EC-CUBE MCP Server, POST /{admin_route}/mcp, OAuth2 required). '
+                . 'They are separate servers/endpoints; register the intended one.',
+            'coexistence' => [
+                'servers' => [
+                    [
+                        'name' => self::SERVER_NAME,
+                        'endpoint' => '/mcp',
+                        'discovery' => '/.well-known/mcp.json',
+                        'auth' => 'none (public storefront)',
+                    ],
+                    [
+                        'name' => 'EC-CUBE MCP Server',
+                        'endpoint' => '/{admin_route}/mcp',
+                        'auth' => 'OAuth2 required (api44, scopes mcp:*:read)',
+                    ],
+                ],
+                'notes' => [
+                    'Both servers expose a tool named search_products, '
+                    . 'but they are different servers/endpoints with different auth '
+                    . 'and schemas. Tool names in this server are unchanged '
+                    . 'for compatibility; compare serverInfo.name and the endpoint URL '
+                    . 'when registering clients.',
+                ],
+            ],
         ];
     }
 
