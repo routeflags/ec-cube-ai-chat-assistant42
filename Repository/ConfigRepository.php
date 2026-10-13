@@ -18,6 +18,7 @@ namespace Plugin\AiChatAssistant44\Repository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Plugin\AiChatAssistant44\Entity\Config;
+use Eccube\Entity\AbstractEntity;
 use Eccube\Repository\AbstractRepository;
 
 /**
@@ -50,7 +51,7 @@ class ConfigRepository extends AbstractRepository
     /**
      * 設定を永続化する。
      */
-    public function save($entity)
+    public function save(AbstractEntity $entity): void
     {
         $this->entityManager->persist($entity);
         $this->entityManager->flush();

@@ -18,6 +18,7 @@ namespace Plugin\AiChatAssistant44\Repository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Plugin\AiChatAssistant44\Entity\Notification;
+use Eccube\Entity\AbstractEntity;
 use Eccube\Repository\AbstractRepository;
 
 /**
@@ -63,7 +64,7 @@ class NotificationRepository extends AbstractRepository
     /**
      * 通知ルールを永続化する。
      */
-    public function save($entity)
+    public function save(AbstractEntity $entity): void
     {
         $this->entityManager->persist($entity);
         $this->entityManager->flush();
@@ -72,7 +73,7 @@ class NotificationRepository extends AbstractRepository
     /**
      * 通知ルールを削除する。
      */
-    public function delete($entity)
+    public function delete(AbstractEntity $entity): void
     {
         $this->entityManager->remove($entity);
         $this->entityManager->flush();

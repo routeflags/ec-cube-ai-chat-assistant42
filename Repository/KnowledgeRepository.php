@@ -19,6 +19,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use Plugin\AiChatAssistant44\Entity\Knowledge;
+use Eccube\Entity\AbstractEntity;
 use Eccube\Repository\AbstractRepository;
 
 /**
@@ -105,7 +106,7 @@ class KnowledgeRepository extends AbstractRepository
     /**
      * ナレッジを永続化する。
      */
-    public function save($entity)
+    public function save(AbstractEntity $entity): void
     {
         $this->entityManager->persist($entity);
         $this->entityManager->flush();
