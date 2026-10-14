@@ -23,6 +23,7 @@
 ### Fixed
 - [4.4] `UTCDateTimeTzType` (DBAL 4) が `DateTimeImmutable` を受け付けない問題を修正: エンティティの日付setter 15件で可変 `DateTime` に正規化、`ChatLogRepository` の日付引数 15件も同様。チャット履歴保存の `EntityManagerClosed` 500を解消 (MySQL/PG/SQLiteのMatrix 45件で検証)。
 - チャット履歴保存の失敗が元のエラーを隠さないよう `logChatSuccess` / `logChatError` を堅牢化 (DB例外時は monolog のみ)。
+- チャットウィジェットの入力で日本語 IME の変換確定 Enter が素のフォーム送信になり `POST /` が 405 (Method Not Allowed) になる問題を修正。入力要素を `<textarea rows="1">` にして Enter による implicit submission を起こさないようにし、フォームは `action="#" method="get"` + `onsubmit="return false"` にして JS が止め損ねても 405 のエラー画面にならないようにした (Enter での送信・Shift+Enter の改行は従来どおり)。
 
 ### Security
 - 変更なし (CSRF/キーマスク/ログ匿名化/MCP サニタイズを維持)。

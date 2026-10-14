@@ -68,17 +68,21 @@
     </div>
 
     {# 入力フォーム — WebMCP: data-mcp-form="ai-chat" でAIがformを一意特定。既存 id/name は変更しない。 #}
-    <form id="chat-form" class="chat-form" action="#" method="post" novalidate data-mcp-form="ai-chat" data-mcp-variant="chat">
+    {# ネイティブ送信は JS で止めるが、止め損ねても POST / (405) にしないよう action="#" + method="get"。
+       さらに IME 変換確定の Enter はブラウザ既定の submit が非 cancelable で発火することがあり JS では
+       止められないため、入力は <input> ではなく <textarea> にして implicit submission 自体を起こさない
+       (Enter は JS が preventDefault し、Shift+Enter は改行として残る)。 #}
+    <form id="chat-form" class="chat-form" action="#" method="get" novalidate onsubmit="return false" data-mcp-form="ai-chat" data-mcp-variant="chat">
       <div class="chat-form__row">
         <label for="chat-input" class="sr-only">メッセージ入力</label>
-        <input type="text"
-               id="chat-input"
-               class="chat-form__input"
-               placeholder="商品について質問してください..."
-               autocomplete="off"
-               maxlength="500"
-               aria-required="true"
-               data-mcp-field="ai-chat.message">
+        <textarea id="chat-input"
+                  class="chat-form__input"
+                  rows="1"
+                  placeholder="商品について質問してください..."
+                  autocomplete="off"
+                  maxlength="500"
+                  aria-required="true"
+                  data-mcp-field="ai-chat.message"></textarea>
         <button type="submit" class="chat-form__send" aria-label="送信" data-mcp-field="ai-chat.submit">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="22" y1="2" x2="11" y2="13"/>
