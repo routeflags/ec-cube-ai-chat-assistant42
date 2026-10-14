@@ -396,6 +396,11 @@
   color: var(--chat-text);
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  /* textarea (Enter でフォームのネイティブ送信を起こさないため) を 1 行の
+     <input> と同じ見た目に保つ。行が増えた分はスクロールさせる。 */
+  resize: none;
+  line-height: 1.4;
+  overflow-y: auto;
 }
 
 .chat-form__input::placeholder {
