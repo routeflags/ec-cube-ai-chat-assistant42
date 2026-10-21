@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- 管理画面の設定画面に「レート制限（分あたり上限）」の項目を追加。`Config.rate_limit_per_minute`（既定30、0で無効化）を UI から変更可能にした。従来は DB の UPDATE でしか変えられない状態だった
+
 ### Fixed
 - チャットウィジェットの入力で日本語 IME の変換確定 Enter が素のフォーム送信になり `POST /` が 405 (Method Not Allowed) になる問題を修正。入力要素を `<textarea rows="1">` にして Enter による implicit submission を起こさないようにし、フォームは `action="#" method="get"` + `onsubmit="return false"` にして JS が止め損ねても 405 のエラー画面にならないようにした (Enter での送信・Shift+Enter の改行は従来どおり)。
 

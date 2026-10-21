@@ -70,6 +70,12 @@
             <input type="number" name="max_tokens" id="max_tokens" class="form-control" value="{{ config and config.getMaxTokens() ? config.getMaxTokens() : 4096 }}" min="256" max="128000" step="1" required>
             <small class="text-muted">AIレスポンスの最大トークン数。モデルや用途に応じて調整してください（例: 4096）。</small>
           </div>
+
+          <div class="form-group">
+            <label for="rate_limit_per_minute">レート制限（分あたり上限）</label>
+            <input type="number" name="rate_limit_per_minute" id="rate_limit_per_minute" class="form-control" value="{{ config ? config.getRateLimitPerMinute() : 30 }}" min="0" max="10000" step="1">
+            <small class="text-muted">1分あたりのチャットAPIリクエスト上限（既定30）。セッション単位で適用し、IP単位はこの2倍になります。0 を指定すると無効化（制限なし）です。</small>
+          </div>
         </div>
       </div>
 

@@ -362,6 +362,8 @@ class DashboardControllerTest extends TestCase
             'is_enabled' => '1',
             // max_tokens は DB で管理し保存されることを検証
             'max_tokens' => '2048',
+            // レート制限も同様に保存されることを検証
+            'rate_limit_per_minute' => '120',
         ]);
 
         $controller->settings($request);
@@ -371,6 +373,50 @@ class DashboardControllerTest extends TestCase
         $this->assertEquals(1, $existingConfig->getIsEnabled());
         // max_tokens は保存される（2048 に更新）
         $this->assertEquals(2048, $existingConfig->getMaxTokens());
+        // レート制限も保存される（120 に更新）
+        $this->assertEquals(120, $existingConfig->getRateLimitPerMinute());
+    }
+
+    // ============================================================
+    //  settings POST: レート制限のバリデーション
+    // ============================================================
+
+    public function testSettingsPostKeepsRateLimitWhenNotSent(): void
+    {
+        $existingConfig = new Config();
+        $this->configRepository->method('findOneBy')->willReturn($existingConfig);
+        $this->entityManager->expects($this->once())->method('flush');
+
+        $controller = $this->createController();
+        $controller->method('isTokenValid')->willReturn(true);
+        $controller->method('addSuccess')->willReturn(null);
+        $controller->method('redirectToRoute')->willReturn(new RedirectResponse('/admin/ai-chat-assistant/settings', 302));
+
+        // レート制限を送信しない → 既存値（既定30）が維持される
+        $controller->settings(Request::create('/admin/ai-chat-assistant/settings', 'POST', [
+            'is_enabled' => '1',
+        ]));
+
+        $this->assertEquals(30, $existingConfig->getRateLimitPerMinute());
+    }
+
+    public function testSettingsPostRejectsRateLimitOutOfRange(): void
+    {
+        $existingConfig = new Config();
+        $this->configRepository->method('findOneBy')->willReturn($existingConfig);
+        $this->entityManager->expects($this->never())->method('flush');
+
+        $controller = $this->createController();
+        $controller->method('isTokenValid')->willReturn(true);
+        $controller->method('addError')->willReturn(null);
+        $controller->method('redirectToRoute')->willReturn(new RedirectResponse('/admin/ai-chat-assistant/settings', 302));
+
+        // 範囲外（10001）は保存されず、既定値のまま
+        $controller->settings(Request::create('/admin/ai-chat-assistant/settings', 'POST', [
+            'rate_limit_per_minute' => '10001',
+        ]));
+
+        $this->assertEquals(30, $existingConfig->getRateLimitPerMinute());
     }
 
     // ================================================================

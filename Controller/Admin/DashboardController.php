@@ -304,6 +304,10 @@ class DashboardController extends AbstractController
         if ($maxTokensResponse !== null) {
             return $maxTokensResponse;
         }
+        $rateLimitResponse = $this->validateRateLimitOrRedirect($request);
+        if ($rateLimitResponse !== null) {
+            return $rateLimitResponse;
+        }
 
         return $this->persistSettingsAndRedirect($request, $config, $provider, $model);
     }
@@ -378,6 +382,25 @@ class DashboardController extends AbstractController
         $maxTokens = (int) $raw;
         if ($maxTokens < 256 || $maxTokens > 128000) {
             $this->addError('最大トークン数は256〜128000の範囲で入力してください。', 'admin');
+            return $this->redirectToRoute('admin_ai_chat_assistant_settings');
+        }
+
+        return null;
+    }
+
+    /**
+     * レート制限（分あたり上限）を検証する。0 は無効化（制限なし）を意味する。
+     */
+    private function validateRateLimitOrRedirect(Request $request): ?Response
+    {
+        $raw = $request->request->get('rate_limit_per_minute', null);
+        // 未送信や空文字は既存値を維持するため検証不要
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+        $rateLimit = (int) $raw;
+        if ($rateLimit < 0 || $rateLimit > 10000) {
+            $this->addError('レート制限は 0（無効化）〜10000 の範囲で入力してください。', 'admin');
             return $this->redirectToRoute('admin_ai_chat_assistant_settings');
         }
 
@@ -488,6 +511,10 @@ class DashboardController extends AbstractController
         $rawMaxTokens = $request->request->get('max_tokens', null);
         if ($rawMaxTokens !== null && $rawMaxTokens !== '') {
             $config->setMaxTokens((int) $rawMaxTokens);
+        }
+        $rawRateLimit = $request->request->get('rate_limit_per_minute', null);
+        if ($rawRateLimit !== null && $rawRateLimit !== '') {
+            $config->setRateLimitPerMinute((int) $rawRateLimit);
         }
         $config->setResponseMode((string) $request->request->get('response_mode', 'hybrid'));
         $this->applyApiKeysFromRequest($request, $config);
