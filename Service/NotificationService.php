@@ -344,16 +344,7 @@ class NotificationService
 
         // レガシー: 既に配列で保存されている場合（各値を個別に復号）
         if (is_array($rawHeaders)) {
-            $headers = [];
-            foreach ($rawHeaders as $key => $value) {
-                $headerKey = trim((string) $key);
-                if ($headerKey === '') {
-                    continue;
-                }
-                $headers[$headerKey] = $this->decryptIfNeeded((string) $value);
-            }
-
-            return $headers;
+            return $this->buildHeaders($rawHeaders);
         }
 
         // 文字列: 全体が暗号化されている可能性があるためまず復号を試みる
@@ -371,13 +362,26 @@ class NotificationService
             return [];
         }
 
+        return $this->buildHeaders($decoded);
+    }
+
+    /**
+     * ヘッダー行（key => value）を検証し、値を復号して返す。
+     *
+     * 値が個別に暗号化されているレガシーデータにも対応する（防御的）。
+     *
+     * @param array<mixed, mixed> $rows
+     *
+     * @return array<string, string>
+     */
+    private function buildHeaders(array $rows): array
+    {
         $headers = [];
-        foreach ($decoded as $key => $value) {
+        foreach ($rows as $key => $value) {
             $headerKey = trim((string) $key);
             if ($headerKey === '') {
                 continue;
             }
-            // 値が個別に暗号化されている場合にも対応（防御的）
             $headers[$headerKey] = $this->decryptIfNeeded((string) $value);
         }
 

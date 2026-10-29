@@ -129,22 +129,7 @@ class PageContextService
         }
 
         if ($product !== null) {
-            $lines[] = '- 閲覧中の商品: ' . ($product['name'] ?? '') . ' (ID: ' . ($product['id'] ?? '') . ')';
-
-            $priceRange = $this->formatPriceRange($product['classes'] ?? []);
-            if ($priceRange !== null) {
-                $lines[] = '  - 価格: ' . $priceRange;
-            }
-
-            $stockRows = $product['stock'] ?? [];
-            if (is_array($stockRows) && $stockRows !== []) {
-                $lines[] = '  - 在庫: ' . ($this->hasStock($stockRows) ? 'あり' : 'なし');
-            }
-
-            $description = trim((string) ($product['description_list'] ?? ''));
-            if ($description !== '') {
-                $lines[] = '  - 商品説明: ' . mb_substr($description, 0, self::MAX_DESCRIPTION_LENGTH);
-            }
+            $lines = array_merge($lines, $this->buildProductLines($product));
         } elseif (isset($context['product_id'])) {
             $lines[] = '- 閲覧中の商品ID: ' . $context['product_id'] . '（商品情報は取得できませんでした）';
         }
@@ -152,6 +137,37 @@ class PageContextService
         $lines[] = '「この商品」「これ」「いくら」などの指示語は、閲覧中のページ・商品を指すものとして回答してください。';
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * 閲覧中商品の詳細行（価格・在庫・説明）を組み立てる。
+     *
+     * @param array<string, mixed> $product ProductRepository::getDetail() の戻り値
+     *
+     * @return string[]
+     */
+    private function buildProductLines(array $product): array
+    {
+        $lines = [
+            '- 閲覧中の商品: ' . ($product['name'] ?? '') . ' (ID: ' . ($product['id'] ?? '') . ')',
+        ];
+
+        $priceRange = $this->formatPriceRange($product['classes'] ?? []);
+        if ($priceRange !== null) {
+            $lines[] = '  - 価格: ' . $priceRange;
+        }
+
+        $stockRows = $product['stock'] ?? [];
+        if (is_array($stockRows) && $stockRows !== []) {
+            $lines[] = '  - 在庫: ' . ($this->hasStock($stockRows) ? 'あり' : 'なし');
+        }
+
+        $description = trim((string) ($product['description_list'] ?? ''));
+        if ($description !== '') {
+            $lines[] = '  - 商品説明: ' . mb_substr($description, 0, self::MAX_DESCRIPTION_LENGTH);
+        }
+
+        return $lines;
     }
 
     /**

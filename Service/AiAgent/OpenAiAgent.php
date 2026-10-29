@@ -418,6 +418,30 @@ class OpenAiAgent implements AiAgentInterface
      */
     private function resolveCapabilityFromJson(): bool
     {
+        $configPath = $this->findCapabilityConfigPath();
+        if ($configPath === null) {
+            return true;
+        }
+
+        $raw = file_get_contents($configPath);
+        if ($raw === false) {
+            return true;
+        }
+
+        $decoded = json_decode($raw, true);
+        $models = is_array($decoded) ? ($decoded['providers']['openai']['models'] ?? null) : null;
+        if (!is_array($models)) {
+            return true;
+        }
+
+        return $this->findReasoningSupportFlag($models);
+    }
+
+    /**
+     * ai_models.json の候補パスのうち、存在する最初のものを返す。
+     */
+    private function findCapabilityConfigPath(): ?string
+    {
         // 将来は AiModelRegistry 必須化し本探索を削除する方針（@todo）。
         // 現状は PluginData（リモート同期の正本）を最優先で探索する。
         // 12候補の膨張を整理し、代表6候補に集約（MN04）
@@ -432,38 +456,31 @@ class OpenAiAgent implements AiAgentInterface
             __DIR__ . '/../../Resource/config/ai_models.json',
         ]);
 
-        $configPath = null;
         foreach ($candidates as $candidate) {
             if (is_file($candidate)) {
-                $configPath = $candidate;
-                break;
+                return $candidate;
             }
         }
 
-        if ($configPath === null) {
-            return true;
-        }
+        return null;
+    }
 
-        if (!is_file($configPath)) {
-            return true;
-        }
-        $raw = file_get_contents($configPath);
-        if ($raw === false) {
-            return true;
-        }
-
-        $decoded = json_decode($raw, true);
-        if (!is_array($decoded) || !isset($decoded['providers']['openai']['models'])) {
-            return true;
-        }
-
-        foreach ($decoded['providers']['openai']['models'] as $model) {
-            if (($model['id'] ?? null) === $this->model) {
-                if (!array_key_exists('supports_reasoning_with_tools', $model)) {
-                    return true;
-                }
-                return (bool) $model['supports_reasoning_with_tools'];
+    /**
+     * モデル定義から supports_reasoning_with_tools を読む（未定義は true）。
+     *
+     * @param array<mixed> $models ai_models.json の providers.openai.models
+     */
+    private function findReasoningSupportFlag(array $models): bool
+    {
+        foreach ($models as $model) {
+            if (!is_array($model) || ($model['id'] ?? null) !== $this->model) {
+                continue;
             }
+            if (!array_key_exists('supports_reasoning_with_tools', $model)) {
+                return true;
+            }
+
+            return (bool) $model['supports_reasoning_with_tools'];
         }
 
         // 未知モデルは制限なし

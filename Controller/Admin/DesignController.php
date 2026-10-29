@@ -231,27 +231,51 @@ class DesignController extends AbstractController
     /**
      * widget 固有フィールドを追加検証する（I-15）。
      *
+     * フィールド名 => [エラーメッセージ, 値の妥当性判定] の表で回す。
+     *
      * @param array<string,mixed> $input
      * @return string[]
      */
     private function validateWidgetSettings(array $input): array
     {
+        $widgetSizeError = 'ウィジェットサイズは small / medium / large のいずれかで'
+            . '指定してください。';
+        $positionError = '表示位置は bottom-right / bottom-left / right-center のいずれかで'
+            . '指定してください。';
+
+        /** @var array<string, array{string, callable(string): bool}> $rules */
+        $rules = [
+            'widget_color' => [
+                'ウィジェットカラーは #RRGGBB 形式で入力してください。',
+                static fn (string $value): bool => (bool) preg_match('/^#[0-9a-fA-F]{6}$/', $value),
+            ],
+            'widget_size' => [
+                $widgetSizeError,
+                static fn (string $value): bool => in_array($value, ['small', 'medium', 'large'], true),
+            ],
+            'position' => [
+                $positionError,
+                static fn (string $value): bool => in_array(
+                    $value,
+                    ['bottom-right', 'bottom-left', 'right-center'],
+                    true
+                ),
+            ],
+            'greeting_message' => [
+                '挨拶メッセージは500文字以内で入力してください。',
+                static fn (string $value): bool => mb_strlen($value) <= 500,
+            ],
+            'assistant_display_name' => [
+                'アシスタント表示名は64文字以内で入力してください。',
+                static fn (string $value): bool => mb_strlen($value) <= 64,
+            ],
+        ];
+
         $errors = [];
-        if (isset($input['widget_color']) && !preg_match('/^#[0-9a-fA-F]{6}$/', (string) $input['widget_color'])) {
-            $errors[] = 'ウィジェットカラーは #RRGGBB 形式で入力してください。';
-        }
-        if (isset($input['widget_size']) && !in_array($input['widget_size'], ['small', 'medium', 'large'], true)) {
-            $errors[] = 'ウィジェットサイズは small / medium / large のいずれかで指定してください。';
-        }
-        $allowedPositions = ['bottom-right', 'bottom-left', 'right-center'];
-        if (isset($input['position']) && !in_array($input['position'], $allowedPositions, true)) {
-            $errors[] = '表示位置は bottom-right / bottom-left / right-center のいずれかで指定してください。';
-        }
-        if (isset($input['greeting_message']) && mb_strlen((string) $input['greeting_message']) > 500) {
-            $errors[] = '挨拶メッセージは500文字以内で入力してください。';
-        }
-        if (isset($input['assistant_display_name']) && mb_strlen((string) $input['assistant_display_name']) > 64) {
-            $errors[] = 'アシスタント表示名は64文字以内で入力してください。';
+        foreach ($rules as $field => [$message, $isValid]) {
+            if (isset($input[$field]) && !$isValid((string) $input[$field])) {
+                $errors[] = $message;
+            }
         }
 
         return $errors;
