@@ -24,6 +24,10 @@
   - 旧抑制ルール 25 件のうち死んでいた 12 件を削除し、広域抑制 (`#should return .* but returns.*#` 等) を廃止。残る抑制は EC-CUBE スタブ未整備と DBAL 行配列形状の 2 件のみ。
   - `Tests/Stubs` を実型に追従 (`AbstractController::json/createFormBuilder/createNotFoundException`、`AbstractRepository` の総称化、`BaseInfoRepository::get`)。
   - `composer.json` require-dev に静的解析用の `symfony/form` / `symfony/validator` / `symfony/translation` / `twig/twig` を追加 (本番配布物には含まれない)。
+- コード品質ゲートを green に: `composer lint` (PHPCS) を 292 エラー → 0 に、`composer md` (PHPMD) を 27 件 → 3 件に削減。
+  - PHPCS: `Tests/Stubs`（EC-CUBE クラスの写しで PHPStan 対象外）と `bin/` の PSR1 side-effect を対象外にし、残りの 120 桁超の行を折り返し。
+  - PHPMD: `\DateTime::createFromImmutable` の static access を例外化、`else` を早期 return に、`AiModelRegistry::resolveConfigPath` / `PageContextService::parse` を分割。
+  - `McpHttpController::handle()` の複雑度 3 件は、Docker + E2E (T-01〜T-08) で検証できるパスで別途分割する（未着手）。
 - [破壊的変更] MCPツール `search_products` を `aichat_search_products` に改名 (公式MCPの同名ツールとの衝突回避)。旧名での `tools/call` はエラー (`isError: true`) になります。AIチャットの function calling 名も同一定義のため連動して変更されます。
 
 ### Fixed
