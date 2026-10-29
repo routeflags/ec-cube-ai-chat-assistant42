@@ -30,6 +30,13 @@ use LogicException;
  * - meta.json による last_synced_at/etag 管理
  *
  * 差分は validate()/persist() のみに閉じる。
+ *
+ * 取得・検証・永続化・meta/ロック管理をテンプレートメソッド 1 本に集約する
+ * 抽象基底で、サブクラスは差分（validate/persist）のみ実装する。meta/ロックを
+ * 別クラスへ出すと、サブクラスが上書きするパス取得フック（getMetaPath /
+ * getLockPath）の受け渡しが増えるため、複雑度の指摘はここで抑止する。
+ *
+ * @SuppressWarnings("PHPMD.ExcessiveClassComplexity")
  */
 abstract class AbstractPluginDataSyncService
 {

@@ -24,7 +24,6 @@ use Eccube\Repository\AbstractRepository;
 use Plugin\AiChatAssistant44\Service\ProductToolDefinition;
 use Plugin\AiChatAssistant44\Service\ProductToolExecutor;
 use Plugin\AiChatAssistant44\Service\ShopContextService;
-use Plugin\AiChatAssistant44\Service\TwigPlainTextExtractor;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -39,6 +38,10 @@ use InvalidArgumentException;
  * フラットな配列データを返す。 Doctrine の QueryBuilder を使い、
  * 全パラメータはバインドパラメータで渡す（SQL インジェクション防止）。
  *
+ * Doctrine の QueryBuilder/Connection、EC-CUBE のリポジトリ/エンティティ、
+ * ツール定義・実行・ショップコンテキストを直接扱うため依存数が増える。
+ * クエリごとの分割は SQL の見通しを落とすため、依存数の指摘はここで抑止する。
+ *
  * @SuppressWarnings("PHPMD.CouplingBetweenObjects")
  *
  * @extends AbstractRepository<\Eccube\Entity\Product>
@@ -46,21 +49,21 @@ use InvalidArgumentException;
 class ProductRepository extends AbstractRepository
 {
     private Connection $connection;
-    private TwigPlainTextExtractor $textExtractor;
     private ShopContextService $shopContextService;
     private LoggerInterface $logger;
+    private ProductToolDefinition $toolDefinition;
 
     public function __construct(
         ManagerRegistry $registry,
         EntityManagerInterface $entityManager,
-        ?TwigPlainTextExtractor $textExtractor = null,
         ?ShopContextService $shopContextService = null,
-        ?LoggerInterface $logger = null
+        ?LoggerInterface $logger = null,
+        ?ProductToolDefinition $toolDefinition = null
     ) {
         parent::__construct($registry, \Eccube\Entity\Product::class);
         $this->connection = $entityManager->getConnection();
-        $this->textExtractor = $textExtractor ?? new TwigPlainTextExtractor();
         $this->logger = $logger ?? new NullLogger();
+        $this->toolDefinition = $toolDefinition ?? new ProductToolDefinition();
         // ShopContextService は EC-CUBE の DI から注入されるが、単体テスト時のフォールバックとして nullable とする
         $this->shopContextService = $shopContextService ?? $this->createFallbackShopContextService();
     }
@@ -466,12 +469,10 @@ class ProductRepository extends AbstractRepository
      * Claude / OpenAI 互換のツール定義を返す。
      *
      * @return array<int, array{type: string, name: string, description: string, input_schema: array<string, mixed>}>
-     *
-     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function getToolDefinitions(): array
     {
-        return ProductToolDefinition::all();
+        return $this->toolDefinition->all();
     }
 
     /**
@@ -489,122 +490,6 @@ class ProductRepository extends AbstractRepository
     public function executeTool(string $name, array $args): array
     {
         return (new ProductToolExecutor($this))->execute($name, $args);
-    }
-
-    // ================================================================
-    //  静的ページ（ヘルプ）・ニュース・記事 取得ロジック
-    // ================================================================
-
-    /**
-     * 最新のお知らせを取得する。
-     *
-     * @deprecated News は汎用化により廃止（データソースはナレッジと商品のみ）。
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    public function getNews(int $limit = 10): array
-    {
-        // パラメータを検証しつつ互換性を保つ（未使用扱いを避けるため意味あるガードを行う）
-        $limit = max(1, min((int) $limit, 100));
-
-        return [];
-    }
-
-    // getArticles は EasyArticle 依存のため完全削除済み（汎用プラグイン化）。
-    // 旧 plg_ea_article テーブルが存在しても参照しない。
-
-    /**
-     * @deprecated Help は汎用化により廃止（データソースはナレッジと商品のみ）。
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    public function searchHelp(string $keyword = '', int $limit = 10): array
-    {
-        // 将来の復活時に備え、入力を検証して監査しやすくする
-        $keyword = trim($keyword);
-        if ($keyword === '') {
-            return [];
-        }
-        $limit = max(1, min((int) $limit, 100));
-
-        return [];
-    }
-
-    /**
-     * 静的ページの詳細を url で取得する。
-     *
-     * @return array{page_name: string|null, url: string, meta_robots: string|null, content: string}|null
-     */
-    public function getHelpDetail(string $url): ?array
-    {
-        if ($url === '') {
-            return null;
-        }
-
-        $qb = $this->connection->createQueryBuilder()
-            ->select('page_name', 'url', 'meta_robots', 'file_name')
-            ->from('dtb_page')
-            ->where('url = :url')
-            ->setMaxResults(1)
-            ->setParameter('url', $url);
-
-        $row = $qb->executeQuery()->fetchAssociative();
-
-        if ($row === false) {
-            return null;
-        }
-
-        $textContent = $this->resolveHelpContentText($row['file_name'] ?? null);
-
-        return [
-            'page_name' => $row['page_name'],
-            'url' => $row['url'],
-            'meta_robots' => $row['meta_robots'],
-            'content' => $textContent,
-        ];
-    }
-
-    // formatArticleRows / buildArticleUrl は EasyArticle 依存のため完全削除済み。
-
-    /**
-     * ヘルプページの twig ファイルからテキストを抽出する。
-     */
-    private function resolveHelpContentText(?string $fileName): string
-    {
-        if ($fileName === null || $fileName === '') {
-            return '';
-        }
-
-        $projectDir = dirname(__DIR__, 4);
-        $candidates = [
-            $projectDir . '/app/template/default/' . $fileName . '.twig',
-            $projectDir . '/src/Eccube/Resource/template/default/' . $fileName . '.twig',
-        ];
-
-        $filePath = null;
-        foreach ($candidates as $candidate) {
-            if (is_file($candidate)) {
-                $filePath = $candidate;
-                break;
-            }
-        }
-
-        if ($filePath === null) {
-            return '';
-        }
-
-        $raw = (string) file_get_contents($filePath);
-
-        return $this->htmlToPlainText($raw);
-    }
-
-    /**
-     * HTML/Twig 文字列からプレーンテキストを抽出する。
-     * 共通ヘルパー TwigPlainTextExtractor に委譲する。
-     */
-    private function htmlToPlainText(string $html): string
-    {
-        return $this->textExtractor->extract($html);
     }
 
     /**

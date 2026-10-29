@@ -112,6 +112,11 @@ class DesignController extends AbstractController
      * デザイン設定を保存する。
      *
      * @SuppressWarnings("PHPMD.StaticAccess")
+     * validateInput() は DesignSettingsSyncService の定数
+     * (DEFAULTS / MAX_STRING_LENGTH) だけを参照する純関数。同期サー
+ビスが
+     * 未注入のテスト経路でも検証を省かないため、インスタンス化せず呼
+ぶ。
      */
     public function save(Request $request): RedirectResponse
     {
@@ -309,9 +314,9 @@ class DesignController extends AbstractController
             // <a> の href を検証 — 許可 href 以外はテキスト化
             $html = (string) preg_replace_callback(
                 '/<a\s+[^>]*href\s*=\s*(["\'])(.*?)\1[^>]*>(.*?)<\/a>/is',
-                static function (array $m) use ($allowedHref): string {
-                    $href = html_entity_decode($m[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
-                    $text = $m[3];
+                static function (array $matches) use ($allowedHref): string {
+                    $href = html_entity_decode($matches[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    $text = $matches[3];
                     if ($href !== $allowedHref) {
                         return htmlspecialchars($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
                     }

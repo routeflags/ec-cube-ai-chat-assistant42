@@ -26,6 +26,10 @@ use LogicException;
  * - 検証: providers/cost_tier/boolean/文字数上限/重複id を厳格に検証
  * - 永続化: 全文置換 + 1世代バックアップ
  *
+ * ai_models.json のスキーマ検証（providers / models / 型 / 長さ / 重複 id）を
+ * 1 クラスに持つ。検証ルールを分割すると正本が割れるため、複雑度の指摘は
+ * ここで抑止する。
+ *
  * @SuppressWarnings("PHPMD.ExcessiveClassComplexity")
  */
 class AiModelSyncService extends AbstractPluginDataSyncService
@@ -42,6 +46,11 @@ class AiModelSyncService extends AbstractPluginDataSyncService
 
     /**
      * @SuppressWarnings("PHPMD.Superglobals")
+     * $_ENV は Symfony Dotenv の正規取得口（getenv() は putenv 前提で
+挙動が
+     * 異なり、テストでも $_ENV 経由で差し替える）。設定値 1 個の取得
+のみ
+     * なので、DI パラメータ化はせずここに閉じる。
      */
     protected function getRemoteUrl(): string
     {

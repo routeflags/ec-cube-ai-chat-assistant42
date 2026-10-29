@@ -115,18 +115,25 @@ class AiModelRegistry
      */
     private function configPathCandidates(string $primary, string $projectDir): array
     {
-        $candidates = array_filter([
-            $primary,
+        // projectDir 配下の候補（リモート同期の正本と EC-CUBE 本配置、単体リポジトリのレイアウト）
+        $projectRelative = [
             // S-07: 旧code (AiChatAssistant42) の PluginData をフォールバック参照 (消失禁止)
-            $projectDir !== '' ? $projectDir . '/app/PluginData/AiChatAssistant42/ai_models.json' : null,
-            $projectDir !== '' ? $projectDir . '/app/Plugin/AiChatAssistant44/Resource/config/ai_models.json' : null,
-            // EC-CUBE ルート直下の Resource（プラグイン単体リポジトリのレイアウト）
-            $projectDir !== '' ? $projectDir . '/Resource/config/ai_models.json' : null,
-            // プラグイン内部の相対パス（Service の兄弟ディレクトリ）
-            dirname(__DIR__) . '/Resource/config/ai_models.json',
-            dirname(__DIR__, 2) . '/Resource/config/ai_models.json',
-            dirname(__DIR__, 3) . '/Resource/config/ai_models.json',
-        ]);
+            '/app/PluginData/AiChatAssistant42/ai_models.json',
+            '/app/Plugin/AiChatAssistant44/Resource/config/ai_models.json',
+            '/Resource/config/ai_models.json',
+        ];
+
+        $candidates = [$primary];
+        if ($projectDir !== '') {
+            foreach ($projectRelative as $relativePath) {
+                $candidates[] = $projectDir . $relativePath;
+            }
+        }
+
+        // プラグイン内部の相対パス（Service の兄弟ディレクトリ）
+        $candidates[] = dirname(__DIR__) . '/Resource/config/ai_models.json';
+        $candidates[] = dirname(__DIR__, 2) . '/Resource/config/ai_models.json';
+        $candidates[] = dirname(__DIR__, 3) . '/Resource/config/ai_models.json';
 
         // 重複を除去しつつ順序を維持
         return array_values(array_unique($candidates));

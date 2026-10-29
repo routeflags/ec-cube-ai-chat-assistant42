@@ -28,8 +28,6 @@ use RuntimeException;
  *
  * GPT-4o 等のモデルに対応し、Function Calling によるツール呼び出しをサポートする。
  * ツール呼び出しが発生した場合はループで再送し、最終的なテキスト応答を返す。
- *
- * @SuppressWarnings("PHPMD.LongVariable")
  */
 class OpenAiAgent implements AiAgentInterface
 {
@@ -46,10 +44,8 @@ class OpenAiAgent implements AiAgentInterface
     private ?AiModelRegistry $modelRegistry;
     /**
      * @var bool|null Capability cache for this model
-     *
-     * @SuppressWarnings("PHPMD.LongVariable")
      */
-    private ?bool $cachedSupportsReasoningWithTools = null;
+    private ?bool $cachedReasoningFlag = null;
     private ?LoggerInterface $logger;
 
     public function __construct(
@@ -91,7 +87,7 @@ class OpenAiAgent implements AiAgentInterface
     public function setModelRegistry(?AiModelRegistry $registry): void
     {
         $this->modelRegistry = $registry;
-        $this->cachedSupportsReasoningWithTools = null;
+        $this->cachedReasoningFlag = null;
     }
 
     /**
@@ -353,26 +349,26 @@ class OpenAiAgent implements AiAgentInterface
         // gpt-5 / o1 / o3 系は max_tokens ではなく max_completion_tokens を使用（API の破壊的変更）
         $payload['max_tokens'] = $this->maxTokens;
         // gpt-5 / o1 / o3 系は max_completion_tokens を使う（API の破壊的変更）
-        $usesCompletionTokens = str_starts_with($this->model, 'gpt-5')
-            || str_starts_with($this->model, 'o1')
-            || str_starts_with($this->model, 'o3');
+        $usesCompletionTokens = (bool) preg_match('/^(?:gpt-5|o1|o3)/', $this->model);
         if ($usesCompletionTokens) {
             $payload['max_completion_tokens'] = $this->maxTokens;
             unset($payload['max_tokens']);
         }
 
         // reasoning effort が設定されていれば付与（後段の capability チェックで必要に応じ除去）
-        if ($this->reasoningEffort !== null && $this->reasoningEffort !== '') {
+        if (!in_array($this->reasoningEffort, [null, ''], true)) {
             $payload['reasoning_effort'] = $this->reasoningEffort;
         }
 
-        if (!empty($tools)) {
-            $payload['tools'] = $tools;
-            $payload['tool_choice'] = 'auto';
+        if (empty($tools)) {
+            return $payload;
         }
 
-        // Capability Matrix: tools 非空かつ reasoning 非対応モデルでは reasoning 系キーを除去
-        if (!empty($tools) && !$this->supportsReasoningWithTools()) {
+        $payload['tools'] = $tools;
+        $payload['tool_choice'] = 'auto';
+
+        // Capability Matrix: reasoning 非対応モデルでは reasoning 系キーを除去
+        if (!$this->supportsReasoningWithTools()) {
             unset($payload['reasoning_effort']);
         }
 
@@ -388,20 +384,20 @@ class OpenAiAgent implements AiAgentInterface
      */
     private function supportsReasoningWithTools(): bool
     {
-        if ($this->cachedSupportsReasoningWithTools !== null) {
-            return $this->cachedSupportsReasoningWithTools;
+        if ($this->cachedReasoningFlag !== null) {
+            return $this->cachedReasoningFlag;
         }
 
         // 1. Registry 経由（DI されている場合）
         if ($this->modelRegistry !== null) {
             $result = $this->modelRegistry->supportsReasoningWithTools('openai', $this->model);
-            $this->cachedSupportsReasoningWithTools = $result;
+            $this->cachedReasoningFlag = $result;
             return $result;
         }
 
         // 2. フォールバック: ai_models.json を直接参照
         $result = $this->resolveCapabilityFromJson();
-        $this->cachedSupportsReasoningWithTools = $result;
+        $this->cachedReasoningFlag = $result;
         return $result;
     }
 

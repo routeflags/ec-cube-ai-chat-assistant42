@@ -43,6 +43,10 @@ use DateTimeImmutable;
  * ユーザーからのメッセージを受け取り、選択された AI プロバイダに
  * ツール呼び出しループを含めて委譲し、応答を返す。
  *
+ * チャット 1 ターン（受信・ツールループ・履歴保存・フィードバック・メール返信）を
+ * 1 エンドポイントに閉じており、依存数は機能数に比例する。分割にはセッション
+ * 状態の持ち方の見直しが必要なため、クラス単位の指摘はここで抑止する。
+ *
  * @SuppressWarnings("PHPMD.ExcessiveClassComplexity")
  * @SuppressWarnings("PHPMD.CouplingBetweenObjects")
  */
@@ -52,6 +56,10 @@ class ChatApiController extends AbstractController
     private const MAX_EMAIL_REPLY_PER_HOUR = 10;
 
     /**
+     * 依存はすべて EC-CUBE の DI コンテナが解決する。設定を値オブジェクトに
+     * まとめる分割は呼び出し側（services.yaml / テスト）を広く変えるため、
+     * 引数数の指摘はここで抑止する。
+     *
      * @SuppressWarnings("PHPMD.ExcessiveParameterList")
      */
     public function __construct(

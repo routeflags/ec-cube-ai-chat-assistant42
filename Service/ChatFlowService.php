@@ -42,7 +42,6 @@ class ChatFlowService
     /**
      * アクセス制限をチェックし、許可されているか判定する。
      *
-     * @SuppressWarnings("PHPMD.Superglobals")
      * @return array{allowed: bool, reason?: string}
      */
     public function checkAccessRules(string $sessionId, string $userMessage = ''): array
@@ -63,7 +62,9 @@ class ChatFlowService
             return ['allowed' => true];
         }
 
-        $clientIp = $this->requestStack?->getCurrentRequest()?->getClientIp() ?? ($_SERVER['REMOTE_ADDR'] ?? '');
+        // リクエスト外（CLI/テスト）では IP 不明として扱う。IP ルールは
+        // リクエスト文脈でのみ意味を持つため、superglobal は参照しない。
+        $clientIp = $this->requestStack?->getCurrentRequest()?->getClientIp() ?? '';
         $lowerMessage = mb_strtolower($userMessage);
 
         foreach ($rules as $rule) {

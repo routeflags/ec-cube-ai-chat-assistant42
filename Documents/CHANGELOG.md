@@ -24,9 +24,12 @@
   - 旧抑制ルール 25 件のうち死んでいた 12 件を削除し、広域抑制 (`#should return .* but returns.*#` 等) を廃止。残る抑制は EC-CUBE スタブ未整備と DBAL 行配列形状の 2 件のみ。
   - `Tests/Stubs` を実型に追従 (`AbstractController::json/createFormBuilder/createNotFoundException`、`AbstractRepository` の総称化、`BaseInfoRepository::get`)。
   - `composer.json` require-dev に静的解析用の `symfony/form` / `symfony/validator` / `symfony/translation` / `twig/twig` を追加 (本番配布物には含まれない)。
-- コード品質ゲートを green に: `composer lint` (PHPCS) を 292 エラー → 0 に、`composer md` (PHPMD) を 27 件 → 0 件に。
+- コード品質ゲートを green に: `composer lint` (PHPCS) を 292 エラー → 0 に、`composer md` (PHPMD) も 0 件に。
   - PHPCS: `Tests/Stubs`（EC-CUBE クラスの写しで PHPStan 対象外）と `bin/` の PSR1 side-effect を対象外にし、残りの 120 桁超の行を折り返し。
-  - PHPMD: `\DateTime::createFromImmutable` の static access を例外化、`else` を早期 return に、`AiModelRegistry::resolveConfigPath` / `PageContextService::parse` を分割。
+  - PHPMD: ルールセットを **PHPMD 既定値に戻した**。従来の緩和（CCN 12 / NPath 300 / WMC 65 / TooManyPublicMethods 15 / CBO 15 / LongVariable 25 / TooManyMethods 30）を廃止し、残る設定は ShortVariable 2 文字と StaticAccess の `DateTime` 例外のみ。
+  - コード側の対応: 既定値で検出される 5 メソッドを分割（`DesignController::validateWidgetSettings` は表駆動化、`ChatFlowService::buildSystemPrompt` はルール文と response_mode 注記に分離、ほか 3 件）、命名規則違反 9 件を改名、`ProductRepository` の死んだヘルプ/ニュース取得コードを削除、Webhook URL の SSRF ガードを `WebhookUrlGuard` に切り出し、`ProductToolDefinition` をインスタンス化して static access を解消、`EmailReplyService` から `DateTime` 依存を除去。
+  - インライン抑止は 16 → 10 件（`DashboardController` 3 / `ChatApiController` 3 / `ChatLogRepository` 1 / `ProductRepository` 1 / `AbstractPluginDataSyncService` 1 / `AiModelSyncService` 1）。いずれも「大型管理コントローラ / リポジトリ / テンプレートメソッド基底」という構造上の理由を各クラスの docblock に明記。
+  - `composer md` の解析対象を `--exclude` で絞った。vendor / node_modules を PDepend に読ませるとメトリクスが混線し、別メソッドの値が報告される（実測）。
   - `McpHttpController::handle()` を、HTTP メソッド/Content-Type/ボディ復号/jsonrpc 版判定/通知/レート制限/ディスパッチの各ステップに分割（応答コードとヘッダーは不変、Docker 8082 の E2E 43 件で確認）。
 - [破壊的変更] MCPツール `search_products` を `aichat_search_products` に改名 (公式MCPの同名ツールとの衝突回避)。旧名での `tools/call` はエラー (`isError: true`) になります。AIチャットの function calling 名も同一定義のため連動して変更されます。
 
