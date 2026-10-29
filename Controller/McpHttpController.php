@@ -53,8 +53,8 @@ class McpHttpController
         $ip = $request->getClientIp() ?? 'unknown';
         try {
             $this->rateLimitService->enforce($ip, 'well_known');
-        } catch (RateLimitExceededException $e) {
-            return $this->wellKnownRateLimitResponse($e);
+        } catch (RateLimitExceededException $exception) {
+            return $this->wellKnownRateLimitResponse($exception);
         }
 
         $baseUrl = $this->resolveBaseUrl($request);
@@ -121,8 +121,8 @@ class McpHttpController
         $ip = $request->getClientIp() ?? 'unknown';
         try {
             $this->rateLimitService->enforce($ip, $this->resolveRateLimitTool($method, $requestData));
-        } catch (RateLimitExceededException $e) {
-            return $this->rateLimitResponse($id, $e);
+        } catch (RateLimitExceededException $exception) {
+            return $this->rateLimitResponse($id, $exception);
         }
 
         $result = $this->dispatchJsonRpc($method, $requestData, $id, $ip);
@@ -188,9 +188,9 @@ class McpHttpController
 
         try {
             $decoded = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException $e) {
+        } catch (\JsonException $exception) {
             return $this->jsonResponseWithCors(
-                $this->mcpHttpService->writeErrorResponse(null, -32700, 'Parse error: ' . $e->getMessage()),
+                $this->mcpHttpService->writeErrorResponse(null, -32700, 'Parse error: ' . $exception->getMessage()),
                 200
             );
         }
@@ -277,8 +277,12 @@ class McpHttpController
                 null => $this->mcpHttpService->writeErrorResponse($id, -32600, 'Invalid Request: method is required'),
                 default => $this->mcpHttpService->writeErrorResponse($id, -32601, "Method not found: {$method}"),
             };
-        } catch (\Throwable $e) {
-            return $this->mcpHttpService->writeErrorResponse($id, -32603, 'Internal error: ' . $e->getMessage());
+        } catch (\Throwable $exception) {
+            return $this->mcpHttpService->writeErrorResponse(
+                $id,
+                -32603,
+                'Internal error: ' . $exception->getMessage()
+            );
         }
     }
 
@@ -298,7 +302,7 @@ class McpHttpController
         return $response;
     }
 
-    private function rateLimitResponse(mixed $id, RateLimitExceededException $e): JsonResponse
+    private function rateLimitResponse(mixed $id, RateLimitExceededException $exception): JsonResponse
     {
         $body = [
             'jsonrpc' => '2.0',
@@ -309,8 +313,8 @@ class McpHttpController
             ],
         ];
         $response = new JsonResponse($body, 429, [], false);
-        $response->headers->set('Retry-After', (string) $e->getRetryAfterSeconds());
-        $response->headers->set('X-RateLimit-Limit', (string) $e->getLimit());
+        $response->headers->set('Retry-After', (string) $exception->getRetryAfterSeconds());
+        $response->headers->set('X-RateLimit-Limit', (string) $exception->getLimit());
         $response->headers->set('X-RateLimit-Remaining', '0');
         $this->addCorsHeaders($response);
         $response->headers->set('Content-Type', 'application/json; charset=utf-8');
@@ -320,12 +324,12 @@ class McpHttpController
         return $response;
     }
 
-    private function wellKnownRateLimitResponse(RateLimitExceededException $e): JsonResponse
+    private function wellKnownRateLimitResponse(RateLimitExceededException $exception): JsonResponse
     {
         // Discovery (GET /.well-known/mcp.json) は REST なので JSON-RPC ラップせず REST 形式で返す
         $response = new JsonResponse(['error' => 'Too Many Requests'], 429, [], false);
-        $response->headers->set('Retry-After', (string) $e->getRetryAfterSeconds());
-        $response->headers->set('X-RateLimit-Limit', (string) $e->getLimit());
+        $response->headers->set('Retry-After', (string) $exception->getRetryAfterSeconds());
+        $response->headers->set('X-RateLimit-Limit', (string) $exception->getLimit());
         $response->headers->set('X-RateLimit-Remaining', '0');
         $this->addCorsHeaders($response);
         $response->headers->set('Content-Type', 'application/json; charset=utf-8');

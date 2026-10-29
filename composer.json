@@ -68,7 +68,7 @@
         "lint": "phpcs --standard=phpcs.xml.dist --warning-severity=5",
         "lint:fix": "phpcbf --standard=phpcs.xml.dist",
         "stan": "phpstan analyse -c phpstan.neon.dist --error-format=table",
-        "md": "phpmd . text phpmd.xml",
+        "md": "phpmd . text phpmd.xml --exclude vendor,node_modules,.git,Tests,Documents,artifacts,var,test-results",
         "metrics": "phpmetrics --exclude=\"vendor,Tests,artifacts,Documents\" --report-html=artifacts/phpmetrics --report-json=artifacts/phpmetrics/report.json .",
         "quality": [
             "@lint",

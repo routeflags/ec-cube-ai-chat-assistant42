@@ -28,6 +28,11 @@ use DateTimeImmutable;
  * 本リポジトリに集約して Doctrine 形式（ORM QueryBuilder / DBAL QueryBuilder）で
  * データアクセスを一元管理する。
  *
+ *
+ * 管理画面・チャット API・MCP から使う検索/集計クエリを 1 リポジトリに
+ * 集約している（呼び出し側の正本を 1 本化するため）。用途別リポジトリへの
+ * 分割は呼び出し側の変更を伴うため、公開メソッド数の指摘はここで抑止する。
+ *
  * @SuppressWarnings("PHPMD.TooManyPublicMethods")
  *
  * @extends AbstractRepository<ChatLog>

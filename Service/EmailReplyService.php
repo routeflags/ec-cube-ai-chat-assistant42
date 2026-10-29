@@ -23,7 +23,6 @@ use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
-use DateTime;
 
 /**
  * AIチャットの「メールで返信依頼」2通送信を担うサービス.
@@ -205,9 +204,9 @@ class EmailReplyService
 
         if (!preg_match($regexp, $email)) {
             // local part をエスケープしてからクォートする（" と \ をエスケープ）
-            $email = preg_replace_callback('/^(.*)@(.*)$/', static function (array $m): string {
-                $local = str_replace(['\\', '"'], ['\\\\', '\\"'], $m[1]);
-                return '"' . $local . '"@' . $m[2];
+            $email = preg_replace_callback('/^(.*)@(.*)$/', static function (array $matches): string {
+                $local = str_replace(['\\', '"'], ['\\\\', '\\"'], $matches[1]);
+                return '"' . $local . '"@' . $matches[2];
             }, $email) ?? $email;
         }
 
@@ -251,7 +250,7 @@ class EmailReplyService
      */
     private function buildUserBody(string $sessionId, string $userEmail, array $history, string $shopName): string
     {
-        $now = (new DateTime())->format('Y-m-d H:i');
+        $now = date('Y-m-d H:i');
         $historyText = $this->formatHistory($history);
 
         return <<<BODY
@@ -279,7 +278,7 @@ BODY;
      */
     private function buildAdminBody(string $sessionId, string $userEmail, array $history): string
     {
-        $now = (new DateTime())->format('Y-m-d H:i');
+        $now = date('Y-m-d H:i');
         $historyText = $this->formatHistory($history);
 
         return <<<BODY

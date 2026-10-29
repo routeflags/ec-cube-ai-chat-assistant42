@@ -127,14 +127,10 @@ final class ProductToolDefinition
         ],
     ];
 
-    private function __construct()
-    {
-    }
-
     /**
      * @return array<int, array{type: string, name: string, description: string, input_schema: array<string, mixed>}>
      */
-    public static function all(): array
+    public function all(): array
     {
         return self::DEFINITIONS;
     }

@@ -27,17 +27,19 @@ use Symfony\Component\Mime\Email;
  *
  * トリガーイベントが発生した際、有効な通知ルールを取得し、
  * 設定されたチャネル経由で通知を送信する。
- *
- * @SuppressWarnings("PHPMD.ExcessiveClassComplexity")
  */
 class NotificationService
 {
+    private WebhookUrlGuard $urlGuard;
+
     public function __construct(
-        private NotificationRepository $notificationRepository,
+        private NotificationRepository $notificationRepo,
         private LoggerInterface $logger,
         private ?MailerInterface $mailer = null,
         private ?ApiKeyEncryptor $apiKeyEncryptor = null,
+        ?WebhookUrlGuard $urlGuard = null,
     ) {
+        $this->urlGuard = $urlGuard ?? new WebhookUrlGuard();
     }
 
     /**
@@ -49,7 +51,7 @@ class NotificationService
     public function checkAndSend(string $event, array $context = []): void
     {
         try {
-            $notifications = $this->notificationRepository->findByEvent($event);
+            $notifications = $this->notificationRepo->findByEvent($event);
         } catch (\Throwable $e) {
             $this->logger->error('通知ルールの取得に失敗しました', [
                 'event' => $event,
@@ -115,7 +117,7 @@ class NotificationService
         }
 
         // SSRF 対策: URL の検証
-        if (!$this->isValidWebhookUrl($url)) {
+        if (!$this->urlGuard->isSafe($url)) {
             $this->logger->warning('Webhook URL が無効です（プライベートIP/ローカルホストは禁止）', [
                 'url' => $url,
             ]);
@@ -344,16 +346,7 @@ class NotificationService
 
         // レガシー: 既に配列で保存されている場合（各値を個別に復号）
         if (is_array($rawHeaders)) {
-            $headers = [];
-            foreach ($rawHeaders as $key => $value) {
-                $headerKey = trim((string) $key);
-                if ($headerKey === '') {
-                    continue;
-                }
-                $headers[$headerKey] = $this->decryptIfNeeded((string) $value);
-            }
-
-            return $headers;
+            return $this->buildHeaders($rawHeaders);
         }
 
         // 文字列: 全体が暗号化されている可能性があるためまず復号を試みる
@@ -371,13 +364,26 @@ class NotificationService
             return [];
         }
 
+        return $this->buildHeaders($decoded);
+    }
+
+    /**
+     * ヘッダー行（key => value）を検証し、値を復号して返す。
+     *
+     * 値が個別に暗号化されているレガシーデータにも対応する（防御的）。
+     *
+     * @param array<mixed, mixed> $rows
+     *
+     * @return array<string, string>
+     */
+    private function buildHeaders(array $rows): array
+    {
         $headers = [];
-        foreach ($decoded as $key => $value) {
+        foreach ($rows as $key => $value) {
             $headerKey = trim((string) $key);
             if ($headerKey === '') {
                 continue;
             }
-            // 値が個別に暗号化されている場合にも対応（防御的）
             $headers[$headerKey] = $this->decryptIfNeeded((string) $value);
         }
 
@@ -400,115 +406,5 @@ class NotificationService
         }
 
         return $decrypted;
-    }
-
-    /**
-     * Webhook URL の安全性を検証する。
-     *
-     * - https のみ許可
-     * - プライベートIP / ローカルホスト / link-local を禁止
-     * - ブラケット付き IPv6（例: [::1]）を正しく検出
-     * - 10/16進表記の迂回を拒否（filter_var + 明示的な 16進チェック）
-     */
-    private function isValidWebhookUrl(string $url): bool
-    {
-        $parsed = parse_url($url);
-        if ($parsed === false || !isset($parsed['scheme'], $parsed['host'])) {
-            return false;
-        }
-        if (!$this->isHttpsUrl($parsed)) {
-            return false;
-        }
-        $host = $this->normalizeWebhookHost((string) $parsed['host']);
-        if ($this->isHexBypassHost($host)) {
-            return false;
-        }
-        if ($this->isLocalHost($host)) {
-            return false;
-        }
-        $ipLiteralResult = $this->checkIpLiteralHost($host);
-        if ($ipLiteralResult !== null) {
-            return $ipLiteralResult;
-        }
-        if ($this->isDnsResolvedPrivateHost($host)) {
-            return false;
-        }
-        if ($this->hasDotHexSegment($host)) {
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * @param array<string, mixed> $parsed parse_url() の結果
-     */
-    private function isHttpsUrl(array $parsed): bool
-    {
-        return ($parsed['scheme'] ?? '') === 'https';
-    }
-
-    private function normalizeWebhookHost(string $rawHost): string
-    {
-        return strtolower(trim($rawHost, '[]'));
-    }
-
-    private function isHexBypassHost(string $host): bool
-    {
-        if (preg_match('/^0x[0-9a-f]+/i', $host) === 1 || preg_match('/^[0-9]+$/', $host) === 1) {
-            if (filter_var($host, FILTER_VALIDATE_IP) === false) {
-                if (preg_match('/^0x/i', $host) === 1) {
-                    return true;
-                }
-                if (ctype_digit($host)) {
-                    return true;
-                }
-            }
-        }
-        if (strpos($host, '0x') !== false || strpos($host, '0X') !== false) {
-            return true;
-        }
-
-        return false;
-    }
-
-    private function isLocalHost(string $host): bool
-    {
-        return in_array($host, ['localhost', '127.0.0.1', '::1', '0.0.0.0', '::', '::ffff:127.0.0.1'], true);
-    }
-
-    /**
-     * IP リテラルホストを検証する。
-     *
-     * @return bool|null ブロックなら false、許可なら true、IPでなければ null
-     */
-    private function checkIpLiteralHost(string $host): ?bool
-    {
-        if (filter_var($host, FILTER_VALIDATE_IP) === false) {
-            return null;
-        }
-        if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
-            return false;
-        }
-
-        return true;
-    }
-
-    private function isDnsResolvedPrivateHost(string $host): bool
-    {
-        $resolvedIp = gethostbyname($host);
-        if ($resolvedIp === $host) {
-            return false;
-        }
-        return filter_var(
-            $resolvedIp,
-            FILTER_VALIDATE_IP,
-            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
-        ) === false;
-    }
-
-    private function hasDotHexSegment(string $host): bool
-    {
-        return preg_match('/(?:^|\.)0x[0-9a-f]+/i', $host) === 1;
     }
 }

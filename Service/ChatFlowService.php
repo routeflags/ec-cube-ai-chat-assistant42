@@ -42,7 +42,6 @@ class ChatFlowService
     /**
      * アクセス制限をチェックし、許可されているか判定する。
      *
-     * @SuppressWarnings("PHPMD.Superglobals")
      * @return array{allowed: bool, reason?: string}
      */
     public function checkAccessRules(string $sessionId, string $userMessage = ''): array
@@ -63,7 +62,9 @@ class ChatFlowService
             return ['allowed' => true];
         }
 
-        $clientIp = $this->requestStack?->getCurrentRequest()?->getClientIp() ?? ($_SERVER['REMOTE_ADDR'] ?? '');
+        // リクエスト外（CLI/テスト）では IP 不明として扱う。IP ルールは
+        // リクエスト文脈でのみ意味を持つため、superglobal は参照しない。
+        $clientIp = $this->requestStack?->getCurrentRequest()?->getClientIp() ?? '';
         $lowerMessage = mb_strtolower($userMessage);
 
         foreach ($rules as $rule) {
@@ -308,38 +309,11 @@ class ChatFlowService
         // 汎用化: ショップのベースURLを ShopContextService から取得（特定ドメイン固定を避ける）
         $shopBaseUrl = $this->shopContextService?->getBaseUrl() ?? '';
         $shopBaseLabel = $shopBaseUrl !== '' ? $shopBaseUrl : '当ショップ';
-        // 外部サイト参照禁止ルール（管理者設定に関わらず常に適用）- 汎用プラグイン向けにドメイン固定を除去
-        // データソースは DB のナレッジ（plg_ai_chat_assistant_knowledge）と商品DB（ツール経由）のみ。ヘルプ/ニュース/記事は参照しない
-        $basePrompt .= "\n\n## 重要なルール\n"
-            . "- 外部サイト（ウェブサイト・URL）へのリンクや参照は一切含めないでください。\n"
-            . "- 回答は提供される商品情報とナレッジベースのみを根拠にしてください。\n"
-            . "- 外部の情報源を引用しないでください。\n"
-            . "- 当ショップ（{$shopBaseLabel}）のページを案内する際は、必ず絶対URLで出力してください。相対パスや https://www.example.com は使用しないでください。\n"
-            . "- 商品を推薦する際は、商品名を [商品名]({$shopBaseLabel}/products/detail/{id}) の形式でリンク化し、3-5件を箇条書きで提示してください。\n"
-            . "- リンクはクリック可能な markdown 形式で出力し、ユーザーがスムーズに商品ページへ遷移できるようにしてください。\n";
+        $basePrompt .= $this->buildRulesBlock($shopBaseLabel);
 
         $knowledgeContext = $this->buildKnowledgeContext();
-        $responseMode = $config->getResponseMode();
-
-        // 汎用化: ナレッジのみを注入（ヘルプ/ニュース/記事は参照しない）
-        $combinedContext = $knowledgeContext;
-
-        if ($combinedContext !== '' && $responseMode === 'knowledge_only') {
-            // 厳格モード: ナレッジにない場合は回答しない
-            $combinedContext .= "\n\n上記のナレッジベースのみを根拠に回答してください。"
-                . "該当する情報がない場合は「申し訳ございません。該当する情報がございません。"
-                . "メールにてお問い合わせください。」と回答してください。";
-        }
-        if ($combinedContext !== '' && $responseMode !== 'knowledge_only') {
-            // ハイブリッド: ナレッジを参照しつつ、一般的知識も許可
-            $combinedContext .= "\n\n上記のナレッジベースを参照して回答してください。"
-                . "該当する情報がない場合は、一般的な知識で回答してください。";
-        }
-        if ($combinedContext === '' && $responseMode === 'knowledge_only') {
-            // コンテキストが空でも knowledge_only モードなら制限を維持
-            $combinedContext .= "\n\n現在ナレッジが登録されていません。"
-                . "申し訳ございません。該当する情報がございません。メールにてお問い合わせください。";
-        }
+        $combinedContext = $knowledgeContext
+            . $this->buildResponseModeNote($config->getResponseMode(), $knowledgeContext);
 
         // 初回送信時のページコンテキスト（閲覧中ページ・商品情報）を追記
         if ($pageContextBlock !== '') {
@@ -347,6 +321,52 @@ class ChatFlowService
         }
 
         return $basePrompt . $combinedContext;
+    }
+
+    /**
+     * 管理者設定に関わらず常に付与するルールブロック。
+     */
+    private function buildRulesBlock(string $shopBaseLabel): string
+    {
+        // 外部サイト参照禁止ルール（管理者設定に関わらず常に適用）
+        // - 汎用プラグイン向けにドメイン固定を除去
+        // データソースは DB のナレッジ（plg_ai_chat_assistant_knowledge）と商品DB（ツール経由）のみ。
+        // ヘルプ/ニュース/記事は参照しない
+        return "\n\n## 重要なルール\n"
+            . "- 外部サイト（ウェブサイト・URL）へのリンクや参照は一切含めないでください。\n"
+            . "- 回答は提供される商品情報とナレッジベースのみを根拠にしてください。\n"
+            . "- 外部の情報源を引用しないでください。\n"
+            . "- 当ショップ（{$shopBaseLabel}）のページを案内する際は、必ず総対URLで出力してください。相対パスや https://www.example.com は使用しないでください。\n"
+            . "- 商品を推薦する際は、商品名を [商品名]({$shopBaseLabel}/products/detail/{id}) の形式でリンク化し、3-5件を箇条書きで提示してください。\n"
+            . "- リンクはクリック可能な markdown 形式で出力し、ユーザーがスムーズに商品ページへ遷移できるようにしてください。\n";
+    }
+
+    /**
+     * response_mode とナレッジの有無に応じた結論文を組み立てる。
+     *
+     * @param string $knowledgeContext buildKnowledgeContext() の戻り値
+     */
+    private function buildResponseModeNote(string $responseMode, string $knowledgeContext): string
+    {
+        $isKnowledgeOnly = $responseMode === 'knowledge_only';
+        if ($knowledgeContext !== '' && $isKnowledgeOnly) {
+            // 厳格モード: ナレッジにない場合は回答しない
+            return "\n\n上記のナレッジベースのみを根拠に回答してください。"
+                . "該当する情報がない場合は「申し訳ございません。該当する情報がございません。"
+                . "メールにてお問い合わせください。」と回答してください。";
+        }
+        if ($knowledgeContext !== '') {
+            // ハイブリッド: ナレッジを参照しつつ、一般的知識も許可
+            return "\n\n上記のナレッジベースを参照して回答してください。"
+                . "該当する情報がない場合は、一般的な知識で回答してください。";
+        }
+        if ($isKnowledgeOnly) {
+            // コンテキストが空でも knowledge_only モードなら制限を維持
+            return "\n\n現在ナレッジが登録されていません。"
+                . "申し訳ございません。該当する情報がございません。メールにてお問い合わせください。";
+        }
+
+        return '';
     }
 
     private function matchesRegex(string $pattern, string $input): bool

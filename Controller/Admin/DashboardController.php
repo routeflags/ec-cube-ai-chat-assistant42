@@ -39,8 +39,14 @@ use DateTimeImmutable;
  *       ChatApiController::executeChatSession() は $config->getMaxTokens() を AiAgentFactory::create() に渡す。
  *       dashboard.twig:296 の表示も DB 値で統一。
  *
- * @SuppressWarnings("PHPMD.TooManyMethods")
+ * 管理画面 9 画面分の集計クエリと、AI モデル設定の編集 UI を 1 クラスに持つ。
+ * 画面分割はルーティング定義（templates）と twig を同時に動かす必要があるため、
+ * クラス単位の複雑度・メソッド数・依存数の指摘はここで抑止する（behavior は
+ * 変えない）。
+ *
  * @SuppressWarnings("PHPMD.ExcessiveClassComplexity")
+ * @SuppressWarnings("PHPMD.TooManyMethods")
+ * @SuppressWarnings("PHPMD.CouplingBetweenObjects")
  */
 class DashboardController extends AbstractController
 {

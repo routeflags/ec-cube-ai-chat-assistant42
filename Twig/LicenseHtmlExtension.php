@@ -52,9 +52,9 @@ class LicenseHtmlExtension extends AbstractExtension
         // 2. <a> を検証し、不正なものはタグ除去
         return (string) preg_replace_callback(
             '/<a\s+[^>]*href\s*=\s*(["\'])(.*?)\1[^>]*>(.*?)<\/a>/is',
-            function (array $m): string {
-                $href = html_entity_decode($m[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
-                $text = $m[3];
+            function (array $matches): string {
+                $href = html_entity_decode($matches[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                $text = $matches[3];
 
                 // 許可 href のみ通す（完全一致）
                 if ($href !== self::ALLOWED_HREF) {

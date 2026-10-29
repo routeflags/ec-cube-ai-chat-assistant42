@@ -134,8 +134,8 @@ class GeminiAgent implements AiAgentInterface
             $contents[] = ['role' => 'model', 'parts' => $normalizedParts];
 
             // ツール呼び出しを実行し、結果を履歴に追加
-            $functionResponseParts = $this->processFunctionCalls($functionCalls, $toolExecutor, $toolsUsed);
-            $contents[] = ['role' => 'user', 'parts' => $functionResponseParts];
+            $functionParts = $this->processFunctionCalls($functionCalls, $toolExecutor, $toolsUsed);
+            $contents[] = ['role' => 'user', 'parts' => $functionParts];
         }
 
         return $this->buildResult($lastReply, $toolsUsed, $totalInputTokens, $totalOutputTokens);

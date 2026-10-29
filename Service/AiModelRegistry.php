@@ -115,16 +115,23 @@ class AiModelRegistry
      */
     private function configPathCandidates(string $primary, string $projectDir): array
     {
-        $candidates = array_filter([
-            $primary,
-            $projectDir !== '' ? $projectDir . '/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json' : null,
-            // EC-CUBE ルート直下の Resource（プラグイン単体リポジトリのレイアウト）
-            $projectDir !== '' ? $projectDir . '/Resource/config/ai_models.json' : null,
-            // プラグイン内部の相対パス（Service の兄弟ディレクトリ）
-            dirname(__DIR__) . '/Resource/config/ai_models.json',
-            dirname(__DIR__, 2) . '/Resource/config/ai_models.json',
-            dirname(__DIR__, 3) . '/Resource/config/ai_models.json',
-        ]);
+        // projectDir 配下の候補（EC-CUBE 本体配置と、単体リポジトリのレイアウト）
+        $projectRelative = [
+            '/app/Plugin/AiChatAssistant42/Resource/config/ai_models.json',
+            '/Resource/config/ai_models.json',
+        ];
+
+        $candidates = [$primary];
+        if ($projectDir !== '') {
+            foreach ($projectRelative as $relativePath) {
+                $candidates[] = $projectDir . $relativePath;
+            }
+        }
+
+        // プラグイン内部の相対パス（Service の兄弟ディレクトリ）
+        $candidates[] = dirname(__DIR__) . '/Resource/config/ai_models.json';
+        $candidates[] = dirname(__DIR__, 2) . '/Resource/config/ai_models.json';
+        $candidates[] = dirname(__DIR__, 3) . '/Resource/config/ai_models.json';
 
         // 重複を除去しつつ順序を維持
         return array_values(array_unique($candidates));

@@ -42,7 +42,7 @@ class NotificationController extends AbstractController
     ];
 
     public function __construct(
-        private NotificationRepository $notificationRepository,
+        private NotificationRepository $notificationRepo,
         private ?ApiKeyEncryptor $apiKeyEncryptor = null,
     ) {
     }
@@ -52,7 +52,7 @@ class NotificationController extends AbstractController
      */
     public function index(): Response
     {
-        $notifications = $this->notificationRepository->findAllActive();
+        $notifications = $this->notificationRepo->findAllActive();
 
         return $this->render('@AiChatAssistant42/admin/notification.twig', [
             'notifications' => $notifications,
@@ -82,7 +82,7 @@ class NotificationController extends AbstractController
         $notification->setCreateDate(new DateTimeImmutable());
         $notification->setUpdateDate(new DateTimeImmutable());
 
-        $this->notificationRepository->save($notification);
+        $this->notificationRepo->save($notification);
 
         $this->addSuccess('通知ルールを作成しました。', 'admin');
 
@@ -102,7 +102,7 @@ class NotificationController extends AbstractController
             return $this->redirectToRoute('admin_ai_chat_assistant_notification_index');
         }
 
-        $notification = $this->notificationRepository->find($id);
+        $notification = $this->notificationRepo->find($id);
         if ($notification === null) {
             $this->addError('指定された通知ルールが見つかりません。', 'admin');
             return $this->redirectToRoute('admin_ai_chat_assistant_notification_index');
@@ -120,7 +120,7 @@ class NotificationController extends AbstractController
         $notification->setIsActive((int) $request->request->get('is_active', $notification->getIsActive()));
         $notification->setUpdateDate(new DateTimeImmutable());
 
-        $this->notificationRepository->save($notification);
+        $this->notificationRepo->save($notification);
 
         $this->addSuccess('通知ルールを更新しました。', 'admin');
 
@@ -146,13 +146,13 @@ class NotificationController extends AbstractController
             return $this->redirectToRoute('admin_ai_chat_assistant_notification_index');
         }
 
-        $notification = $this->notificationRepository->find($id);
+        $notification = $this->notificationRepo->find($id);
         if ($notification === null) {
             $this->addError('指定された通知ルールが見つかりません。', 'admin');
             return $this->redirectToRoute('admin_ai_chat_assistant_notification_index');
         }
 
-        $this->notificationRepository->delete($notification);
+        $this->notificationRepo->delete($notification);
 
         $this->addSuccess('通知ルールを削除しました。', 'admin');
 

@@ -110,6 +110,11 @@ class DesignController extends AbstractController
      * デザイン設定を保存する。
      *
      * @SuppressWarnings("PHPMD.StaticAccess")
+     * validateInput() は DesignSettingsSyncService の定数
+     * (DEFAULTS / MAX_STRING_LENGTH) だけを参照する純関数。同期サー
+ビスが
+     * 未注入のテスト経路でも検証を省かないため、インスタンス化せず呼
+ぶ。
      */
     public function save(Request $request): RedirectResponse
     {
@@ -217,26 +222,47 @@ class DesignController extends AbstractController
     /**
      * widget 固有フィールドを追加検証する（I-15）。
      *
+     * フィールド名 => [エラーメッセージ, 値の妥当性判定] の表で回す。
+     *
      * @param array<string,mixed> $input
      * @return string[]
      */
     private function validateWidgetSettings(array $input): array
     {
+        $widgetSizeError = 'ウィジェットサイズは small / medium / large のいずれかで'
+            . '指定してください。';
+        $positionError = '表示位置は bottom-right / bottom-left のいずれかで'
+            . '指定してください。';
+
+        /** @var array<string, array{string, callable(string): bool}> $rules */
+        $rules = [
+            'widget_color' => [
+                'ウィジェットカラーは #RRGGBB 形式で入力してください。',
+                static fn (string $value): bool => (bool) preg_match('/^#[0-9a-fA-F]{6}$/', $value),
+            ],
+            'widget_size' => [
+                $widgetSizeError,
+                static fn (string $value): bool => in_array($value, ['small', 'medium', 'large'], true),
+            ],
+            'position' => [
+                $positionError,
+                static fn (string $value): bool => in_array($value, ['bottom-right', 'bottom-left'], true),
+            ],
+            'greeting_message' => [
+                '挨拶メッセージは500文字以内で入力してください。',
+                static fn (string $value): bool => mb_strlen($value) <= 500,
+            ],
+            'assistant_display_name' => [
+                'アシスタント表示名は64文字以内で入力してください。',
+                static fn (string $value): bool => mb_strlen($value) <= 64,
+            ],
+        ];
+
         $errors = [];
-        if (isset($input['widget_color']) && !preg_match('/^#[0-9a-fA-F]{6}$/', (string) $input['widget_color'])) {
-            $errors[] = 'ウィジェットカラーは #RRGGBB 形式で入力してください。';
-        }
-        if (isset($input['widget_size']) && !in_array($input['widget_size'], ['small', 'medium', 'large'], true)) {
-            $errors[] = 'ウィジェットサイズは small / medium / large のいずれかで指定してください。';
-        }
-        if (isset($input['position']) && !in_array($input['position'], ['bottom-right', 'bottom-left'], true)) {
-            $errors[] = '表示位置は bottom-right / bottom-left のいずれかで指定してください。';
-        }
-        if (isset($input['greeting_message']) && mb_strlen((string) $input['greeting_message']) > 500) {
-            $errors[] = '挨拶メッセージは500文字以内で入力してください。';
-        }
-        if (isset($input['assistant_display_name']) && mb_strlen((string) $input['assistant_display_name']) > 64) {
-            $errors[] = 'アシスタント表示名は64文字以内で入力してください。';
+        foreach ($rules as $field => [$message, $isValid]) {
+            if (isset($input[$field]) && !$isValid((string) $input[$field])) {
+                $errors[] = $message;
+            }
         }
 
         return $errors;
@@ -270,9 +296,9 @@ class DesignController extends AbstractController
             // <a> の href を検証 — 許可 href 以外はテキスト化
             $html = (string) preg_replace_callback(
                 '/<a\s+[^>]*href\s*=\s*(["\'])(.*?)\1[^>]*>(.*?)<\/a>/is',
-                static function (array $m) use ($allowedHref): string {
-                    $href = html_entity_decode($m[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
-                    $text = $m[3];
+                static function (array $matches) use ($allowedHref): string {
+                    $href = html_entity_decode($matches[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                    $text = $matches[3];
                     if ($href !== $allowedHref) {
                         return htmlspecialchars($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
                     }
