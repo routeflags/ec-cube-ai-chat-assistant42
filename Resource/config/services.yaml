@@ -23,7 +23,6 @@ services:
 
     Plugin\AiChatAssistant44\Service\McpServerService:
         arguments:
-            - '@Plugin\AiChatAssistant44\Repository\ProductRepository'
             - '@Plugin\AiChatAssistant44\Service\McpHttpService'
 
     Plugin\AiChatAssistant44\Service\McpHttpService:
@@ -39,7 +38,6 @@ services:
         public: true
         tags: ['controller.service_arguments']
         arguments:
-            - '@Plugin\AiChatAssistant44\Repository\ProductRepository'
             - '@Plugin\AiChatAssistant44\Service\McpHttpService'
             - '@Plugin\AiChatAssistant44\Service\RateLimitService'
             - '@Plugin\AiChatAssistant44\Service\ShopContextService'

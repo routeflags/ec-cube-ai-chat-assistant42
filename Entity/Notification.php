@@ -47,6 +47,8 @@ class Notification extends \Eccube\Entity\AbstractEntity
 
     /**
      * 通知設定の JSON (宛先 URL, ヘッダー, メッセージテンプレート等)。
+     *
+     * @var array<string, mixed>|null
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $config_json = null;
@@ -90,11 +92,17 @@ class Notification extends \Eccube\Entity\AbstractEntity
         return $this;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     public function getConfigJson(): ?array
     {
         return $this->config_json;
     }
 
+    /**
+     * @param array<string, mixed>|null $configJson
+     */
     public function setConfigJson(?array $configJson): self
     {
         $this->config_json = $configJson;
@@ -119,7 +127,7 @@ class Notification extends \Eccube\Entity\AbstractEntity
 
     public function setCreateDate(\DateTimeInterface $createDate): self
     {
-        $this->create_date = $createDate === null ? null : ($createDate instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($createDate) : $createDate);
+        $this->create_date = $createDate instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($createDate) : $createDate;
         return $this;
     }
 
@@ -130,7 +138,7 @@ class Notification extends \Eccube\Entity\AbstractEntity
 
     public function setUpdateDate(\DateTimeInterface $updateDate): self
     {
-        $this->update_date = $updateDate === null ? null : ($updateDate instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($updateDate) : $updateDate);
+        $this->update_date = $updateDate instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($updateDate) : $updateDate;
         return $this;
     }
 }

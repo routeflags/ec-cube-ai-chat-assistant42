@@ -19,6 +19,9 @@ use Eccube\Common\EccubeNav;
 
 class Nav implements EccubeNav
 {
+    /**
+     * @return array<string, mixed> 管理画面ナビの定義
+     */
     #[\Override]
     public static function getNav(): array
     {

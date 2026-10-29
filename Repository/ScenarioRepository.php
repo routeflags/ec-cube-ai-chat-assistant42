@@ -26,6 +26,8 @@ use Eccube\Repository\AbstractRepository;
  * 自動応答シナリオリポジトリ。
  *
  * ユーザー入力に対する定型応答を管理する。
+ *
+ * @extends AbstractRepository<Scenario>
  */
 class ScenarioRepository extends AbstractRepository
 {
@@ -37,15 +39,9 @@ class ScenarioRepository extends AbstractRepository
     }
 
     /**
-     * 指定 ID のシナリオを取得する。
-     */
-
-    /**
-     * 全件を priority → id の順で取得する。
-     */
-
-    /**
      * 有効なシナリオを優先度順に取得する。
+     *
+     * @return Scenario[]
      */
     public function findAllActive(): array
     {
@@ -60,6 +56,8 @@ class ScenarioRepository extends AbstractRepository
 
     /**
      * トリガーキーワードで検索する。
+     *
+     * @return Scenario[]
      */
     public function findByTrigger(string $keyword): array
     {
@@ -81,6 +79,8 @@ class ScenarioRepository extends AbstractRepository
      * regex — 正規表現マッチ
      *
      * マッチ順は priority DESC。
+     *
+     * @return Scenario[]
      */
     public function findMatching(string $input): array
     {

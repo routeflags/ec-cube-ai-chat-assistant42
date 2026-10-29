@@ -43,8 +43,8 @@ use DateTimeImmutable;
  * ユーザーからのメッセージを受け取り、選択された AI プロバイダに
  * ツール呼び出しループを含めて委譲し、応答を返す。
  *
- * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
- * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ * @SuppressWarnings("PHPMD.ExcessiveClassComplexity")
+ * @SuppressWarnings("PHPMD.CouplingBetweenObjects")
  */
 class ChatApiController extends AbstractController
 {
@@ -52,7 +52,7 @@ class ChatApiController extends AbstractController
     private const MAX_EMAIL_REPLY_PER_HOUR = 10;
 
     /**
-     * @SuppressWarnings(PHPMD.ExcessiveParameterList)
+     * @SuppressWarnings("PHPMD.ExcessiveParameterList")
      */
     public function __construct(
         private AiAgentFactory $aiAgentFactory,
@@ -191,7 +191,7 @@ class ChatApiController extends AbstractController
      * page_context は任意。不正な形式でも 400 にはせず無視する
      * （旧ウィジェットとの互換性のため）。
      *
-     * @return array{message: string, session_id: string, page_context: array|null}|JsonResponse
+     * @return array{message: string, session_id: string, page_context: array<string, mixed>|null}|JsonResponse
      *         成功時は配列、バリデーション失敗時は JsonResponse
      */
     private function parseChatRequest(Request $request): array|JsonResponse
@@ -446,6 +446,8 @@ class ChatApiController extends AbstractController
 
     /**
      * チャット成功時のログを記録する。
+     *
+     * @param array{reply: string, tools_used: string[], token_input?: int|null, token_output?: int|null} $result エージェントの実行結果
      */
     private function logChatSuccess(
         string $sessionId,

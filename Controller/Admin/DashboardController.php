@@ -39,8 +39,8 @@ use DateTimeImmutable;
  *       ChatApiController::executeChatSession() は $config->getMaxTokens() を AiAgentFactory::create() に渡す。
  *       dashboard.twig:296 の表示も DB 値で統一。
  *
- * @SuppressWarnings(PHPMD.TooManyMethods)
- * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ * @SuppressWarnings("PHPMD.TooManyMethods")
+ * @SuppressWarnings("PHPMD.ExcessiveClassComplexity")
  */
 class DashboardController extends AbstractController
 {
@@ -226,10 +226,7 @@ class DashboardController extends AbstractController
         $allModelIds = $this->extractAllModelIds($modelsByProvider);
 
         if ($request->isMethod('POST')) {
-            $redirect = $this->handleSettingsPost($request, $config, $allModelIds, $modelsByProvider);
-            if ($redirect instanceof Response) {
-                return $redirect;
-            }
+            return $this->handleSettingsPost($request, $config, $allModelIds, $modelsByProvider);
         }
 
         // APIキーのマスク表示は復号後の平文をマスクする（暗号化対応 + 平文後方互換）
@@ -283,6 +280,9 @@ class DashboardController extends AbstractController
      * 設定フォームの POST リクエストを処理する。
      *
      * CSRF と provider/model/max_tokens を検証し、不正なら保存せずリダイレクトする。
+     *
+     * @param string[] $allModelIds
+     * @param aiModelProviders $modelsByProvider
      */
     private function handleSettingsPost(Request $request, Config $config, array $allModelIds, array $modelsByProvider): Response
     {
@@ -356,6 +356,9 @@ class DashboardController extends AbstractController
 
     /**
      * モデルを検証し、不正ならリダイレクトを返す。
+     *
+     * @param string[] $allModelIds
+     * @param aiModelProviders $modelsByProvider
      */
     private function validateModelOrRedirect(string $model, string $provider, Config $config, array $allModelIds, array $modelsByProvider): ?Response
     {
@@ -446,6 +449,9 @@ class DashboardController extends AbstractController
      * - allModelIds に存在するか、ただし現在 DB の config.getModel() と同一の旧モデルは許容
      * - provider/model の組み合わせが有効か（isValidModel 相当）
      *
+     * @param string[] $allModelIds
+     * @param aiModelProviders $modelsByProvider
+     *
      * @return string|null エラー時はメッセージ、正常時は null
      */
     private function validateModelValue(string $model, string $provider, Config $config, array $allModelIds, array $modelsByProvider): ?string
@@ -469,6 +475,8 @@ class DashboardController extends AbstractController
      * 新規に存在しないモデルかを判定する。
      *
      * 現在の config.getModel() と同一なら旧モデルとして許容する。
+     *
+     * @param string[] $allModelIds
      */
     private function isUnknownNewModel(string $model, Config $config, array $allModelIds): bool
     {
@@ -484,6 +492,8 @@ class DashboardController extends AbstractController
      *
      * modelsByProvider[provider] の中に model が含まれるかで判定。
      * 現在の config と同一の旧モデルは後方互換として許容する。
+     *
+     * @param aiModelProviders $modelsByProvider
      */
     private function isValidModel(string $provider, string $model, Config $config, array $modelsByProvider): bool
     {
@@ -568,9 +578,7 @@ class DashboardController extends AbstractController
      * AiModelRegistry を優先して再利用し、二重実装を解消。
      * フォールバックとして従来の file_get_contents 経由も維持（Registry 未注入やテスト時の後方互換）。
      *
-     * @return array<string, array{name: string, api_base: string, models: array<int, array{
-     *               id: string, name: string, description: string, supports_tools: bool,
-     *               cost_tier: string, is_default: bool}>}>
+     * @return aiModelProviders プロバイダ別のモデル定義
      */
     private function loadAiModels(): array
     {
@@ -628,6 +636,8 @@ class DashboardController extends AbstractController
 
     /**
      * JSON ファイルから providers 配列を読み込む。
+     *
+     * @return aiModelProviders
      */
     private function readProvidersFromJson(string $path): array
     {
@@ -647,7 +657,7 @@ class DashboardController extends AbstractController
     /**
      * モデル定義から全モデル ID の平坦配列を抽出する。
      *
-     * @param array<string, array{models?: array}> $modelsByProvider
+     * @param aiModelProviders $modelsByProvider
      *
      * @return string[]
      */

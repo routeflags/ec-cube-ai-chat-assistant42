@@ -29,7 +29,7 @@ use RuntimeException;
  * GPT-4o 等のモデルに対応し、Function Calling によるツール呼び出しをサポートする。
  * ツール呼び出しが発生した場合はループで再送し、最終的なテキスト応答を返す。
  *
- * @SuppressWarnings(PHPMD.LongVariable)
+ * @SuppressWarnings("PHPMD.LongVariable")
  */
 class OpenAiAgent implements AiAgentInterface
 {
@@ -47,7 +47,7 @@ class OpenAiAgent implements AiAgentInterface
     /**
      * @var bool|null Capability cache for this model
      *
-     * @SuppressWarnings(PHPMD.LongVariable)
+     * @SuppressWarnings("PHPMD.LongVariable")
      */
     private ?bool $cachedSupportsReasoningWithTools = null;
     private ?LoggerInterface $logger;
@@ -96,6 +96,11 @@ class OpenAiAgent implements AiAgentInterface
 
     /**
      * {@inheritdoc}
+     *
+     * @param array<int, array{type: string, name: string, description: string, input_schema: array<string, mixed>}> $tools
+     * @param array<int, array{role: string, content: string}> $history
+     *
+     * @return array{reply: string, tools_used: string[], token_input: int, token_output: int}
      */
     public function chat(
         string $message,
@@ -161,6 +166,8 @@ class OpenAiAgent implements AiAgentInterface
 
     /**
      * トークン使用量を累積する。
+     *
+     * @param array<string, mixed> $response
      */
     private function accumulateTokenUsage(
         array $response,
@@ -168,8 +175,8 @@ class OpenAiAgent implements AiAgentInterface
         int &$totalOutputTokens
     ): void {
         $usage = $response['usage'] ?? [];
-        $totalInputTokens += $usage['prompt_tokens'] ?? 0;
-        $totalOutputTokens += $usage['completion_tokens'] ?? 0;
+        $totalInputTokens += (int) ($usage['prompt_tokens'] ?? 0);
+        $totalOutputTokens += (int) ($usage['completion_tokens'] ?? 0);
     }
 
     /**
@@ -177,7 +184,7 @@ class OpenAiAgent implements AiAgentInterface
      *
      * @param array<int, array{id: string, function: array{name: string, arguments: string}}> $toolCalls
      * @param callable $toolExecutor
-     * @param array    $toolsUsed 使用したツール名のリスト（参照渡しで追加）
+     * @param string[] $toolsUsed 使用したツール名のリスト（参照渡しで追加）
      *
      * @return array<int, array{role: string, tool_call_id: string, content: string}>
      */
@@ -195,7 +202,7 @@ class OpenAiAgent implements AiAgentInterface
                 512,
                 JSON_THROW_ON_ERROR
             );
-            $toolCallId = $toolCall['id'] ?? '';
+            $toolCallId = (string) ($toolCall['id'] ?? '');
 
             $toolsUsed[] = $toolName;
             try {
@@ -212,7 +219,7 @@ class OpenAiAgent implements AiAgentInterface
             $resultMessages[] = [
                 'role' => 'tool',
                 'tool_call_id' => $toolCallId,
-                'content' => json_encode($toolResult, JSON_UNESCAPED_UNICODE),
+                'content' => (string) json_encode($toolResult, JSON_UNESCAPED_UNICODE),
             ];
         }
 
@@ -221,6 +228,10 @@ class OpenAiAgent implements AiAgentInterface
 
     /**
      * 統一されたチャット結果配列を構築する。
+     *
+     * @param string[] $toolsUsed
+     *
+     * @return array{reply: string, tools_used: string[], token_input: int, token_output: int}
      */
     private function buildResult(
         string $reply,
@@ -238,6 +249,8 @@ class OpenAiAgent implements AiAgentInterface
 
     /**
      * 初期メッセージ配列を構築する。
+     *
+     * @param array<int, array{role: string, content: string}> $history
      *
      * @return array<int, array{role: string, content: string}>
      */
@@ -280,9 +293,9 @@ class OpenAiAgent implements AiAgentInterface
     /**
      * MCP 形式のツール定義を OpenAI functions 形式に変換する。
      *
-     * @param array<int, array{name: string, description: string, inputSchema: array}> $mcpTools
+     * @param array<int, array<string, mixed>> $mcpTools inputSchema / input_schema / parameters のいずれかを含むツール定義
      *
-     * @return array<int, array{type: string, function: array{name: string, description: string, parameters: array}}>
+     * @return array<int, array{type: string, function: array{name: string, description: string, parameters: array<string, mixed>|object}}>
      */
     private function convertToolsToOpenAiFormat(array $mcpTools): array
     {
@@ -314,8 +327,8 @@ class OpenAiAgent implements AiAgentInterface
      * Capability Matrix を参照し、ツール併用時に reasoning が非対応のモデルでは
      * reasoning_effort / reasoningEffort を付与しない（400 エラー回避）。
      *
-     * @param array<int, array{role: string, content?: string, tool_calls?: array, tool_call_id?: string}> $messages
-     * @param array<int, array{type: string, function: array}> $tools
+     * @param array<int, array{role: string, content?: string, tool_calls?: array<int, array{id: string, type: string, function: array{name: string, arguments: string}}>, tool_call_id?: string}> $messages
+     * @param array<int, array{type: string, function: array{name: string, description: string, parameters: array<string, mixed>|object}}> $tools
      *
      * @return array<string, mixed>
      */
@@ -345,7 +358,7 @@ class OpenAiAgent implements AiAgentInterface
 
         // Capability Matrix: tools 非空かつ reasoning 非対応モデルでは reasoning 系キーを除去
         if (!empty($tools) && !$this->supportsReasoningWithTools()) {
-            unset($payload['reasoning_effort'], $payload['reasoningEffort']);
+            unset($payload['reasoning_effort']);
         }
 
         return $payload;

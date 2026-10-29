@@ -82,7 +82,7 @@ class Feedback extends \Eccube\Entity\AbstractEntity
 
     public function setCreatedAt(\DateTimeInterface $createdAt): self
     {
-        $this->created_at = $createdAt === null ? null : ($createdAt instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($createdAt) : $createdAt);
+        $this->created_at = $createdAt instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($createdAt) : $createdAt;
         return $this;
     }
 }

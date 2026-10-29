@@ -111,6 +111,8 @@ class ChatWidgetListener implements EventSubscriberInterface
 
     /**
      * design_settings.json から設定を読み込む。DEFAULTS とマージして後方互換を担保。
+     *
+     * @return array<string, mixed> design_settings.json の内容（DEFAULTS マージ済み）
      */
     private function loadDesignSettings(): array
     {

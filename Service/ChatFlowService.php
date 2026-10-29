@@ -42,7 +42,7 @@ class ChatFlowService
     /**
      * アクセス制限をチェックし、許可されているか判定する。
      *
-     * @SuppressWarnings(PHPMD.Superglobals)
+     * @SuppressWarnings("PHPMD.Superglobals")
      * @return array{allowed: bool, reason?: string}
      */
     public function checkAccessRules(string $sessionId, string $userMessage = ''): array
@@ -76,6 +76,8 @@ class ChatFlowService
     /**
      * 単一のルールを評価し、ブロック判定なら配列を返す。
      * 許可なら null を返す。
+     *
+     * @return array{allowed: false, reason: string}|null ブロック判定時は理由、許可時は null
      */
     private function evaluateRule(string $type, string $value, string $clientIp, string $lowerMessage): ?array
     {
@@ -87,6 +89,9 @@ class ChatFlowService
         };
     }
 
+    /**
+     * @return array{allowed: false, reason: string}|null ブロック判定時は理由、許可時は null
+     */
     private function evaluateIpRule(string $pattern, string $clientIp): ?array
     {
         if ($clientIp === '') {
@@ -103,6 +108,9 @@ class ChatFlowService
         return null;
     }
 
+    /**
+     * @return array{allowed: false, reason: string}|null ブロック判定時は理由、許可時は null
+     */
     private function evaluateTimeRule(string $value): ?array
     {
         if ($this->isTimeBlocked($value)) {
@@ -112,6 +120,9 @@ class ChatFlowService
         return null;
     }
 
+    /**
+     * @return array{allowed: false, reason: string}|null ブロック判定時は理由、許可時は null
+     */
     private function evaluateKeywordRule(string $value, string $lowerMessage): ?array
     {
         if ($lowerMessage === '') {
@@ -167,7 +178,7 @@ class ChatFlowService
     /**
      * シナリオをマッチングし、一致したものがあれば返す。
      *
-     * @return array{matched: bool, response?: string, response_type?: string}
+     * @return array{matched: true, response: string, response_type: string}|array{matched: false}
      */
     public function matchScenario(string $userMessage): array
     {

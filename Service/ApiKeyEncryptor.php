@@ -88,11 +88,9 @@ class ApiKeyEncryptor
         $decoded = base64_decode($encrypted, true);
         if ($decoded === false || strlen($decoded) < self::NONCE_LENGTH + self::TAG_LENGTH + 1) {
             // 復号失敗時は平文として扱う（後方互換） — ただし isEncrypted() が true の場合は警告
-            if ($this->isEncrypted($encrypted)) {
-                $this->logger?->warning('APIキー復号に失敗しました（base64 デコード失敗または長さ不足）。APP_SECRET 変更の可能性があります。再登録してください。', [
-                    'encrypted_prefix' => substr($encrypted, 0, 8) . '...',
-                ]);
-            }
+            $this->logger?->warning('APIキー復号に失敗しました（base64 デコード失敗または長さ不足）。APP_SECRET 変更の可能性があります。再登録してください。', [
+                'encrypted_prefix' => substr($encrypted, 0, 8) . '...',
+            ]);
             return $encrypted;
         }
 

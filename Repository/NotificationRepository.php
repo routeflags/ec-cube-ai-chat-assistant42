@@ -25,6 +25,8 @@ use Eccube\Repository\AbstractRepository;
  * 通知ルールリポジトリ。
  *
  * チャットイベントに紐づく通知ルールを管理する。
+ *
+ * @extends AbstractRepository<Notification>
  */
 class NotificationRepository extends AbstractRepository
 {

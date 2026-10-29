@@ -74,6 +74,8 @@ class ChatHistoryController extends AbstractController
 
     /**
      * リクエストからフィルタ配列を抽出する。
+     *
+     * @return chatHistoryFilters
      */
     private function extractFilters(Request $request): array
     {
@@ -88,6 +90,8 @@ class ChatHistoryController extends AbstractController
 
     /**
      * フィルタ後の集合からセッションごとの最新 ID を取得する。
+     *
+     * @param chatHistoryFilters $filters
      *
      * @return int[]
      */
@@ -111,6 +115,8 @@ class ChatHistoryController extends AbstractController
     /**
      * セッションごとの件数マップを取得する。
      *
+     * @param chatHistoryFilters $filters
+     *
      * @return array<string,int> ['session_id' => count]
      */
     private function fetchSessionCounts(array $filters): array
@@ -120,6 +126,10 @@ class ChatHistoryController extends AbstractController
 
     /**
      * グループ化された履歴一覧を描画する。
+     *
+     * @param ChatLog[] $logs
+     * @param chatHistoryFilters $filters
+     * @param array<string, int> $sessionCounts
      */
     private function renderGroupedHistory(array $logs, int $total, int $page, array $filters, array $sessionCounts, int $lastPage = 1): Response
     {
@@ -173,6 +183,8 @@ class ChatHistoryController extends AbstractController
 
     /**
      * 現在表示中のログが relatedLogs の何番目かを解決する（0始まり）。
+     *
+     * @param ChatLog[] $relatedLogs
      */
     private function resolveCurrentRelayIndex(array $relatedLogs, ChatLog $currentLog): int
     {

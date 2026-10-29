@@ -26,7 +26,7 @@ use LogicException;
  * - 検証: providers/cost_tier/boolean/文字数上限/重複id を厳格に検証
  * - 永続化: 全文置換 + 1世代バックアップ
  *
- * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ * @SuppressWarnings("PHPMD.ExcessiveClassComplexity")
  */
 class AiModelSyncService extends AbstractPluginDataSyncService
 {
@@ -41,7 +41,7 @@ class AiModelSyncService extends AbstractPluginDataSyncService
     private const MAX_ID_LENGTH = 128;
 
     /**
-     * @SuppressWarnings(PHPMD.Superglobals)
+     * @SuppressWarnings("PHPMD.Superglobals")
      */
     protected function getRemoteUrl(): string
     {
@@ -125,6 +125,9 @@ class AiModelSyncService extends AbstractPluginDataSyncService
         return $this->sanitizeVersion($remoteData);
     }
 
+    /**
+     * @param array<string, mixed> $remoteData 取得した ai_models.json
+     */
     private function hasValidProvidersStructure(array $remoteData): bool
     {
         if (!isset($remoteData['providers']) || !is_array($remoteData['providers']) || $remoteData['providers'] === []) {
@@ -173,6 +176,9 @@ class AiModelSyncService extends AbstractPluginDataSyncService
         return $this->validateModels($providerKey, $provider['models']);
     }
 
+    /**
+     * @param array<string, mixed> $provider プロバイダ設定データ
+     */
     private function validateProviderStringField(string $providerKey, array $provider, string $field): bool
     {
         if (!isset($provider[$field])) {

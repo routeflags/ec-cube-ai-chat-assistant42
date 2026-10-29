@@ -19,9 +19,16 @@
 - 書込経路スモーク (T-C5): フルサイクル (7g) と `--version` (7b) に、シナリオ一致 → `ChatLogger::log()` → `flush()` → DBAL 型変換まで実際に書き込ませ、`plg_ai_chat_assistant_log` に `created_at` 付きの行が入ることを DB で確認する検査を追加。API キー未設定 / `Config.is_enabled=0` / 設定行なしの環境では従来の API スモークが 403/400 で早期リターンし書込経路に入らないため `UTCDateTimeTzType` 不具合を検知できなかった (検査中のみ Config を有効化し、終了時に元に戻す)。
 
 ### Changed
+- 静的解析を PHPStan level 5 → **level 8** に引き上げ (`phpstan.neon.dist`)。
+  - 欠けていた iterable/パラメータ型注釈 (約 150 件) を補完し、`mixed` 由来の曖昧さを除去。
+  - 旧抑制ルール 25 件のうち死んでいた 12 件を削除し、広域抑制 (`#should return .* but returns.*#` 等) を廃止。残る抑制は EC-CUBE スタブ未整備と DBAL 行配列形状の 2 件のみ。
+  - `Tests/Stubs` を実型に追従 (`AbstractController::json/createFormBuilder/createNotFoundException`、`AbstractRepository` の総称化、`BaseInfoRepository::get`)。
+  - `composer.json` require-dev に静的解析用の `symfony/form` / `symfony/validator` / `symfony/translation` / `twig/twig` を追加 (本番配布物には含まれない)。
 - [破壊的変更] MCPツール `search_products` を `aichat_search_products` に改名 (公式MCPの同名ツールとの衝突回避)。旧名での `tools/call` はエラー (`isError: true`) になります。AIチャットの function calling 名も同一定義のため連動して変更されます。
 
 ### Fixed
+- PHPStan が指摘した死んだ分岐と重複を整理: 日付 setter / `ChatLogRepository` の `instanceof DateTimeImmutable` (引数型で常に真) と `=== null` 分岐、`ApiKeyEncryptor` の二重 `isEncrypted()` 判定、`unset($payload['reasoningEffort'])` (未設定キー)、`McpHttpController` の未使用 `ProductRepository` 依存 (services.yaml も更新)、`ProductRepository::$entityManager` の未使用プロパティ、`McpServerService` の重複定数 (正本は `McpHttpService`)。
+- `/api/ai-chat-assistant/*` で `InputBag::get()` の返り値 (`bool|float|int|string|null`) を文字列型の setter にそのまま渡していた箇所を明示的に文字列化。
 - [4.4] `UTCDateTimeTzType` (DBAL 4) が `DateTimeImmutable` を受け付けない問題を修正: エンティティの日付setter 15件で可変 `DateTime` に正規化、`ChatLogRepository` の日付引数 15件も同様。チャット履歴保存の `EntityManagerClosed` 500を解消 (MySQL/PG/SQLiteのMatrix 45件で検証)。
 - チャット履歴保存の失敗が元のエラーを隠さないよう `logChatSuccess` / `logChatError` を堅牢化 (DB例外時は monolog のみ)。
 - チャットウィジェットの入力で日本語 IME の変換確定 Enter が素のフォーム送信になり `POST /` が 405 (Method Not Allowed) になる問題を修正。入力要素を `<textarea rows="1">` にして Enter による implicit submission を起こさないようにし、フォームは `action="#" method="get"` + `onsubmit="return false"` にして JS が止め損ねても 405 のエラー画面にならないようにした (Enter での送信・Shift+Enter の改行は従来どおり)。

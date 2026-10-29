@@ -16,7 +16,6 @@ declare(strict_types=1);
 namespace Plugin\AiChatAssistant44\Repository;
 
 use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
-use Doctrine\DBAL\Platforms\SqlitePlatform;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Eccube\Repository\AbstractRepository;
@@ -30,7 +29,9 @@ use DateTimeImmutable;
  * 本リポジトリに集約して Doctrine 形式（ORM QueryBuilder / DBAL QueryBuilder）で
  * データアクセスを一元管理する。
  *
- * @SuppressWarnings(PHPMD.TooManyPublicMethods)
+ * @SuppressWarnings("PHPMD.TooManyPublicMethods")
+ *
+ * @extends AbstractRepository<ChatLog>
  */
 class ChatLogRepository extends AbstractRepository
 {
@@ -53,7 +54,7 @@ class ChatLogRepository extends AbstractRepository
      */
     public function countRecentBySession(string $sessionId, DateTimeImmutable $since): int
     {
-        $since = $since instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($since) : $since;
+        $since = \DateTime::createFromImmutable($since);
         return (int) $this->createQueryBuilder('log')
             ->select('COUNT(log.id)')
             ->where('log.session_id = :sid')
@@ -69,7 +70,7 @@ class ChatLogRepository extends AbstractRepository
      */
     public function countRecentByIp(string $ip, DateTimeImmutable $since): int
     {
-        $since = $since instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($since) : $since;
+        $since = \DateTime::createFromImmutable($since);
         return (int) $this->createQueryBuilder('log')
             ->select('COUNT(log.id)')
             ->where('log.client_ip = :ip')
@@ -85,7 +86,7 @@ class ChatLogRepository extends AbstractRepository
      */
     public function countEmailReplyBySession(string $sessionId, DateTimeImmutable $since): int
     {
-        $since = $since instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($since) : $since;
+        $since = \DateTime::createFromImmutable($since);
         return (int) $this->createQueryBuilder('log')
             ->select('COUNT(log.id)')
             ->where('log.session_id = :sid')
@@ -102,7 +103,7 @@ class ChatLogRepository extends AbstractRepository
      */
     public function countEmailReplyByIp(string $ip, DateTimeImmutable $since): int
     {
-        $since = $since instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($since) : $since;
+        $since = \DateTime::createFromImmutable($since);
         return (int) $this->createQueryBuilder('log')
             ->select('COUNT(log.id)')
             ->where('log.client_ip = :ip')
@@ -255,7 +256,7 @@ class ChatLogRepository extends AbstractRepository
      */
     public function purgeExpiredEmailEnc(DateTimeImmutable $before): int
     {
-        $before = $before instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($before) : $before;
+        $before = \DateTime::createFromImmutable($before);
         return (int) $this->createQueryBuilder('log')
             ->update()
             ->set('log.email_reply_address_enc', ':null')
@@ -299,16 +300,17 @@ class ChatLogRepository extends AbstractRepository
      */
     public function fetchHourlyDistribution(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
-        $start = $start instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($start) : $start;
-        $end = $end instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($end) : $end;
+        $start = \DateTime::createFromImmutable($start);
+        $end = \DateTime::createFromImmutable($end);
         $conn = $this->entityManager->getConnection();
         $platform = $conn->getDatabasePlatform();
 
-        // DBAL 4 で AbstractPlatform::getName() が廃止されたため instanceof で判定する。
-        // SqlitePlatform (DBAL 3) / SQLitePlatform (DBAL 4) の双方に対応する。
-        // 未知のクラスに対する instanceof は false を返すため安全。
+        // DBAL 3 は SqlitePlatform、DBAL 4 は SQLitePlatform と、クラス名の大小だけが
+        // 異なる。他バージョンのクラス名への instanceof は autoload の成否に依存する
+        // ため、小文字化したクラス名で判定する。
+        $isSqlite = strtolower($platform::class) === 'doctrine\dbal\platforms\sqliteplatform';
         $hourExpr = 'HOUR(created_at)';
-        if ($platform instanceof SqlitePlatform || $platform instanceof \Doctrine\DBAL\Platforms\SQLitePlatform) {
+        if ($isSqlite) {
             $hourExpr = "CAST(strftime('%H', created_at) AS INTEGER)";
         } elseif ($platform instanceof PostgreSQLPlatform) {
             $hourExpr = 'CAST(EXTRACT(HOUR FROM created_at) AS INTEGER)';
@@ -435,7 +437,8 @@ class ChatLogRepository extends AbstractRepository
     /**
      * フィルタ後の集合からセッションごとの最新 ID を取得する。
      *
-     * @param array $filters
+     * @param chatHistoryFilters $filters
+     *
      * @return int[]
      */
     public function fetchLatestIdPerSession(array $filters): array
@@ -478,7 +481,8 @@ class ChatLogRepository extends AbstractRepository
     /**
      * セッションごとの件数マップを取得する。
      *
-     * @param array $filters
+     * @param chatHistoryFilters $filters
+     *
      * @return array<string,int> ['session_id' => count]
      */
     public function fetchSessionCounts(array $filters): array
@@ -505,7 +509,7 @@ class ChatLogRepository extends AbstractRepository
     public function fetchSessionRelayLogs(ChatLog $currentLog): array
     {
         $sessionId = $currentLog->getSessionId();
-        if ($sessionId === '' || $sessionId === null) {
+        if ($sessionId === '') {
             return [$currentLog];
         }
 
@@ -542,8 +546,8 @@ class ChatLogRepository extends AbstractRepository
      */
     public function fetchKpi(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
-        $start = $start instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($start) : $start;
-        $end = $end instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($end) : $end;
+        $start = \DateTime::createFromImmutable($start);
+        $end = \DateTime::createFromImmutable($end);
         $qb = $this->createQueryBuilder('log');
         $qb->select('
             COUNT(log.id) AS total,
@@ -597,8 +601,8 @@ class ChatLogRepository extends AbstractRepository
      */
     public function fetchProviderStats(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
-        $start = $start instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($start) : $start;
-        $end = $end instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($end) : $end;
+        $start = \DateTime::createFromImmutable($start);
+        $end = \DateTime::createFromImmutable($end);
         return $this->createQueryBuilder('log')
             ->select('
                 log.provider AS provider,
@@ -626,8 +630,8 @@ class ChatLogRepository extends AbstractRepository
      */
     public function fetchModelStats(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
-        $start = $start instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($start) : $start;
-        $end = $end instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($end) : $end;
+        $start = \DateTime::createFromImmutable($start);
+        $end = \DateTime::createFromImmutable($end);
         return $this->createQueryBuilder('log')
             ->select('
                 log.model AS model,
@@ -657,8 +661,8 @@ class ChatLogRepository extends AbstractRepository
      */
     public function fetchErrorBreakdown(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
-        $start = $start instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($start) : $start;
-        $end = $end instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($end) : $end;
+        $start = \DateTime::createFromImmutable($start);
+        $end = \DateTime::createFromImmutable($end);
         return $this->createQueryBuilder('log')
             ->select('
                 COALESCE(log.error_type, \'unknown\') AS error_type,

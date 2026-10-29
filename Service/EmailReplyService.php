@@ -15,6 +15,7 @@ declare(strict_types=1);
 
 namespace Plugin\AiChatAssistant44\Service;
 
+use Eccube\Entity\BaseInfo;
 use Eccube\Repository\BaseInfoRepository;
 use Plugin\AiChatAssistant44\Repository\ChatLogRepository;
 use Psr\Log\LoggerInterface;
@@ -35,7 +36,6 @@ use DateTime;
  */
 class EmailReplyService
 {
-    private const FALLBACK_FROM_DOMAIN = 'example.com';
     private const FALLBACK_FROM = 'no-reply@example.com';
 
     public function __construct(
@@ -123,6 +123,9 @@ class EmailReplyService
 
     /**
      * ユーザー宛の受付確認メールを送信する.
+     *
+     * @param array<int, array{role: string, content: string}> $history 会話履歴
+     * @param BaseInfo $baseInfo ショップ基本情報
      */
     private function sendUserConfirmation(string $sessionId, string $userEmail, array $history, $baseInfo): void
     {
@@ -147,6 +150,9 @@ class EmailReplyService
      * 管理者宛の通知メールを送信する.
      *
      * 管理者宛アドレスが空の場合はスキップし warning を残す。
+     *
+     * @param array<int, array{role: string, content: string}> $history 会話履歴
+     * @param BaseInfo $baseInfo ショップ基本情報
      */
     private function sendAdminNotification(string $sessionId, string $userEmail, array $history, $baseInfo): void
     {
@@ -202,12 +208,15 @@ class EmailReplyService
             $email = preg_replace_callback('/^(.*)@(.*)$/', static function (array $m): string {
                 $local = str_replace(['\\', '"'], ['\\\\', '\\"'], $m[1]);
                 return '"' . $local . '"@' . $m[2];
-            }, $email);
+            }, $email) ?? $email;
         }
 
         return new Address($email);
     }
 
+    /**
+     * @param BaseInfo $baseInfo ショップ基本情報
+     */
     private function resolveFromAddress($baseInfo): string
     {
         $from = $baseInfo->getEmail03();
@@ -221,6 +230,9 @@ class EmailReplyService
         return self::FALLBACK_FROM;
     }
 
+    /**
+     * @param BaseInfo $baseInfo ショップ基本情報
+     */
     private function resolveAdminTo($baseInfo): string
     {
         $to = $baseInfo->getEmail02();
@@ -234,6 +246,9 @@ class EmailReplyService
         return '';
     }
 
+    /**
+     * @param array<int, array{role: string, content: string}> $history 会話履歴
+     */
     private function buildUserBody(string $sessionId, string $userEmail, array $history, string $shopName): string
     {
         $now = (new DateTime())->format('Y-m-d H:i');
@@ -259,6 +274,9 @@ class EmailReplyService
 BODY;
     }
 
+    /**
+     * @param array<int, array{role: string, content: string}> $history 会話履歴
+     */
     private function buildAdminBody(string $sessionId, string $userEmail, array $history): string
     {
         $now = (new DateTime())->format('Y-m-d H:i');
@@ -280,6 +298,9 @@ BODY;
 BODY;
     }
 
+    /**
+     * @param array<int, array{role: string, content: string}> $history 会話履歴
+     */
     private function formatHistory(array $history): string
     {
         if (empty($history)) {

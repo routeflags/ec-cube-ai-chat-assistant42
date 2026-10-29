@@ -69,16 +69,16 @@ class AccessRuleController extends AbstractController
             return $this->redirectToRoute('admin_ai_chat_assistant_access_index');
         }
 
-        $ruleValue = $request->request->get('rule_value', '');
+        $ruleValue = (string) $request->request->get('rule_value', '');
         if ($ruleValue === '') {
             $this->addError('ルール値を入力してください。', 'admin');
             return $this->redirectToRoute('admin_ai_chat_assistant_access_index');
         }
 
         $rule = new AccessRule();
-        $rule->setRuleType($request->request->get('rule_type', 'ip'));
+        $rule->setRuleType((string) $request->request->get('rule_type', 'ip'));
         $rule->setRuleValue($ruleValue);
-        $rule->setAction($request->request->get('action', 'deny'));
+        $rule->setAction((string) $request->request->get('action', 'deny'));
         $rule->setIsActive(1);
         $rule->setCreateDate(new DateTimeImmutable());
         $rule->setUpdateDate(new DateTimeImmutable());
@@ -109,15 +109,15 @@ class AccessRuleController extends AbstractController
             return $this->redirectToRoute('admin_ai_chat_assistant_access_index');
         }
 
-        $ruleValue = $request->request->get('rule_value', $rule->getRuleValue());
+        $ruleValue = (string) $request->request->get('rule_value', $rule->getRuleValue());
         if ($ruleValue === '') {
             $this->addError('ルール値を入力してください。', 'admin');
             return $this->redirectToRoute('admin_ai_chat_assistant_access_index');
         }
 
-        $rule->setRuleType($request->request->get('rule_type', $rule->getRuleType()));
+        $rule->setRuleType((string) $request->request->get('rule_type', $rule->getRuleType()));
         $rule->setRuleValue($ruleValue);
-        $rule->setAction($request->request->get('action', $rule->getAction()));
+        $rule->setAction((string) $request->request->get('action', $rule->getAction()));
         $rule->setIsActive((int) $request->request->get('is_active', $rule->getIsActive()));
         $rule->setUpdateDate(new DateTimeImmutable());
 

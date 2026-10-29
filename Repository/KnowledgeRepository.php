@@ -26,6 +26,8 @@ use Eccube\Repository\AbstractRepository;
  * ナレッジベースリポジトリ。
  *
  * AI チャットが参照する FAQ・商品知識を管理する。
+ *
+ * @extends AbstractRepository<Knowledge>
  */
 class KnowledgeRepository extends AbstractRepository
 {
@@ -37,11 +39,9 @@ class KnowledgeRepository extends AbstractRepository
     }
 
     /**
-     * 全件を display_order → id の順で取得する。
-     */
-
-    /**
      * 有効なナレッジを表示順に取得する。
+     *
+     * @return Knowledge[]
      */
     public function findAllActive(): array
     {
@@ -56,6 +56,8 @@ class KnowledgeRepository extends AbstractRepository
 
     /**
      * カテゴリでフィルタして取得する。
+     *
+     * @return Knowledge[]
      */
     public function findByCategory(string $category): array
     {
@@ -74,6 +76,8 @@ class KnowledgeRepository extends AbstractRepository
      *
      * orX() でタイトル/本文の OR 条件を group 化し、
      * is_active フィルタが正しく適用されるようにする。
+     *
+     * @return Knowledge[]
      */
     public function search(string $keyword): array
     {

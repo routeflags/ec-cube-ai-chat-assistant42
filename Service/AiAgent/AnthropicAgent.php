@@ -62,6 +62,11 @@ class AnthropicAgent implements AiAgentInterface
 
     /**
      * {@inheritdoc}
+     *
+     * @param array<int, array{type: string, name: string, description: string, input_schema: array<string, mixed>}> $tools
+     * @param array<int, array{role: string, content: string}> $history
+     *
+     * @return array{reply: string, tools_used: string[], token_input: int, token_output: int}
      */
     public function chat(
         string $message,
@@ -71,6 +76,7 @@ class AnthropicAgent implements AiAgentInterface
     ): array {
         $messages = $this->buildInitialMessages($message, $history);
         $convertedTools = $this->convertToolsToAnthropicFormat($tools);
+        /** @var string[] $toolsUsed 使用したツール名（ツール呼び出しループで追記） */
         $toolsUsed = [];
         $totalInputTokens = 0;
         $totalOutputTokens = 0;
@@ -120,12 +126,12 @@ class AnthropicAgent implements AiAgentInterface
             $toolResults = $this->processToolUseBlocks($contentBlocks, $toolExecutor, $toolsUsed);
             $messages[] = ['role' => 'user', 'content' => $toolResults];
         }
-
-        return $this->buildResult($lastReply, $toolsUsed, $totalInputTokens, $totalOutputTokens);
     }
 
     /**
      * トークン使用量を累積する。
+     *
+     * @param array<string, mixed> $response
      */
     private function accumulateTokenUsage(
         array $response,
@@ -133,8 +139,8 @@ class AnthropicAgent implements AiAgentInterface
         int &$totalOutputTokens
     ): void {
         $usage = $response['usage'] ?? [];
-        $totalInputTokens += $usage['input_tokens'] ?? 0;
-        $totalOutputTokens += $usage['output_tokens'] ?? 0;
+        $totalInputTokens += (int) ($usage['input_tokens'] ?? 0);
+        $totalOutputTokens += (int) ($usage['output_tokens'] ?? 0);
     }
 
     /**
@@ -142,7 +148,7 @@ class AnthropicAgent implements AiAgentInterface
      *
      * @param array<int, array<string, mixed>> $contentBlocks
      * @param callable $toolExecutor
-     * @param array    $toolsUsed 使用したツール名のリスト（参照渡しで追加）
+     * @param string[] $toolsUsed 使用したツール名のリスト（参照渡しで追加）
      *
      * @return array<int, array{type: string, tool_use_id: string, content: string}>
      */
@@ -157,9 +163,9 @@ class AnthropicAgent implements AiAgentInterface
                 continue;
             }
 
-            $toolName = $block['name'] ?? '';
+            $toolName = (string) ($block['name'] ?? '');
             $toolArgs = is_array($block['input'] ?? []) ? $block['input'] : [];
-            $toolId = $block['id'] ?? '';
+            $toolId = (string) ($block['id'] ?? '');
 
             $toolsUsed[] = $toolName;
             $toolResult = $toolExecutor($toolName, $toolArgs);
@@ -167,7 +173,7 @@ class AnthropicAgent implements AiAgentInterface
             $toolResults[] = [
                 'type' => 'tool_result',
                 'tool_use_id' => $toolId,
-                'content' => json_encode($toolResult, JSON_UNESCAPED_UNICODE),
+                'content' => (string) json_encode($toolResult, JSON_UNESCAPED_UNICODE),
             ];
         }
 
@@ -176,6 +182,10 @@ class AnthropicAgent implements AiAgentInterface
 
     /**
      * 統一されたチャット結果配列を構築する。
+     *
+     * @param string[] $toolsUsed
+     *
+     * @return array{reply: string, tools_used: string[], token_input: int, token_output: int}
      */
     private function buildResult(
         string $reply,
@@ -193,6 +203,8 @@ class AnthropicAgent implements AiAgentInterface
 
     /**
      * 初期メッセージ配列を構築する。
+     *
+     * @param array<int, array{role: string, content: string}> $history
      *
      * @return array<int, array{role: string, content: string}>
      */
@@ -233,9 +245,9 @@ class AnthropicAgent implements AiAgentInterface
      * Anthropic の input_schema は MCP の inputSchema と互換性があるため、
      * 最小限の変換で済む。
      *
-     * @param array<int, array{name: string, description: string, inputSchema: array}> $mcpTools
+     * @param array<int, array<string, mixed>> $mcpTools inputSchema / input_schema / parameters のいずれかを含むツール定義
      *
-     * @return array<int, array{name: string, description: string, input_schema: array}>
+     * @return array<int, array{name: string, description: string, input_schema: array<string, mixed>|object}>
      */
     private function convertToolsToAnthropicFormat(array $mcpTools): array
     {
@@ -260,8 +272,8 @@ class AnthropicAgent implements AiAgentInterface
     /**
      * Anthropic API リクエストペイロードを構築する。
      *
-     * @param array<int, array{role: string, content: string|array}> $messages
-     * @param array<int, array{name: string, description: string, input_schema: array}> $tools
+     * @param array<int, array{role: string, content: string|array<int, array<string, mixed>>}> $messages
+     * @param array<int, array{name: string, description: string, input_schema: array<string, mixed>|object}> $tools
      *
      * @return array<string, mixed>
      */

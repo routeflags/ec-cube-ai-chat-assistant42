@@ -25,6 +25,8 @@ use Eccube\Repository\AbstractRepository;
  * アクセスルールリポジトリ。
  *
  * IP・時間帯・禁止キーワード等のアクセス制御ルールを管理する。
+ *
+ * @extends AbstractRepository<AccessRule>
  */
 class AccessRuleRepository extends AbstractRepository
 {

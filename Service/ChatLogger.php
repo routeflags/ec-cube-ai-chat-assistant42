@@ -41,10 +41,8 @@ class ChatLogger
         if ($this->chatLogRepository !== null) {
             return $this->chatLogRepository;
         }
-        /** @var ChatLogRepository $repo */
-        $repo = $this->entityManager->getRepository(ChatLog::class);
-
-        return $repo;
+        // EC-CUBE はエンティティに紐づく Repository を返すが、Doctrine の宣言は EntityRepository のため型が合わない
+        return $this->entityManager->getRepository(ChatLog::class); // @phpstan-ignore return.type
     }
 
     /**

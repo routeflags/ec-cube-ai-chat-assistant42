@@ -31,15 +31,6 @@ use Plugin\AiChatAssistant44\Repository\ProductRepository;
  */
 class McpServerService
 {
-    /** MCP プロトコルバージョン — 正本は McpHttpService */
-    private const PROTOCOL_VERSION = McpHttpService::PROTOCOL_VERSION;
-
-    /** サーバー名 — 正本は McpHttpService */
-    private const SERVER_NAME = McpHttpService::SERVER_NAME;
-
-    /** サーバーバージョン — 正本は McpHttpService */
-    private const SERVER_VERSION = McpHttpService::SERVER_VERSION;
-
     private McpHttpService $mcpHttpService;
 
     public function __construct(
@@ -134,7 +125,7 @@ class McpServerService
      * 実行結果は MCP の content 配列形式（type: text）で返す。
      * エラーが発生した場合は isError フラグを立ててエラー内容を返す。
      *
-     * @param array  $request JSON-RPC リクエスト配列
+     * @param array<string, mixed>  $request JSON-RPC リクエスト配列
      * @param mixed  $id      JSON-RPC リクエスト ID
      */
     private function handleToolsCall(array $request, mixed $id): void
@@ -146,7 +137,7 @@ class McpServerService
     /**
      * JSON-RPC 正常レスポンスを STDIN に書き出す。
      *
-     * @param array $response JSON-RPC レスポンス配列
+     * @param array<string, mixed> $response JSON-RPC レスポンス配列
      */
     private function writeResponse(array $response): void
     {

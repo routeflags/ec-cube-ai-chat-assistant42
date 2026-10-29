@@ -30,7 +30,7 @@ use InvalidArgumentException;
  */
 class AiModelRegistry
 {
-    /** @var array 設定データ全体（JSON パース済み） */
+    /** @var array{version?: string, providers?: aiModelProviders} 設定データ全体（JSON パース済み） */
     private array $config;
 
     /**
@@ -121,6 +121,8 @@ class AiModelRegistry
      *
      * @throws RuntimeException ファイルが読めない場合
      * @throws InvalidArgumentException JSON の形式が不正な場合
+     *
+     * @return array{version?: string, providers?: aiModelProviders} バリデーション済みの設定データ
      */
     private static function loadAndValidateConfig(string $configPath): array
     {
@@ -158,8 +160,7 @@ class AiModelRegistry
      *
      * @param string $provider プロバイダキー（openai / anthropic / gemini）
      *
-     * @return array<int, array{id: string, name: string, description: string, supports_tools: bool,
-     *               supports_reasoning_with_tools?: bool, cost_tier: string, is_default: bool}>
+     * @return array<int, aiModel>
      */
     public function getModels(string $provider): array
     {
@@ -171,8 +172,7 @@ class AiModelRegistry
      *
      * 見つからない場合は null を返す。
      *
-     * @return array{id: string, name: string, description: string, supports_tools: bool,
-     *               supports_reasoning_with_tools?: bool, cost_tier: string, is_default: bool}|null
+     * @return aiModel|null
      */
     public function getModel(string $provider, string $modelId): ?array
     {
@@ -279,7 +279,7 @@ class AiModelRegistry
     /**
      * 設定ファイルの全データを返す。
      *
-     * @return array{version: string, providers: array}
+     * @return array{version?: string, providers?: aiModelProviders}
      */
     public function getAll(): array
     {
@@ -309,8 +309,7 @@ class AiModelRegistry
     /**
      * 全プロバイダの全モデルを平坦化して返す。
      *
-     * @return array<int, array{provider: string, id: string, name: string, description: string,
-     *               supports_tools: bool, cost_tier: string, is_default: bool}>
+     * @return array<int, aiModelWithProvider>
      */
     public function getAllModels(): array
     {
@@ -335,7 +334,7 @@ class AiModelRegistry
      * is_default フラグが true のモデルがあればそれを返し、
      * なければ先頭モデル ID を返す。
      *
-     * @param array<int, array{id: string, is_default: bool}> $models
+     * @param array<int, array{id: string, is_default?: bool}> $models
      */
     private function findDefaultModelId(array $models): string
     {
@@ -353,7 +352,7 @@ class AiModelRegistry
      * プロバイダ設定からサマリー配列を構築する。
      *
      * @param string $key      プロバイダキー
-     * @param array  $provider プロバイダ設定データ
+     * @param array{name?: string, api_base?: string, models?: array<int, array<string, mixed>>} $provider プロバイダ設定データ
      *
      * @return array{key: string, name: string, api_base: string, model_count: int}
      */

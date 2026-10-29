@@ -51,6 +51,7 @@ class ChatLog extends \Eccube\Entity\AbstractEntity
     #[ORM\Column(type: Types::TEXT)]
     private string $assistant_reply;
 
+    /** @var string[]|null 使用したツール名の配列 */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $tools_used = null;
 
@@ -189,12 +190,17 @@ class ChatLog extends \Eccube\Entity\AbstractEntity
         return $this;
     }
 
-    /** @return array|null 使用したツール名の配列 */
+    /**
+     * @return string[]|null 使用したツール名の配列
+     */
     public function getToolsUsed(): ?array
     {
         return $this->tools_used;
     }
 
+    /**
+     * @param string[]|null $toolsUsed 使用したツール名の配列
+     */
     public function setToolsUsed(?array $toolsUsed): self
     {
         $this->tools_used = $toolsUsed;
@@ -353,7 +359,7 @@ class ChatLog extends \Eccube\Entity\AbstractEntity
 
     public function setEmailRepliedAt(?\DateTimeInterface $emailRepliedAt): self
     {
-        $this->email_replied_at = $emailRepliedAt === null ? null : ($emailRepliedAt instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($emailRepliedAt) : $emailRepliedAt);
+        $this->email_replied_at = $emailRepliedAt instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($emailRepliedAt) : $emailRepliedAt;
         return $this;
     }
 
@@ -365,7 +371,7 @@ class ChatLog extends \Eccube\Entity\AbstractEntity
 
     public function setCreatedAt(\DateTimeInterface $createdAt): self
     {
-        $this->created_at = $createdAt === null ? null : ($createdAt instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($createdAt) : $createdAt);
+        $this->created_at = $createdAt instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($createdAt) : $createdAt;
         return $this;
     }
 
@@ -377,7 +383,7 @@ class ChatLog extends \Eccube\Entity\AbstractEntity
 
     public function setSyncedAt(?\DateTimeInterface $syncedAt): self
     {
-        $this->synced_at = $syncedAt === null ? null : ($syncedAt instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($syncedAt) : $syncedAt);
+        $this->synced_at = $syncedAt instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($syncedAt) : $syncedAt;
         return $this;
     }
 }

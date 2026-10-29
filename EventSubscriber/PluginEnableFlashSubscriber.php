@@ -107,9 +107,6 @@ class PluginEnableFlashSubscriber implements EventSubscriberInterface
         }
 
         $session = $request->getSession();
-        if ($session === null) {
-            return null;
-        }
 
         // @phpstan-ignore-next-line SessionInterface には getFlashBag があるが phpstan が検出できない場合がある
         return $session->getFlashBag();
@@ -161,6 +158,8 @@ class PluginEnableFlashSubscriber implements EventSubscriberInterface
      *
      * 例: "「AI チャットアシスタント」を有効にしました。" から中身を抜く。
      * 取得できなければデフォルト名を返す。
+     *
+     * @param string[] $successMessages Flash の success メッセージ一覧
      */
     private function resolvePluginName(array $successMessages): string
     {

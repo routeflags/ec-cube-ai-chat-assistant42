@@ -111,7 +111,7 @@ class DesignController extends AbstractController
     /**
      * デザイン設定を保存する。
      *
-     * @SuppressWarnings(PHPMD.StaticAccess)
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function save(Request $request): RedirectResponse
     {
@@ -125,63 +125,28 @@ class DesignController extends AbstractController
 
         // I-15/I-22: 入力バリデーション + ライセンスHTMLサニタイズ（ガイドライン §2-2）
         $existing = $this->loadDesignSettings();
+        // 既定値は「既存設定 → DEFAULTS」の順。JSON 由来の値は型が保証されないため、
+        // スカラのみ文字列化して既定値に使う（非スカラは DEFAULTS で置き換える）。
+        $default = function (string $key) use ($existing): string {
+            $value = $existing[$key] ?? self::DEFAULTS[$key] ?? '';
+
+            return is_scalar($value) ? (string) $value : (string) (self::DEFAULTS[$key] ?? '');
+        };
         $rawInput = [
-            'widget_color' => $request->request->get(
-                'widget_color',
-                $existing['widget_color'] ?? self::DEFAULTS['widget_color']
-            ),
-            'widget_size' => $request->request->get(
-                'widget_size',
-                $existing['widget_size'] ?? self::DEFAULTS['widget_size']
-            ),
-            'position' => $request->request->get(
-                'position',
-                $existing['position'] ?? self::DEFAULTS['position']
-            ),
-            'greeting_message' => $request->request->get(
-                'greeting_message',
-                $existing['greeting_message'] ?? self::DEFAULTS['greeting_message']
-            ),
-            'assistant_display_name' => $request->request->get(
-                'assistant_display_name',
-                $existing['assistant_display_name'] ?? self::DEFAULTS['assistant_display_name']
-            ),
-            'license_footer_label' => $request->request->get(
-                'license_footer_label',
-                $existing['license_footer_label'] ?? self::DEFAULTS['license_footer_label']
-            ),
-            'license_title' => $request->request->get(
-                'license_title',
-                $existing['license_title'] ?? self::DEFAULTS['license_title']
-            ),
-            'license_lead' => $request->request->get(
-                'license_lead',
-                $existing['license_lead'] ?? self::DEFAULTS['license_lead']
-            ),
-            'license_item1_heading' => $request->request->get(
-                'license_item1_heading',
-                $existing['license_item1_heading'] ?? self::DEFAULTS['license_item1_heading']
-            ),
-            'license_item1_body' => $request->request->get(
-                'license_item1_body',
-                $existing['license_item1_body'] ?? self::DEFAULTS['license_item1_body']
-            ),
-            'license_item2_heading' => $request->request->get(
-                'license_item2_heading',
-                $existing['license_item2_heading'] ?? self::DEFAULTS['license_item2_heading']
-            ),
-            'license_item2_body' => $request->request->get(
-                'license_item2_body',
-                $existing['license_item2_body'] ?? self::DEFAULTS['license_item2_body']
-            ),
-            'license_item3_heading' => $request->request->get(
-                'license_item3_heading',
-                $existing['license_item3_heading'] ?? self::DEFAULTS['license_item3_heading']
-            ),
-            'license_item3_body' => $request->request->get(
-                'license_item3_body',
-                $existing['license_item3_body'] ?? self::DEFAULTS['license_item3_body']
-            ),
+            'widget_color' => $request->request->get('widget_color', $default('widget_color')),
+            'widget_size' => $request->request->get('widget_size', $default('widget_size')),
+            'position' => $request->request->get('position', $default('position')),
+            'greeting_message' => $request->request->get('greeting_message', $default('greeting_message')),
+            'assistant_display_name' => $request->request->get('assistant_display_name', $default('assistant_display_name')),
+            'license_footer_label' => $request->request->get('license_footer_label', $default('license_footer_label')),
+            'license_title' => $request->request->get('license_title', $default('license_title')),
+            'license_lead' => $request->request->get('license_lead', $default('license_lead')),
+            'license_item1_heading' => $request->request->get('license_item1_heading', $default('license_item1_heading')),
+            'license_item1_body' => $request->request->get('license_item1_body', $default('license_item1_body')),
+            'license_item2_heading' => $request->request->get('license_item2_heading', $default('license_item2_heading')),
+            'license_item2_body' => $request->request->get('license_item2_body', $default('license_item2_body')),
+            'license_item3_heading' => $request->request->get('license_item3_heading', $default('license_item3_heading')),
+            'license_item3_body' => $request->request->get('license_item3_body', $default('license_item3_body')),
         ];
 
         // バリデーション
@@ -220,6 +185,8 @@ class DesignController extends AbstractController
      *
      * ファイルが存在しない場合はデフォルト値を返す。
      * 不正な JSON の場合はログを出力しデフォルト値にフォールバックする。
+     *
+     * @return array<string, mixed> JSON 由来のため型は保証しない
      */
     private function loadDesignSettings(): array
     {

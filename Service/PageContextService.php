@@ -168,7 +168,7 @@ class PageContextService
             if (!empty($row['stock_unlimited'])) {
                 return true;
             }
-            if (isset($row['stock']) && $row['stock'] !== null && (int) $row['stock'] > 0) {
+            if (isset($row['stock']) && (int) $row['stock'] > 0) {
                 return true;
             }
         }

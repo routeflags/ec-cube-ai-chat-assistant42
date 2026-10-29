@@ -39,11 +39,12 @@ use InvalidArgumentException;
  * フラットな配列データを返す。 Doctrine の QueryBuilder を使い、
  * 全パラメータはバインドパラメータで渡す（SQL インジェクション防止）。
  *
- * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ * @SuppressWarnings("PHPMD.CouplingBetweenObjects")
+ *
+ * @extends AbstractRepository<\Eccube\Entity\Product>
  */
 class ProductRepository extends AbstractRepository
 {
-    private EntityManagerInterface $entityManager;
     private Connection $connection;
     private TwigPlainTextExtractor $textExtractor;
     private ShopContextService $shopContextService;
@@ -57,7 +58,6 @@ class ProductRepository extends AbstractRepository
         ?LoggerInterface $logger = null
     ) {
         parent::__construct($registry, \Eccube\Entity\Product::class);
-        $this->entityManager = $entityManager;
         $this->connection = $entityManager->getConnection();
         $this->textExtractor = $textExtractor ?? new TwigPlainTextExtractor();
         $this->logger = $logger ?? new NullLogger();
@@ -80,30 +80,30 @@ class ProductRepository extends AbstractRepository
                     $this->fallbackLogger = $fallbackLogger;
                 }
 
-                public function get($id = 1)
+                public function get(mixed $id = 1): \Eccube\Entity\BaseInfo
                 {
                     // $id を検証して監査ログに残す（フォールバックでは id=1 のみが正規）
                     if ($id !== 1) {
                         $this->fallbackLogger->debug(sprintf('[AiChatAssistant44] Fallback BaseInfoRepository::get unexpected id=%s', (string) $id));
                     }
 
-                    return new class {
-                        public function getShopName()
+                    return new class extends \Eccube\Entity\BaseInfo {
+                        public function getShopName(): string
                         {
                             return '';
                         }
 
-                        public function getEmail01()
+                        public function getEmail01(): string
                         {
                             return '';
                         }
 
-                        public function getEmail02()
+                        public function getEmail02(): string
                         {
                             return '';
                         }
 
-                        public function getEmail03()
+                        public function getEmail03(): string
                         {
                             return '';
                         }
@@ -121,6 +121,9 @@ class ProductRepository extends AbstractRepository
                     $this->storedContext = new RequestContext();
                 }
 
+                /**
+                 * @param array<string, mixed> $parameters
+                 */
                 public function generate(
                     string $name,
                     array $parameters = [],
@@ -219,7 +222,7 @@ class ProductRepository extends AbstractRepository
      *
      * @param int $productId 商品 ID
      *
-     * @return array|null 商品情報（存在しない場合は null）
+     * @return array<string, mixed>|null 商品情報（存在しない場合は null）
      */
     public function getDetail(int $productId): ?array
     {
@@ -440,9 +443,9 @@ class ProductRepository extends AbstractRepository
     /**
      * Claude / OpenAI 互換のツール定義を返す。
      *
-     * @return array<int, array{type: string, name: string, description: string, input_schema: array}>
+     * @return array<int, array{type: string, name: string, description: string, input_schema: array<string, mixed>}>
      *
-     * @SuppressWarnings(PHPMD.StaticAccess)
+     * @SuppressWarnings("PHPMD.StaticAccess")
      */
     public function getToolDefinitions(): array
     {
@@ -455,9 +458,9 @@ class ProductRepository extends AbstractRepository
      * @deprecated ProductToolExecutor::execute() を使用すること。互換保持のための委譲ラッパ。
      *
      * @param string $name ツール名
-     * @param array  $args ツール引数
+     * @param array<string, mixed> $args ツール引数
      *
-     * @return array ツール実行結果
+     * @return array<string, mixed> ツール実行結果
      *
      * @throws InvalidArgumentException 未知のツール名の場合
      */
@@ -474,6 +477,8 @@ class ProductRepository extends AbstractRepository
      * 最新のお知らせを取得する。
      *
      * @deprecated News は汎用化により廃止（データソースはナレッジと商品のみ）。
+     *
+     * @return array<int, array<string, mixed>>
      */
     public function getNews(int $limit = 10): array
     {
@@ -488,6 +493,8 @@ class ProductRepository extends AbstractRepository
 
     /**
      * @deprecated Help は汎用化により廃止（データソースはナレッジと商品のみ）。
+     *
+     * @return array<int, array<string, mixed>>
      */
     public function searchHelp(string $keyword = '', int $limit = 10): array
     {
@@ -535,14 +542,6 @@ class ProductRepository extends AbstractRepository
         ];
     }
 
-    /**
-     * 記事行の slug を url に変換する共通ヘルパー。
-     *
-     * URL はヒット時に必ず追記して返答するため、絶対URL（/guide/{category}/{slug}）で返す。
-     * カテゴリが取得できない場合は /guide/{slug} にフォールバックする。
-     *
-     * @param array<int, array<string, mixed>> $rows
-     *
     // formatArticleRows / buildArticleUrl は EasyArticle 依存のため完全削除済み。
 
     /**

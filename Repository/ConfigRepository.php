@@ -25,6 +25,8 @@ use Eccube\Repository\AbstractRepository;
  * AI チャットアシスタント設定リポジトリ。
  *
  * 設定レコードは原則1行。get() で取得する。
+ *
+ * @extends AbstractRepository<Config>
  */
 class ConfigRepository extends AbstractRepository
 {
