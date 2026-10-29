@@ -87,114 +87,199 @@ class McpHttpController
             return $this->optionsResponse();
         }
 
-        // Phase1: GET /mcp は 405 で明示（SSE は Phase3 延期）
-        if ($request->getMethod() === 'GET') {
-            $response = new JsonResponse(['error' => 'Method Not Allowed. Use POST /mcp'], 405);
-            $response->headers->set('Allow', 'POST, OPTIONS');
-            $this->addCorsHeaders($response);
-            $response->headers->set('Content-Type', 'application/json; charset=utf-8');
-
-            return $response;
-        }
-
-        // POST 以外は 405（念のため）
+        // Phase1: GET /mcp は 405 で明示（SSE は Phase3 延期）、POST 以外も 405
         if ($request->getMethod() !== 'POST') {
-            $response = new JsonResponse(['error' => 'Method Not Allowed'], 405);
-            $response->headers->set('Allow', 'POST, OPTIONS');
-            $this->addCorsHeaders($response);
-
-            return $response;
+            return $this->methodNotAllowedResponse($request->getMethod() === 'GET');
         }
 
-        // 軽量 Content-Type 415: JSON 以外は 415 で拒否（MCP Inspector は JSON を送るため影響なし）
-        $contentType = (string) $request->headers->get('Content-Type', '');
-        if ($contentType !== '' && stripos($contentType, 'application/json') === false) {
-            $error = $this->mcpHttpService->writeErrorResponse(
-                null,
-                -32700,
-                'Parse error: Content-Type must be application/json'
-            );
-            $resp = $this->jsonResponseWithCors($error, 415);
-            $resp->headers->set('Content-Type', 'application/json; charset=utf-8');
-
-            return $resp;
+        $contentTypeError = $this->contentTypeErrorResponse($request);
+        if ($contentTypeError !== null) {
+            return $contentTypeError;
         }
 
-        $content = $request->getContent();
-
-        if ($content === '') {
-            $error = $this->mcpHttpService->writeErrorResponse(null, -32700, 'Parse error: empty body');
-            return $this->jsonResponseWithCors($error, 200);
+        $requestData = $this->decodeRequestBody($request->getContent());
+        if ($requestData instanceof Response) {
+            return $requestData;
         }
 
-        try {
-            $data = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException $e) {
-            $error = $this->mcpHttpService->writeErrorResponse(null, -32700, 'Parse error: ' . $e->getMessage());
-            return $this->jsonResponseWithCors($error, 200);
-        }
+        $method = $requestData['method'] ?? null;
+        $id = $requestData['id'] ?? null;
 
-        // batch リクエスト（配列）は未対応 → -32600
-        // json_decode('{}', true) は [] を返すため array_is_list だけでは空オブジェクトを batch と誤判定する。
-        // 元の JSON テキストが "[" で始まる場合のみ batch とみなす。
-        if (str_starts_with(ltrim($content), '[') && is_array($data) && array_is_list($data)) {
-            $error = $this->mcpHttpService->writeErrorResponse(null, -32600, 'Invalid Request: batch not supported');
-            return $this->jsonResponseWithCors($error, 200);
-        }
-
-        if (!is_array($data)) {
-            $error = $this->mcpHttpService->writeErrorResponse(null, -32700, 'Parse error: invalid JSON');
-            return $this->jsonResponseWithCors($error, 200);
-        }
-
-        $method = $data['method'] ?? null;
-        $id = $data['id'] ?? null;
-
-        // 軽量 jsonrpc:"2.0" 検証 — 存在し 2.0 以外なら -32600
-        if (array_key_exists('jsonrpc', $data) && $data['jsonrpc'] !== '2.0') {
-            $error = $this->mcpHttpService->writeErrorResponse($id, -32600, 'Invalid Request: jsonrpc must be "2.0"');
-            return $this->jsonResponseWithCors($error, 200);
+        $versionError = $this->jsonRpcVersionErrorResponse($requestData, $id);
+        if ($versionError !== null) {
+            return $versionError;
         }
 
         // notifications/initialized は通知（id 無し）→ 204 で応答不要
         if ($method === 'notifications/initialized') {
-            $response = new Response('', 204);
-            $this->addCorsHeaders($response);
-
-            return $response;
+            return $this->noContentResponse();
         }
 
         // TODO: Authorization ヘッダーの受け口。write 系では Bearer 検証して 401 を返す
         // （現行は read-only のためヘッダーは参照しない）
 
-        // レート制限 — toolName で分岐（get_stock は 60、他は 120）
-        $toolName = 'default';
-        if ($method === 'tools/call' && isset($data['params']['name']) && is_string($data['params']['name'])) {
-            $toolName = $data['params']['name'];
-        } elseif ($method === 'initialize' || $method === 'tools/list') {
-            $toolName = 'default';
-        }
-
         $ip = $request->getClientIp() ?? 'unknown';
         try {
-            $this->rateLimitService->enforce($ip, $toolName);
+            $this->rateLimitService->enforce($ip, $this->resolveRateLimitTool($method, $requestData));
         } catch (RateLimitExceededException $e) {
             return $this->rateLimitResponse($id, $e);
         }
 
+        $result = $this->dispatchJsonRpc($method, $requestData, $id, $ip);
+
+        return $this->jsonResponseWithCors($result, 200);
+    }
+
+    /**
+     * POST 以外（GET は明示的に 405）のレスポンスを返す。
+     */
+    private function methodNotAllowedResponse(bool $isGet): Response
+    {
+        $message = $isGet ? 'Method Not Allowed. Use POST /mcp' : 'Method Not Allowed';
+        $response = new JsonResponse(['error' => $message], 405);
+        $response->headers->set('Allow', 'POST, OPTIONS');
+        $this->addCorsHeaders($response);
+
+        if ($isGet) {
+            $response->headers->set('Content-Type', 'application/json; charset=utf-8');
+        }
+
+        return $response;
+    }
+
+    /**
+     * Content-Type が JSON 以外なら 415 を返す（軽量チェック）。
+     *
+     * MCP Inspector は JSON を送るため影響なし。空ヘッダーは許容する。
+     */
+    private function contentTypeErrorResponse(Request $request): ?Response
+    {
+        $contentType = (string) $request->headers->get('Content-Type', '');
+        if ($contentType === '' || stripos($contentType, 'application/json') !== false) {
+            return null;
+        }
+
+        $error = $this->mcpHttpService->writeErrorResponse(
+            null,
+            -32700,
+            'Parse error: Content-Type must be application/json'
+        );
+        $response = $this->jsonResponseWithCors($error, 415);
+        $response->headers->set('Content-Type', 'application/json; charset=utf-8');
+
+        return $response;
+    }
+
+    /**
+     * リクエストボディを JSON-RPC オブジェクトとして復号する。
+     *
+     * 失敗時は JSON-RPC エラーレスポンスを返す（batch は未対応）。
+     *
+     * @return array<string, mixed>|Response 復号結果、またはエラーレスポンス
+     */
+    private function decodeRequestBody(string $content): array|Response
+    {
+        if ($content === '') {
+            return $this->jsonResponseWithCors(
+                $this->mcpHttpService->writeErrorResponse(null, -32700, 'Parse error: empty body'),
+                200
+            );
+        }
+
         try {
-            $result = match ($method) {
+            $decoded = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            return $this->jsonResponseWithCors(
+                $this->mcpHttpService->writeErrorResponse(null, -32700, 'Parse error: ' . $e->getMessage()),
+                200
+            );
+        }
+
+        // batch リクエスト（配列）は未対応 → -32600
+        // json_decode('{}', true) は [] を返すため array_is_list だけでは空オブジェクトを batch と誤判定する。
+        // 元の JSON テキストが "[" で始まる場合のみ batch とみなす。
+        if (is_array($decoded) && str_starts_with(ltrim($content), '[') && array_is_list($decoded)) {
+            return $this->jsonResponseWithCors(
+                $this->mcpHttpService->writeErrorResponse(null, -32600, 'Invalid Request: batch not supported'),
+                200
+            );
+        }
+
+        if (!is_array($decoded)) {
+            return $this->jsonResponseWithCors(
+                $this->mcpHttpService->writeErrorResponse(null, -32700, 'Parse error: invalid JSON'),
+                200
+            );
+        }
+
+        /** @var array<string, mixed> $decoded */
+        return $decoded;
+    }
+
+    /**
+     * jsonrpc バージョンが 2.0 以外なら -32600 を返す（存在しない場合は許容）。
+     *
+     * @param array<string, mixed> $requestData
+     */
+    private function jsonRpcVersionErrorResponse(array $requestData, mixed $id): ?Response
+    {
+        if (!array_key_exists('jsonrpc', $requestData) || $requestData['jsonrpc'] === '2.0') {
+            return null;
+        }
+
+        return $this->jsonResponseWithCors(
+            $this->mcpHttpService->writeErrorResponse($id, -32600, 'Invalid Request: jsonrpc must be "2.0"'),
+            200
+        );
+    }
+
+    /**
+     * 通知（id 無し）に対する 204 応答を返す。
+     */
+    private function noContentResponse(): Response
+    {
+        $response = new Response('', 204);
+        $this->addCorsHeaders($response);
+
+        return $response;
+    }
+
+    /**
+     * レート制限のバケット名（ツール名）を決める。
+     *
+     * @param array<string, mixed> $requestData
+     */
+    private function resolveRateLimitTool(mixed $method, array $requestData): string
+    {
+        $isToolCall = $method === 'tools/call';
+        $toolName = $requestData['params']['name'] ?? null;
+        if ($isToolCall && is_string($toolName)) {
+            return $toolName;
+        }
+
+        return 'default';
+    }
+
+    /**
+     * JSON-RPC メソッドを実行し、レスポンス配列を返す。
+     *
+     * @param array<string, mixed> $requestData
+     *
+     * @return array<string, mixed>
+     */
+    private function dispatchJsonRpc(mixed $method, array $requestData, mixed $id, string $ip): array
+    {
+        try {
+            return match ($method) {
                 'initialize' => $this->mcpHttpService->handleInitialize($id),
                 'tools/list' => $this->mcpHttpService->handleToolsList($id),
-                'tools/call' => $this->mcpHttpService->handleToolsCall($data, $id, $ip),
+                'tools/call' => $this->mcpHttpService->handleToolsCall($requestData, $id, $ip),
                 null => $this->mcpHttpService->writeErrorResponse($id, -32600, 'Invalid Request: method is required'),
                 default => $this->mcpHttpService->writeErrorResponse($id, -32601, "Method not found: {$method}"),
             };
         } catch (\Throwable $e) {
-            $result = $this->mcpHttpService->writeErrorResponse($id, -32603, 'Internal error: ' . $e->getMessage());
+            return $this->mcpHttpService->writeErrorResponse($id, -32603, 'Internal error: ' . $e->getMessage());
         }
-
-        return $this->jsonResponseWithCors($result, 200);
     }
 
     /**
