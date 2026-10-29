@@ -70,7 +70,8 @@ abstract class AbstractPluginDataSyncService
         }
 
         try {
-            // 二重チェック: ロック取得後に再判定
+            // 二重チェック: ロック待ちの間に別プロセスが同期している可能性があるため再判定する
+            // @phpstan-ignore-next-line
             if (!$this->isStale()) {
                 return false;
             }
@@ -210,6 +211,9 @@ abstract class AbstractPluginDataSyncService
         return $this->validateResponseData($response);
     }
 
+    /**
+     * @param array<string, mixed> $meta メタ情報（last_modified 等）
+     */
     private function isNotModifiedResponse(int $status, array $meta): bool
     {
         if ($status !== 304) {

@@ -28,7 +28,7 @@ use Symfony\Component\Mime\Email;
  * トリガーイベントが発生した際、有効な通知ルールを取得し、
  * 設定されたチャネル経由で通知を送信する。
  *
- * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ * @SuppressWarnings("PHPMD.ExcessiveClassComplexity")
  */
 class NotificationService
 {
@@ -44,7 +44,7 @@ class NotificationService
      * イベント発生時に通知ルールを確認し、必要に応じて通知を送信する。
      *
      * @param string $event   トリガーイベント識別子 (例: error_threshold, unresolved, low_satisfaction)
-     * @param array  $context 通知に含めるコンテキスト情報
+     * @param array<string, mixed>  $context 通知に含めるコンテキスト情報
      */
     public function checkAndSend(string $event, array $context = []): void
     {
@@ -84,8 +84,8 @@ class NotificationService
      *
      * @param string $type    通知チャネル (email / webhook / line)
      * @param string $event   トリガーイベント
-     * @param array  $config  通知設定 (宛先 URL, ヘッダー, メッセージテンプレート等)
-     * @param array  $context 通知コンテキスト
+     * @param array<string, mixed>  $config  通知設定 (宛先 URL, ヘッダー, メッセージテンプレート等)
+     * @param array<string, mixed>  $context 通知コンテキスト
      */
     private function sendNotification(string $type, string $event, array $config, array $context): void
     {
@@ -102,6 +102,9 @@ class NotificationService
      *
      * GuzzleHttp を使用して JSON ペイロードを POST する。
      * ネットワークエラーが発生した場合はログに記録し、処理を続行する。
+     *
+     * @param array<string, mixed> $config 通知設定
+     * @param array<string, mixed> $context 通知コンテキスト
      */
     private function sendWebhook(string $event, array $config, array $context): void
     {
@@ -167,6 +170,9 @@ class NotificationService
      *
      * Symfony Mailer が利用可能な場合はそちらを使用し、
      * 利用不可の場合はログに記録する。
+     *
+     * @param array<string, mixed> $config 通知設定
+     * @param array<string, mixed> $context 通知コンテキスト
      */
     private function sendEmail(string $event, array $config, array $context): void
     {
@@ -196,6 +202,8 @@ class NotificationService
 
     /**
      * Symfony Mailer を使ってメールを送信する。
+     *
+     * @param array<string, mixed> $context 通知コンテキスト
      */
     private function sendEmailWithMailer(string $to, string $subject, string $event, array $context): void
     {
@@ -254,6 +262,9 @@ class NotificationService
      * LINE 経由で通知を送信する。
      *
      * LINE Messaging API の HTTP API を使用して送信する。
+     *
+     * @param array<string, mixed> $config 通知設定
+     * @param array<string, mixed> $context 通知コンテキスト
      */
     private function sendLine(string $event, array $config, array $context): void
     {
@@ -320,7 +331,7 @@ class NotificationService
      * decryptIfNeeded() で復号する（値が個別に暗号化されているケースにも対応）。
      * 配列で保存されているレガシーデータも考慮する。空/未設定なら空配列を返す。
      *
-     * @param array $config 通知設定
+     * @param array<string, mixed> $config 通知設定
      *
      * @return array<string, string>
      */
@@ -429,6 +440,9 @@ class NotificationService
         return true;
     }
 
+    /**
+     * @param array<string, mixed> $parsed parse_url() の結果
+     */
     private function isHttpsUrl(array $parsed): bool
     {
         return ($parsed['scheme'] ?? '') === 'https';

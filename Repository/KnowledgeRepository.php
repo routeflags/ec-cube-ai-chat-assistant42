@@ -15,6 +15,7 @@ declare(strict_types=1);
 
 namespace Plugin\AiChatAssistant42\Repository;
 
+use Eccube\Entity\AbstractEntity;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -25,6 +26,8 @@ use Eccube\Repository\AbstractRepository;
  * ナレッジベースリポジトリ。
  *
  * AI チャットが参照する FAQ・商品知識を管理する。
+ *
+ * @extends AbstractRepository<Knowledge>
  */
 class KnowledgeRepository extends AbstractRepository
 {
@@ -36,11 +39,9 @@ class KnowledgeRepository extends AbstractRepository
     }
 
     /**
-     * 全件を display_order → id の順で取得する。
-     */
-
-    /**
      * 有効なナレッジを表示順に取得する。
+     *
+     * @return Knowledge[]
      */
     public function findAllActive(): array
     {
@@ -55,6 +56,8 @@ class KnowledgeRepository extends AbstractRepository
 
     /**
      * カテゴリでフィルタして取得する。
+     *
+     * @return Knowledge[]
      */
     public function findByCategory(string $category): array
     {
@@ -73,6 +76,8 @@ class KnowledgeRepository extends AbstractRepository
      *
      * orX() でタイトル/本文の OR 条件を group 化し、
      * is_active フィルタが正しく適用されるようにする。
+     *
+     * @return Knowledge[]
      */
     public function search(string $keyword): array
     {
@@ -105,7 +110,7 @@ class KnowledgeRepository extends AbstractRepository
     /**
      * ナレッジを永続化する。
      */
-    public function save($entity)
+    public function save(AbstractEntity $entity): void
     {
         $this->entityManager->persist($entity);
         $this->entityManager->flush();

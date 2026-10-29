@@ -51,6 +51,11 @@ class ProductToolExecutor
         };
     }
 
+    /**
+     * @param array<string, mixed> $args ツール引数
+     *
+     * @return array<mixed> ツール実行結果
+     */
     private function executeSearchProducts(array $args): array
     {
         return $this->productRepository->search(
@@ -61,16 +66,31 @@ class ProductToolExecutor
         );
     }
 
+    /**
+     * @param array<string, mixed> $args ツール引数
+     *
+     * @return array<mixed> ツール実行結果
+     */
     private function executeGetProductDetail(array $args): array
     {
         return $this->productRepository->getDetail((int) $args['product_id']) ?? ['error' => 'Product not found'];
     }
 
+    /**
+     * @param array<string, mixed> $args ツール引数
+     *
+     * @return array<mixed> ツール実行結果
+     */
     private function executeGetStock(array $args): array
     {
         return $this->productRepository->getStock((int) $args['product_id']);
     }
 
+    /**
+     * @param array<string, mixed> $args ツール引数
+     *
+     * @return array<mixed> ツール実行結果
+     */
     private function executeGetCategories(array $args): array
     {
         return $this->productRepository->getCategories(
@@ -78,6 +98,11 @@ class ProductToolExecutor
         );
     }
 
+    /**
+     * @param array<string, mixed> $args ツール引数
+     *
+     * @return array<mixed> ツール実行結果
+     */
     private function executeGetCategoryProducts(array $args): array
     {
         return $this->productRepository->getCategoryProducts(
@@ -87,11 +112,19 @@ class ProductToolExecutor
         );
     }
 
+    /**
+     * @return array<mixed> ツール実行結果
+     */
     private function executeGetTags(): array
     {
         return $this->productRepository->getTags();
     }
 
+    /**
+     * @param array<string, mixed> $args ツール引数
+     *
+     * @return array<mixed> ツール実行結果
+     */
     private function executeSearchByTag(array $args): array
     {
         if (!isset($args['tag_id'])) {

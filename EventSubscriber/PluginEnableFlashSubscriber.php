@@ -106,9 +106,6 @@ class PluginEnableFlashSubscriber implements EventSubscriberInterface
         }
 
         $session = $request->getSession();
-        if ($session === null) {
-            return null;
-        }
 
         // @phpstan-ignore-next-line SessionInterface には getFlashBag があるが phpstan が検出できない場合がある
         return $session->getFlashBag();
@@ -160,6 +157,8 @@ class PluginEnableFlashSubscriber implements EventSubscriberInterface
      *
      * 例: "「AI チャットアシスタント」を有効にしました。" から中身を抜く。
      * 取得できなければデフォルト名を返す。
+     *
+     * @param string[] $successMessages Flash の success メッセージ一覧
      */
     private function resolvePluginName(array $successMessages): string
     {
@@ -181,6 +180,8 @@ class PluginEnableFlashSubscriber implements EventSubscriberInterface
      */
     private function isMainRequest(ResponseEvent $event): bool
     {
+        // EC-CUBE 4.2 (Symfony 5.4) には isMainRequest が無いため、実行時分岐は維持する
+        // @phpstan-ignore-next-line function.alreadyNarrowedType
         if (method_exists($event, 'isMainRequest')) {
             return $event->isMainRequest();
         }

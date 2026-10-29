@@ -30,9 +30,9 @@ interface AiAgentInterface
      * 実装側でループ処理を行い、最終的なテキスト応答を返す。
      *
      * @param string   $message      ユーザー入力メッセージ
-     * @param array    $tools        ツール定義配列（MCP 形式）
-     * @param callable $toolExecutor ツール実行クロージャ fn(string $name, array $args): array
-     * @param array    $history      過去の会話履歴 [{role: 'user'|'assistant', content: string}, ...]
+     * @param array<int, array{type: string, name: string, description: string, input_schema: array<string, mixed>}> $tools ツール定義配列（MCP 形式）
+     * @param callable $toolExecutor ツール実行クロージャ fn(string $name, array<string, mixed> $args): array
+     * @param array<int, array{role: string, content: string}> $history 過去の会話履歴
      *
      * @return array{reply: string, tools_used: string[], token_input: int|null, token_output: int|null}
      */

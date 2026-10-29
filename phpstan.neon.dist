@@ -1,9 +1,20 @@
 parameters:
-    level: 5
+    level: 8
 
     # 最小サポート 8.1 に合わせる（composer.json: php >=8.1）
     phpVersion: 80100
     treatPhpDocTypesAsCertain: false
+
+    # 複数ファイルで共有する配列形状の別名（PHPDoc の重複定義を避ける）
+    typeAliases:
+        # ai_models.json の 1 モデル定義（未設定キーは既定値で補完されるため optional）
+        aiModel: 'array{id: string, name?: string, description?: string, supports_tools?: bool, supports_reasoning_with_tools?: bool, cost_tier?: string, is_default?: bool}'
+        # ai_models.json の 1 モデル定義 + 所属プロバイダ（getAllModels の戻り値）
+        aiModelWithProvider: 'array{provider: string, id: string, name?: string, description?: string, supports_tools?: bool, supports_reasoning_with_tools?: bool, cost_tier?: string, is_default?: bool}'
+        # ai_models.json の providers（AiModelRegistry が読み込む形式）
+        aiModelProviders: 'array<string, array{name?: string, api_base?: string, models?: array<int, aiModel>}>'
+        # チャット履歴の検索フィルタ（ChatHistoryController::extractFilters の戻り値）
+        chatHistoryFilters: 'array{date_from: string, date_to: string, provider: string, model: string, status: string}'
 
     paths:
         - Command
@@ -26,63 +37,12 @@ parameters:
         - Documents/*
         - DoctrineMigrations/*
 
-    reportUnmatchedIgnoredErrors: false
-
     ignoreErrors:
-        # EC-CUBE 本体不在で static 解析できない Repository/Tool dispatch
-        - '#Call to an undefined method Plugin\\AiChatAssistant42\\Repository.*#'
-        - '#Method Plugin\\AiChatAssistant42\\Repository\\ProductRepository::execute.* is unused#'
+        # EC-CUBE 本体とスタブが揃っていないため解決できない呼び出し（スタブ拡充で順次削減する）
         - '#Call to an undefined (method|static method) (Eccube|Doctrine)\\.*#'
-        - '#Access to an undefined property.*#'
 
         # Entity $id は Doctrine がリフレクションで代入するため誤検出
         - '#Property Plugin\\AiChatAssistant42\\Entity\\.*::\$id .* is never assigned#'
-        - '#Property Plugin\\AiChatAssistant42\\Repository\\ProductRepository::\$entityManager is never read#'
-
-        # 動的ディスパッチ / by-ref は誤検出が多いため許容（将来厳格化）
-        - '#Parameter .* by-ref type.*#'
-        - '#Constant .* is unused#'
-        - '#Property .* is never read.*#'
-        - '#Method .* is unused#'
-        - '#Unreachable statement.*#'
-        - '#will always evaluate to.*#'
-        - '#PHPDoc tag @param references unknown parameter.*#'
-        - '#should return .* but returns.*#'
-        - '#Negated boolean expression is always false#'
-        - '#Offset .* does not exist on array.*#'
-        - '#Cannot unset offset.*#'
-        - '#If condition is always true#'
-        -
-            message: '#PHPDoc tag @SuppressWarnings has invalid value#'
-            paths:
-                - Controller/*
-                - Repository/*
-                - Service/*
-                - EventSubscriber/*
-
-        # EC-CUBE / Plugin Entity の動的プロパティ（将来 EC-CUBE スタブ導入後に再有効化）
-        -
-            message: '#Dynamic property on (Eccube\\Entity\\|Plugin\\).* is not supported in PHP 8\.2#'
-            paths:
-                - Entity/*
-
-        # Doctrine Proxy / Entity
-        -
-            message: '#class .* is not final#'
-            paths:
-                - Entity/*
-
-        # Twig 関連は暫定
-        -
-            message: '#Function twig_.* not found#'
-            paths:
-                - Twig/*
-
-        -
-            message: '#Call to an undefined method Twig\\.*#'
-            paths:
-                - Twig/*
-
-        # EventSubscriber の Symfony 互換フォールバック（isMasterRequest は 5.4 で deprecated だが存在）
-        - '#Call to an undefined method Symfony\\Component\\HttpFoundation\\Session\\SessionInterface::getFlashBag#'
-        - '#Call to an undefined method Symfony\\Component\\HttpKernel\\Event\\ResponseEvent::isMasterRequest#'
+        # DBAL の fetchAllAssociative() は array<string, mixed> を返すため、行を組み立て直す
+        # メソッドでは型が絞れない（返却形状は Tests/Matrix の DB 実走で検証している）
+        - '#should return array<int, array\{.+\}> but returns (?:array<int,\s*|list<)array<string, mixed>>#'

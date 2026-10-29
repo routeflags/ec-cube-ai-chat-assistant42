@@ -15,6 +15,7 @@ declare(strict_types=1);
 
 namespace Plugin\AiChatAssistant42\Repository;
 
+use Eccube\Entity\AbstractEntity;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Plugin\AiChatAssistant42\Entity\Config;
@@ -24,6 +25,8 @@ use Eccube\Repository\AbstractRepository;
  * AI チャットアシスタント設定リポジトリ。
  *
  * 設定レコードは原則1行。get() で取得する。
+ *
+ * @extends AbstractRepository<Config>
  */
 class ConfigRepository extends AbstractRepository
 {
@@ -50,7 +53,7 @@ class ConfigRepository extends AbstractRepository
     /**
      * 設定を永続化する。
      */
-    public function save($entity)
+    public function save(AbstractEntity $entity): void
     {
         $this->entityManager->persist($entity);
         $this->entityManager->flush();

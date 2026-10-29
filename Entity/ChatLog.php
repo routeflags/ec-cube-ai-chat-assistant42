@@ -66,6 +66,8 @@ class ChatLog extends \Eccube\Entity\AbstractEntity
     private string $assistant_reply;
 
     /**
+     * @var string[]|null 使用したツール名の配列
+     *
      * @ORM\Column(type="json", nullable=true)
      */
     private ?array $tools_used = null;
@@ -232,12 +234,17 @@ class ChatLog extends \Eccube\Entity\AbstractEntity
         return $this;
     }
 
-    /** @return array|null 使用したツール名の配列 */
+    /**
+     * @return string[]|null 使用したツール名の配列
+     */
     public function getToolsUsed(): ?array
     {
         return $this->tools_used;
     }
 
+    /**
+     * @param string[]|null $toolsUsed 使用したツール名の配列
+     */
     public function setToolsUsed(?array $toolsUsed): self
     {
         $this->tools_used = $toolsUsed;

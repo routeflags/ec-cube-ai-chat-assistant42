@@ -15,7 +15,6 @@ declare(strict_types=1);
 
 namespace Plugin\AiChatAssistant42\Controller;
 
-use Plugin\AiChatAssistant42\Repository\ProductRepository;
 use Plugin\AiChatAssistant42\Service\McpHttpService;
 use Plugin\AiChatAssistant42\Service\RateLimitExceededException;
 use Plugin\AiChatAssistant42\Service\RateLimitService;
@@ -34,7 +33,6 @@ use Symfony\Component\HttpFoundation\Response;
 class McpHttpController
 {
     public function __construct(
-        private ProductRepository $productRepository,
         private McpHttpService $mcpHttpService,
         private RateLimitService $rateLimitService,
         private ?ShopContextService $shopContextService = null,
@@ -108,7 +106,7 @@ class McpHttpController
         }
 
         // 軽量 Content-Type 415: JSON 以外は 415 で拒否（MCP Inspector は JSON を送るため影響なし）
-        $contentType = $request->headers->get('Content-Type', '');
+        $contentType = (string) $request->headers->get('Content-Type', '');
         if ($contentType !== '' && stripos($contentType, 'application/json') === false) {
             $error = $this->mcpHttpService->writeErrorResponse(null, -32700, 'Parse error: Content-Type must be application/json');
             $resp = $this->jsonResponseWithCors($error, 415);
@@ -196,6 +194,9 @@ class McpHttpController
         return $this->jsonResponseWithCors($result, 200);
     }
 
+    /**
+     * @param array<string, mixed> $data JSON レスポンス本文
+     */
     private function jsonResponseWithCors(array $data, int $status): JsonResponse
     {
         $response = new JsonResponse($data, $status, [], false);

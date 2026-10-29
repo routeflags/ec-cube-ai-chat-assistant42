@@ -56,7 +56,7 @@ class McpHttpService
      *
      * @param mixed $id JSON-RPC リクエスト ID
      *
-     * @return array{jsonrpc: string, id: mixed, result: array}
+     * @return array{jsonrpc: string, id: mixed, result: array<string, mixed>}
      */
     public function handleInitialize(mixed $id): array
     {
@@ -81,7 +81,7 @@ class McpHttpService
      *
      * @param mixed $id JSON-RPC リクエスト ID
      *
-     * @return array{jsonrpc: string, id: mixed, result: array}
+     * @return array{jsonrpc: string, id: mixed, result: array<string, mixed>}
      */
     public function handleToolsList(mixed $id): array
     {
@@ -108,11 +108,11 @@ class McpHttpService
      *
      * 監査ログを記録する（失敗しても本処理に影響させない）。
      *
-     * @param array       $request   JSON-RPC リクエスト配列
+     * @param array<string, mixed>       $request   JSON-RPC リクエスト配列
      * @param mixed       $id        JSON-RPC リクエスト ID
      * @param string|null $clientIp  呼び出し元IP（ハッシュ化して記録、null可）
      *
-     * @return array{jsonrpc: string, id: mixed, result: array}
+     * @return array{jsonrpc: string, id: mixed, result: array<string, mixed>}
      */
     public function handleToolsCall(array $request, mixed $id, ?string $clientIp = null): array
     {
@@ -183,7 +183,7 @@ class McpHttpService
      * @param int    $code    JSON-RPC エラーコード
      * @param string $message エラーメッセージ
      *
-     * @return array{jsonrpc: string, id: mixed, error: array}
+     * @return array{jsonrpc: string, id: mixed, error: array<string, mixed>}
      */
     public function writeErrorResponse(mixed $id, int $code, string $message): array
     {
@@ -211,7 +211,7 @@ class McpHttpService
             return 'Internal error';
         }
 
-        $clean = preg_replace('/[\x00-\x1F\x7F]/u', '', $message);
+        $clean = preg_replace('/[\x00-\x1F\x7F]/u', '', $message) ?? '';
 
         return mb_substr($clean, 0, 200);
     }
@@ -280,7 +280,7 @@ class McpHttpService
     /**
      * MCP ツール定義をそのまま返す（wellKnown 用の委譲ヘルパ）。
      *
-     * @return array<int, array>
+     * @return array<int, array<string, mixed>>
      */
     public function getToolDefinitions(): array
     {

@@ -52,6 +52,8 @@ class Notification extends \Eccube\Entity\AbstractEntity
     /**
      * 通知設定の JSON (宛先 URL, ヘッダー, メッセージテンプレート等)。
      *
+     * @var array<string, mixed>|null
+     *
      * @ORM\Column(type="json", nullable=true)
      */
     private ?array $config_json = null;
@@ -100,11 +102,17 @@ class Notification extends \Eccube\Entity\AbstractEntity
         return $this;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     public function getConfigJson(): ?array
     {
         return $this->config_json;
     }
 
+    /**
+     * @param array<string, mixed>|null $configJson
+     */
     public function setConfigJson(?array $configJson): self
     {
         $this->config_json = $configJson;

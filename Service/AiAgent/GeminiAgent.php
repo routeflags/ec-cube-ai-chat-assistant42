@@ -62,6 +62,11 @@ class GeminiAgent implements AiAgentInterface
 
     /**
      * {@inheritdoc}
+     *
+     * @param array<int, array{type: string, name: string, description: string, input_schema: array<string, mixed>}> $tools
+     * @param array<int, array{role: string, content: string}> $history
+     *
+     * @return array{reply: string, tools_used: string[], token_input: int, token_output: int}
      */
     public function chat(
         string $message,
@@ -160,6 +165,8 @@ class GeminiAgent implements AiAgentInterface
 
     /**
      * トークン使用量を累積する。
+     *
+     * @param array<string, mixed> $response
      */
     private function accumulateTokenUsage(
         array $response,
@@ -167,12 +174,15 @@ class GeminiAgent implements AiAgentInterface
         int &$totalOutputTokens
     ): void {
         $usageMetadata = $response['usageMetadata'] ?? [];
-        $totalInputTokens += $usageMetadata['promptTokenCount'] ?? 0;
-        $totalOutputTokens += $usageMetadata['candidatesTokenCount'] ?? 0;
+        $totalInputTokens += (int) ($usageMetadata['promptTokenCount'] ?? 0);
+        $totalOutputTokens += (int) ($usageMetadata['candidatesTokenCount'] ?? 0);
     }
 
     /**
      * レスポンスが最終応答（ツール呼び出しがない）かどうかを判定する。
+     *
+     * @param array<string, mixed> $candidate
+     * @param array<int, array<string, mixed>> $functionCalls
      */
     private function isTerminalResponse(array $candidate, array $functionCalls): bool
     {
@@ -191,7 +201,7 @@ class GeminiAgent implements AiAgentInterface
      *
      * @param array<int, array{name: string, args: mixed}> $functionCalls
      * @param callable $toolExecutor
-     * @param array    $toolsUsed   使用したツール名のリスト（参照渡しで追加）
+     * @param string[] $toolsUsed   使用したツール名のリスト（参照渡しで追加）
      *
      * @return array<int, array{functionResponse: array{name: string, response: array{result: mixed}}}>
      */
@@ -221,6 +231,10 @@ class GeminiAgent implements AiAgentInterface
 
     /**
      * 統一されたチャット結果配列を構築する。
+     *
+     * @param string[] $toolsUsed
+     *
+     * @return array{reply: string, tools_used: string[], token_input: int, token_output: int}
      */
     private function buildResult(
         string $reply,
@@ -238,6 +252,8 @@ class GeminiAgent implements AiAgentInterface
 
     /**
      * 初期 contents 配列を構築する。
+     *
+     * @param array<int, array{role: string, content: string}> $history
      *
      * @return array<int, array{role: string, parts: array<int, array{text: string}>}>
      */
@@ -284,9 +300,9 @@ class GeminiAgent implements AiAgentInterface
      * - properties: [] → new stdClass()  ({} でエンコードするため)
      * - functionDeclaration 二重ラップ解消（Gemini 形式が既にラップされている場合に剥がす）
      *
-     * @param array<int, array{name: string, description: string, inputSchema: array}> $mcpTools
+     * @param array<int, array<string, mixed>> $mcpTools inputSchema / input_schema / parameters のいずれかを含むツール定義
      *
-     * @return array<int, array{name: string, description: string, parameters: array}>
+     * @return array<int, array{name: string, description: string, parameters: array<string, mixed>|object}>
      */
     private function convertToolsToGeminiFormat(array $mcpTools): array
     {
@@ -324,8 +340,8 @@ class GeminiAgent implements AiAgentInterface
     /**
      * Gemini API リクエストペイロードを構築する。
      *
-     * @param array<int, array{role: string, parts: array}> $contents
-     * @param array<int, array{name: string, description: string, parameters: array}> $tools
+     * @param array<int, array{role: string, parts: array<int, array<string, mixed>>}> $contents
+     * @param array<int, array{name: string, description: string, parameters: array<string, mixed>|object}> $tools
      *
      * @return array<string, mixed>
      */
@@ -361,7 +377,7 @@ class GeminiAgent implements AiAgentInterface
      *
      * @param array<int, array<string, mixed>> $contentParts
      *
-     * @return array<int, array{name: string, args: array}>
+     * @return array<int, array{name: string, args: array<string, mixed>}>
      */
     private function extractFunctionCalls(array $contentParts): array
     {
@@ -423,6 +439,11 @@ class GeminiAgent implements AiAgentInterface
         return $redacted !== null ? $redacted : $message;
     }
 
+    /**
+     * @param array<string, mixed> $payload
+     *
+     * @return array<string, mixed> API レスポンス（JSON パース済み）
+     */
     private function sendRequest(array $payload): array
     {
         try {

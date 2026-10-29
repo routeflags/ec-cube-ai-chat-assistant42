@@ -26,6 +26,8 @@ use DateTimeImmutable;
  *
  * 引数・応答内容は記録しない。tool名・結果区分・所要時間・
  * エラーコード・IPハッシュのみ。
+ *
+ * @extends AbstractRepository<McpAudit>
  */
 class McpAuditRepository extends AbstractRepository
 {

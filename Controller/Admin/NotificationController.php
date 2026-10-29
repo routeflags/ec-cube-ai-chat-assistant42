@@ -75,8 +75,8 @@ class NotificationController extends AbstractController
         }
 
         $notification = new Notification();
-        $notification->setNotificationType($request->request->get('notification_type', 'email'));
-        $notification->setTriggerEvent($request->request->get('trigger_event', 'error_threshold'));
+        $notification->setNotificationType((string) $request->request->get('notification_type', 'email'));
+        $notification->setTriggerEvent((string) $request->request->get('trigger_event', 'error_threshold'));
         $notification->setConfigJson($this->buildConfigJson($request));
         $notification->setIsActive(1);
         $notification->setCreateDate(new DateTimeImmutable());
@@ -108,8 +108,8 @@ class NotificationController extends AbstractController
             return $this->redirectToRoute('admin_ai_chat_assistant_notification_index');
         }
 
-        $notification->setNotificationType($request->request->get('notification_type', $notification->getNotificationType()));
-        $notification->setTriggerEvent($request->request->get('trigger_event', $notification->getTriggerEvent()));
+        $notification->setNotificationType((string) $request->request->get('notification_type', $notification->getNotificationType()));
+        $notification->setTriggerEvent((string) $request->request->get('trigger_event', $notification->getTriggerEvent()));
         $notification->setConfigJson($this->buildConfigJson($request));
         $notification->setIsActive((int) $request->request->get('is_active', $notification->getIsActive()));
         $notification->setUpdateDate(new DateTimeImmutable());
@@ -155,6 +155,8 @@ class NotificationController extends AbstractController
 
     /**
      * リクエストから通知設定 JSON を構築する。
+     *
+     * @return array<string, mixed> 通知設定（宛先 URL・ヘッダー・テンプレート等）
      */
     private function buildConfigJson(Request $request): array
     {
@@ -167,10 +169,10 @@ class NotificationController extends AbstractController
             ],
             'webhook' => [
                 'url' => $request->request->get('webhook_url', ''),
-                'headers' => $this->encryptIfNeeded($request->request->get('webhook_headers', '')),
+                'headers' => $this->encryptIfNeeded((string) $request->request->get('webhook_headers', '')),
             ],
             'line' => [
-                'channel_access_token' => $this->encryptIfNeeded($request->request->get('line_channel_access_token', '')),
+                'channel_access_token' => $this->encryptIfNeeded((string) $request->request->get('line_channel_access_token', '')),
                 'user_id' => $request->request->get('line_user_id', ''),
             ],
             default => [],

@@ -71,7 +71,7 @@ class RateLimitService
         // PSR-6 キーは ":" を含められないため "." に置換。IP の ":" "." "/" は "_" にサニタイズ。
         $sanitizedIp = str_replace([':', '.', '/'], '_', $ip);
         $raw = sprintf('mcp.ratelimit.%s.%s.%s', $sanitizedIp, $normalizedTool, $minute);
-        $key = preg_replace('/[^A-Za-z0-9_.]/', '_', $raw);
+        $key = preg_replace('/[^A-Za-z0-9_.]/', '_', $raw) ?? $raw;
 
         $item = $this->cache->getItem($key);
         $count = $item->isHit() ? (int) $item->get() : 0;

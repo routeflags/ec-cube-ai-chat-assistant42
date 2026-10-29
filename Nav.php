@@ -19,7 +19,10 @@ use Eccube\Common\EccubeNav;
 
 class Nav implements EccubeNav
 {
-    public static function getNav()
+    /**
+     * @return array<string, mixed> 管理画面ナビの定義
+     */
+    public static function getNav(): array
     {
         return [
             'setting' => [

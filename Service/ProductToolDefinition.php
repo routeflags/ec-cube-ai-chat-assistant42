@@ -25,7 +25,7 @@ namespace Plugin\AiChatAssistant42\Service;
 final class ProductToolDefinition
 {
     /**
-     * @var array<int, array{type: string, name: string, description: string, input_schema: array}>
+     * @var array<int, array{type: string, name: string, description: string, input_schema: array<string, mixed>}>
      */
     private const DEFINITIONS = [
         [
@@ -128,7 +128,7 @@ final class ProductToolDefinition
     }
 
     /**
-     * @return array<int, array{type: string, name: string, description: string, input_schema: array}>
+     * @return array<int, array{type: string, name: string, description: string, input_schema: array<string, mixed>}>
      */
     public static function all(): array
     {

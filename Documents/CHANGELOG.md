@@ -5,7 +5,16 @@
 ### Added
 - 管理画面の設定画面に「レート制限（分あたり上限）」の項目を追加。`Config.rate_limit_per_minute`（既定30、0で無効化）を UI から変更可能にした。従来は DB の UPDATE でしか変えられない状態だった
 
+### Changed
+- 静的解析を PHPStan level 5 → **level 8** に引き上げ (`phpstan.neon.dist`)。
+  - 欠けていた iterable/パラメータ型注釈 (約 150 件) を補完し、`mixed` 由来の曖昧さを除去。
+  - 旧抑制ルール 25 件のうち死んでいた 12 件を削除し、広域抑制 (`#should return .* but returns.*#` 等) を廃止。残る抑制は EC-CUBE スタブ未整備と DBAL 行配列形状の 2 件のみ。
+  - `Tests/Stubs` を実型に追従 (`AbstractController::json/createFormBuilder/createNotFoundException`、`AbstractRepository` の総称化、`BaseInfoRepository::get`)。
+  - `composer.json` require-dev に静的解析用の `symfony/form` / `symfony/validator` / `symfony/translation` / `twig/twig` を追加 (本番配布物には含まれない)。
+
 ### Fixed
+- PHPStan が指摘した死んだ分岐と重複を整理: `ApiKeyEncryptor` の二重 `isEncrypted()` 判定、`unset($payload['reasoningEffort'])` (未設定キー)、`McpHttpController` の未使用 `ProductRepository` 依存 (services.yaml も更新)、`ProductRepository::$entityManager` の未使用プロパティ、`McpServerService` の重複定数 (正本は `McpHttpService`)、リポジトリの `save/delete` 上書きの戻り値型。
+- `/api/ai-chat-assistant/*` で `InputBag::get()` の返り値 (`bool|float|int|string|null`) を文字列型の setter にそのまま渡していた箇所を明示的に文字列化。
 - チャットウィジェットの入力で日本語 IME の変換確定 Enter が素のフォーム送信になり `POST /` が 405 (Method Not Allowed) になる問題を修正。入力要素を `<textarea rows="1">` にして Enter による implicit submission を起こさないようにし、フォームは `action="#" method="get"` + `onsubmit="return false"` にして JS が止め損ねても 405 のエラー画面にならないようにした (Enter での送信・Shift+Enter の改行は従来どおり)。
 
 ## [1.1.3] - 2026-09-09

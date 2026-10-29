@@ -214,7 +214,7 @@ class KnowledgeController extends AbstractController
      */
     public function delete(Request $request, int $id): Response
     {
-        if (!$this->isCsrfTokenValid('admin_ai_chat_assistant_knowledge_' . $id, $request->request->get('_token'))) {
+        if (!$this->isCsrfTokenValid('admin_ai_chat_assistant_knowledge_' . $id, (string) $request->request->get('_token'))) {
             $this->addError('不正なリクエストです。', 'admin');
 
             return $this->redirectToRoute('admin_ai_chat_assistant_knowledge_index');

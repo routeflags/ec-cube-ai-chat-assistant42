@@ -28,7 +28,9 @@ use DateTimeImmutable;
  * 本リポジトリに集約して Doctrine 形式（ORM QueryBuilder / DBAL QueryBuilder）で
  * データアクセスを一元管理する。
  *
- * @SuppressWarnings(PHPMD.TooManyPublicMethods)
+ * @SuppressWarnings("PHPMD.TooManyPublicMethods")
+ *
+ * @extends AbstractRepository<ChatLog>
  */
 class ChatLogRepository extends AbstractRepository
 {
@@ -424,7 +426,8 @@ class ChatLogRepository extends AbstractRepository
     /**
      * フィルタ後の集合からセッションごとの最新 ID を取得する。
      *
-     * @param array $filters
+     * @param chatHistoryFilters $filters
+     *
      * @return int[]
      */
     public function fetchLatestIdPerSession(array $filters): array
@@ -467,7 +470,8 @@ class ChatLogRepository extends AbstractRepository
     /**
      * セッションごとの件数マップを取得する。
      *
-     * @param array $filters
+     * @param chatHistoryFilters $filters
+     *
      * @return array<string,int> ['session_id' => count]
      */
     public function fetchSessionCounts(array $filters): array
@@ -494,7 +498,7 @@ class ChatLogRepository extends AbstractRepository
     public function fetchSessionRelayLogs(ChatLog $currentLog): array
     {
         $sessionId = $currentLog->getSessionId();
-        if ($sessionId === '' || $sessionId === null) {
+        if ($sessionId === '') {
             return [$currentLog];
         }
 

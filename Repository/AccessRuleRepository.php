@@ -15,6 +15,7 @@ declare(strict_types=1);
 
 namespace Plugin\AiChatAssistant42\Repository;
 
+use Eccube\Entity\AbstractEntity;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
 use Plugin\AiChatAssistant42\Entity\AccessRule;
@@ -24,6 +25,8 @@ use Eccube\Repository\AbstractRepository;
  * アクセスルールリポジトリ。
  *
  * IP・時間帯・禁止キーワード等のアクセス制御ルールを管理する。
+ *
+ * @extends AbstractRepository<AccessRule>
  */
 class AccessRuleRepository extends AbstractRepository
 {
@@ -76,7 +79,7 @@ class AccessRuleRepository extends AbstractRepository
     /**
      * アクセスルールを永続化する。
      */
-    public function save($entity)
+    public function save(AbstractEntity $entity): void
     {
         $this->entityManager->persist($entity);
         $this->entityManager->flush();
@@ -85,7 +88,7 @@ class AccessRuleRepository extends AbstractRepository
     /**
      * アクセスルールを削除する。
      */
-    public function delete($entity)
+    public function delete(AbstractEntity $entity): void
     {
         $this->entityManager->remove($entity);
         $this->entityManager->flush();
