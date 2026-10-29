@@ -60,7 +60,11 @@ class ShopContextService
     public function getProductDetailUrl(int $productId): string
     {
         try {
-            return $this->urlGenerator->generate('product_detail', ['id' => $productId], UrlGeneratorInterface::ABSOLUTE_URL);
+            return $this->urlGenerator->generate(
+                'product_detail',
+                ['id' => $productId],
+                UrlGeneratorInterface::ABSOLUTE_URL
+            );
         } catch (RouteNotFoundException) {
             return $this->buildAbsolutePath('/products/detail/' . $productId);
         }
@@ -92,7 +96,11 @@ class ShopContextService
     public function getAdminHistoryUrl(): string
     {
         try {
-            return $this->urlGenerator->generate('admin_ai_chat_assistant_history', [], UrlGeneratorInterface::ABSOLUTE_URL);
+            return $this->urlGenerator->generate(
+                'admin_ai_chat_assistant_history',
+                [],
+                UrlGeneratorInterface::ABSOLUTE_URL
+            );
         } catch (RouteNotFoundException) {
             return $this->buildAbsolutePath('/ai-chat-assistant/history');
         }

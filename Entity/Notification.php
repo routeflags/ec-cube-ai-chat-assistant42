@@ -127,7 +127,9 @@ class Notification extends \Eccube\Entity\AbstractEntity
 
     public function setCreateDate(\DateTimeInterface $createDate): self
     {
-        $this->create_date = $createDate instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($createDate) : $createDate;
+        $this->create_date = $createDate instanceof \DateTimeImmutable
+            ? \DateTime::createFromImmutable($createDate)
+            : $createDate;
         return $this;
     }
 
@@ -138,7 +140,9 @@ class Notification extends \Eccube\Entity\AbstractEntity
 
     public function setUpdateDate(\DateTimeInterface $updateDate): self
     {
-        $this->update_date = $updateDate instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($updateDate) : $updateDate;
+        $this->update_date = $updateDate instanceof \DateTimeImmutable
+            ? \DateTime::createFromImmutable($updateDate)
+            : $updateDate;
         return $this;
     }
 }

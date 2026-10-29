@@ -27,7 +27,10 @@ class RateLimitExceededException extends RuntimeException
         private int $retryAfterSeconds = 60,
         string $message = '',
     ) {
-        parent::__construct($message !== '' ? $message : sprintf('Rate limit exceeded. Retry after %d seconds.', $retryAfterSeconds));
+        parent::__construct($message !== '' ? $message : sprintf(
+            'Rate limit exceeded. Retry after %d seconds.',
+            $retryAfterSeconds
+        ));
     }
 
     public function getLimit(): int

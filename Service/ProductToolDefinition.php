@@ -90,7 +90,9 @@ final class ProductToolDefinition
         [
             'type' => 'function',
             'name' => 'get_category_products',
-            'description' => '指定カテゴリに属する商品一覧を取得します。返却される各商品の url はショップの商品詳細ページの絶対URLです。相対パスや https://www.example.com は使用しないでください。',
+            'description' => '指定カテゴリに属する商品一覧を取得します。'
+                . '返却される各商品の url はショップの商品詳細ページの絶対URLです。'
+                . '相対パスや https://www.example.com は使用しないでください。',
             'input_schema' => [
                 'type' => 'object',
                 'properties' => [
@@ -110,7 +112,9 @@ final class ProductToolDefinition
         [
             'type' => 'function',
             'name' => 'search_by_tag',
-            'description' => '特定タグに紐づく商品を検索します。返却される各商品の url はショップの商品詳細ページの絶対URLです。相対パスや https://www.example.com は使用しないでください。',
+            'description' => '特定タグに紐づく商品を検索します。'
+                . '返却される各商品の url はショップの商品詳細ページの絶対URLです。'
+                . '相対パスや https://www.example.com は使用しないでください。',
             'input_schema' => [
                 'type' => 'object',
                 'properties' => [

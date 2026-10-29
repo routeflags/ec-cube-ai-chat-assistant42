@@ -130,8 +130,12 @@ class AiModelSyncService extends AbstractPluginDataSyncService
      */
     private function hasValidProvidersStructure(array $remoteData): bool
     {
-        if (!isset($remoteData['providers']) || !is_array($remoteData['providers']) || $remoteData['providers'] === []) {
-            $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => 'Missing or empty providers']);
+        $providers = $remoteData['providers'] ?? null;
+        if (!is_array($providers) || $providers === []) {
+            $this->logger->warning(
+                $this->getSyncFailureLogMessage(),
+                ['error' => 'Missing or empty providers']
+            );
 
             return false;
         }
@@ -145,13 +149,19 @@ class AiModelSyncService extends AbstractPluginDataSyncService
     private function validateProvider(string $providerKey, mixed $provider): bool
     {
         if (!in_array($providerKey, self::ALLOWED_PROVIDERS, true)) {
-            $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => "Unknown provider: {$providerKey}"]);
+            $this->logger->warning(
+                $this->getSyncFailureLogMessage(),
+                ['error' => "Unknown provider: {$providerKey}"]
+            );
 
             return false;
         }
 
         if (!is_array($provider) || !isset($provider['models']) || !is_array($provider['models'])) {
-            $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => "Invalid models for provider: {$providerKey}"]);
+            $this->logger->warning(
+                $this->getSyncFailureLogMessage(),
+                ['error' => "Invalid models for provider: {$providerKey}"]
+            );
 
             return false;
         }
@@ -186,7 +196,10 @@ class AiModelSyncService extends AbstractPluginDataSyncService
         }
 
         if (!is_string($provider[$field]) || mb_strlen($provider[$field]) > self::MAX_STRING_LENGTH) {
-            $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => "Invalid {$field} for provider: {$providerKey}"]);
+            $this->logger->warning(
+                $this->getSyncFailureLogMessage(),
+                ['error' => "Invalid {$field} for provider: {$providerKey}"]
+            );
 
             return false;
         }
@@ -227,7 +240,10 @@ class AiModelSyncService extends AbstractPluginDataSyncService
         $modelId = $model['id'];
 
         if (isset($seenIds[$modelId])) {
-            $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => "Duplicate id for {$providerKey}: {$modelId}"]);
+            $this->logger->warning(
+                $this->getSyncFailureLogMessage(),
+                ['error' => "Duplicate id for {$providerKey}: {$modelId}"]
+            );
 
             return false;
         }
@@ -370,7 +386,10 @@ class AiModelSyncService extends AbstractPluginDataSyncService
     private function sanitizeVersion(array $remoteData): array
     {
         if (isset($remoteData['version']) && !is_string($remoteData['version'])) {
-            $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => 'Invalid version type, ignored']);
+            $this->logger->warning(
+                $this->getSyncFailureLogMessage(),
+                ['error' => 'Invalid version type, ignored']
+            );
             unset($remoteData['version']);
         }
 
@@ -402,13 +421,19 @@ class AiModelSyncService extends AbstractPluginDataSyncService
 
         $json = json_encode($validated, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         if ($json === false) {
-            $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => 'json_encode failed: ' . json_last_error_msg()]);
+            $this->logger->warning(
+                $this->getSyncFailureLogMessage(),
+                ['error' => 'json_encode failed: ' . json_last_error_msg()]
+            );
 
             return;
         }
 
         if (strlen($json) > self::MAX_PAYLOAD_BYTES) {
-            $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => 'Payload too large after encode: ' . strlen($json)]);
+            $this->logger->warning(
+                $this->getSyncFailureLogMessage(),
+                ['error' => 'Payload too large after encode: ' . strlen($json)]
+            );
 
             return;
         }

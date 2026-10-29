@@ -335,7 +335,9 @@ class ChatApiController extends AbstractController
                 ], 429);
             }
         } catch (\Throwable $e) {
-            $this->logger->warning('Email session rate limit check failed: ' . $this->redactedMessage($e->getMessage()));
+            $this->logger->warning(
+                'Email session rate limit check failed: ' . $this->redactedMessage($e->getMessage())
+            );
         }
 
         // IP 単位 — ガード節で空ならログして終了
@@ -395,7 +397,10 @@ class ChatApiController extends AbstractController
             );
 
             $tools = $this->productRepository->getToolDefinitions();
-            $toolExecutor = fn (string $name, array $args): array => $this->productRepository->executeTool($name, $args);
+            $toolExecutor = fn (
+                string $name,
+                array $args
+            ): array => $this->productRepository->executeTool($name, $args);
 
             $result = $agent->chat($userMessage, $tools, $toolExecutor, $history);
 
@@ -447,7 +452,8 @@ class ChatApiController extends AbstractController
     /**
      * チャット成功時のログを記録する。
      *
-     * @param array{reply: string, tools_used: string[], token_input?: int|null, token_output?: int|null} $result エージェントの実行結果
+     * @param array{reply: string, tools_used: string[], token_input?: int|null, token_output?: int|null} $result
+     *        エージェントの実行結果
      */
     private function logChatSuccess(
         string $sessionId,
@@ -470,7 +476,10 @@ class ChatApiController extends AbstractController
                 'token_output' => $result['token_output'] ?? null,
             ]);
         } catch (\Throwable $e) {
-            $this->logger->warning('Chat success logging failed', ['error' => $e->getMessage(), 'session_id' => $sessionId]);
+            $this->logger->warning(
+                'Chat success logging failed',
+                ['error' => $e->getMessage(), 'session_id' => $sessionId]
+            );
         }
     }
 
@@ -497,7 +506,10 @@ class ChatApiController extends AbstractController
                 'error_message' => $safeErrorMessage,
             ]);
         } catch (\Throwable $e) {
-            $this->logger->warning('Chat error logging failed', ['error' => $e->getMessage(), 'session_id' => $sessionId]);
+            $this->logger->warning(
+                'Chat error logging failed',
+                ['error' => $e->getMessage(), 'session_id' => $sessionId]
+            );
         }
     }
 
@@ -701,7 +713,10 @@ class ChatApiController extends AbstractController
         }
 
         if (!in_array($feedbackValue, ['positive', 'negative'], true)) {
-            return new JsonResponse(['success' => false, 'error' => 'feedback は positive または negative を指定してください。'], 400);
+            return new JsonResponse(
+                ['success' => false, 'error' => 'feedback は positive または negative を指定してください。'],
+                400
+            );
         }
 
         return [$sessionId, $feedbackValue];

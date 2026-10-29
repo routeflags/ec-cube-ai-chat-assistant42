@@ -138,7 +138,10 @@ class DesignSettingsSyncService extends AbstractPluginDataSyncService
             }
             $value = $filtered[$key];
             if (!is_string($value)) {
-                $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => "Invalid type for {$key}"]);
+                $this->logger->warning(
+                    $this->getSyncFailureLogMessage(),
+                    ['error' => "Invalid type for {$key}"]
+                );
 
                 return null;
             }
@@ -147,7 +150,10 @@ class DesignSettingsSyncService extends AbstractPluginDataSyncService
                 $value = self::DEFAULTS[$key];
             }
             if (mb_strlen($value) > self::MAX_STRING_LENGTH) {
-                $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => "Too long: {$key} (" . mb_strlen($value) . ')']);
+                $this->logger->warning(
+                    $this->getSyncFailureLogMessage(),
+                    ['error' => "Too long: {$key} (" . mb_strlen($value) . ')']
+                );
 
                 return null;
             }
@@ -155,7 +161,10 @@ class DesignSettingsSyncService extends AbstractPluginDataSyncService
         }
 
         if (empty($result)) {
-            $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => 'No valid license keys in remote']);
+            $this->logger->warning(
+                $this->getSyncFailureLogMessage(),
+                ['error' => 'No valid license keys in remote']
+            );
 
             return null;
         }
@@ -187,13 +196,19 @@ class DesignSettingsSyncService extends AbstractPluginDataSyncService
 
         $json = json_encode($merged, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
         if ($json === false) {
-            $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => 'json_encode failed: ' . json_last_error_msg()]);
+            $this->logger->warning(
+                $this->getSyncFailureLogMessage(),
+                ['error' => 'json_encode failed: ' . json_last_error_msg()]
+            );
 
             return;
         }
 
         if (strlen($json) > self::MAX_PAYLOAD_BYTES) {
-            $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => 'Merged payload too large']);
+            $this->logger->warning(
+                $this->getSyncFailureLogMessage(),
+                ['error' => 'Merged payload too large']
+            );
 
             return;
         }
@@ -246,11 +261,10 @@ class DesignSettingsSyncService extends AbstractPluginDataSyncService
         // S-07: 新側になければ旧code (AiChatAssistant42) の PluginData から引き継ぐ (消失禁止)
         if (!file_exists($dataPath)) {
             $legacy = $this->projectDir . '/app/PluginData/AiChatAssistant42/design_settings.json';
-            if (is_file($legacy)) {
-                $dataPath = $legacy;
-            } else {
+            if (!is_file($legacy)) {
                 return self::DEFAULTS;
             }
+            $dataPath = $legacy;
         }
         $raw = file_get_contents($dataPath);
         if ($raw === false) {

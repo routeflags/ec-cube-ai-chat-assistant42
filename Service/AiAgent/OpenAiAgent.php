@@ -97,7 +97,7 @@ class OpenAiAgent implements AiAgentInterface
     /**
      * {@inheritdoc}
      *
-     * @param array<int, array{type: string, name: string, description: string, input_schema: array<string, mixed>}> $tools
+     * @param mcpToolDefinition[] $tools
      * @param array<int, array{role: string, content: string}> $history
      *
      * @return array{reply: string, tools_used: string[], token_input: int, token_output: int}
@@ -295,7 +295,10 @@ class OpenAiAgent implements AiAgentInterface
      *
      * @param array<int, array<string, mixed>> $mcpTools inputSchema / input_schema / parameters のいずれかを含むツール定義
      *
-     * @return array<int, array{type: string, function: array{name: string, description: string, parameters: array<string, mixed>|object}}>
+     * @return array<int, array{
+     *     type: string,
+     *     function: array{name: string, description: string, parameters: array<string, mixed>|object}
+     * }>
      */
     private function convertToolsToOpenAiFormat(array $mcpTools): array
     {
@@ -327,8 +330,16 @@ class OpenAiAgent implements AiAgentInterface
      * Capability Matrix を参照し、ツール併用時に reasoning が非対応のモデルでは
      * reasoning_effort / reasoningEffort を付与しない（400 エラー回避）。
      *
-     * @param array<int, array{role: string, content?: string, tool_calls?: array<int, array{id: string, type: string, function: array{name: string, arguments: string}}>, tool_call_id?: string}> $messages
-     * @param array<int, array{type: string, function: array{name: string, description: string, parameters: array<string, mixed>|object}}> $tools
+     * @param array<int, array{
+     *     role: string,
+     *     content?: string,
+     *     tool_calls?: array<int, array{id: string, type: string, function: array{name: string, arguments: string}}>,
+     *     tool_call_id?: string
+     * }> $messages
+     * @param array<int, array{
+     *     type: string,
+     *     function: array{name: string, description: string, parameters: array<string, mixed>|object}
+     * }> $tools
      *
      * @return array<string, mixed>
      */
@@ -341,7 +352,11 @@ class OpenAiAgent implements AiAgentInterface
 
         // gpt-5 / o1 / o3 系は max_tokens ではなく max_completion_tokens を使用（API の破壊的変更）
         $payload['max_tokens'] = $this->maxTokens;
-        if (str_starts_with($this->model, 'gpt-5') || str_starts_with($this->model, 'o1') || str_starts_with($this->model, 'o3')) {
+        // gpt-5 / o1 / o3 系は max_completion_tokens を使う（API の破壊的変更）
+        $usesCompletionTokens = str_starts_with($this->model, 'gpt-5')
+            || str_starts_with($this->model, 'o1')
+            || str_starts_with($this->model, 'o3');
+        if ($usesCompletionTokens) {
             $payload['max_completion_tokens'] = $this->maxTokens;
             unset($payload['max_tokens']);
         }

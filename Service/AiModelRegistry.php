@@ -71,23 +71,50 @@ class AiModelRegistry
             return $primary;
         }
 
-        // 汎用ガード: ai_models.json 以外のファイル名ではフォールバックしない
-        // 従来の PluginData 文字列依存を str_ends_with に置換し、/tmp 等の一時パスでも
-        // フォールバックが効くようにする（ただし本番の PluginData 優先は維持）
+        if (!$this->isFallbackAllowed($primary, $projectDir)) {
+            return $primary;
+        }
+
+        foreach ($this->configPathCandidates($primary, $projectDir) as $candidate) {
+            if (is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return $primary;
+    }
+
+    /**
+     * フォールバック探索してよいパスかを判定する汎用ガード。
+     *
+     * ai_models.json 以外のファイル名、および PluginData / 一時ディレクトリ /
+     * projectDir 配下のいずれでもない孤立パスではフォールバックしない
+     * （Resource へのフォールバックで RuntimeException を隠蔽しないため）。
+     */
+    private function isFallbackAllowed(string $primary, string $projectDir): bool
+    {
         if (!str_ends_with($primary, 'ai_models.json')) {
-            return $primary;
+            return false;
         }
 
-        // 既存テスト互換: 任意の /nonexistent/path/ai_models.json で projectDir が空の場合、
-        // Resource へのフォールバックで誤って成功し RuntimeException が隠蔽されるのを防ぐ。
-        // /tmp 配下・PluginData 配下・projectDir 配下のいずれでもない孤立パスはフォールバックしない
-        $isPluginData = str_contains($primary, 'PluginData');
-        $isTemp = str_contains($primary, sys_get_temp_dir());
-        $isProjectDirRelated = $projectDir !== '' && str_starts_with($primary, $projectDir);
-        if (!$isPluginData && !$isTemp && !$isProjectDirRelated) {
-            return $primary;
+        if (str_contains($primary, 'PluginData')) {
+            return true;
         }
 
+        if (str_contains($primary, sys_get_temp_dir())) {
+            return true;
+        }
+
+        return $projectDir !== '' && str_starts_with($primary, $projectDir);
+    }
+
+    /**
+     * フォールバック候補パスを探索順で返す（重複除去・順序維持）。
+     *
+     * @return string[]
+     */
+    private function configPathCandidates(string $primary, string $projectDir): array
+    {
         $candidates = array_filter([
             $primary,
             // S-07: 旧code (AiChatAssistant42) の PluginData をフォールバック参照 (消失禁止)
@@ -102,15 +129,7 @@ class AiModelRegistry
         ]);
 
         // 重複を除去しつつ順序を維持
-        $candidates = array_values(array_unique($candidates));
-
-        foreach ($candidates as $candidate) {
-            if (is_file($candidate)) {
-                return $candidate;
-            }
-        }
-
-        return $primary;
+        return array_values(array_unique($candidates));
     }
 
     /**

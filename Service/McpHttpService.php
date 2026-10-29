@@ -150,7 +150,10 @@ class McpHttpService
                     'content' => [
                         [
                             'type' => 'text',
-                            'text' => json_encode(['error' => $this->sanitizeErrorMessage($e->getMessage())], JSON_UNESCAPED_UNICODE),
+                            'text' => json_encode(
+                                ['error' => $this->sanitizeErrorMessage($e->getMessage())],
+                                JSON_UNESCAPED_UNICODE
+                            ),
                         ],
                     ],
                     'isError' => true,
@@ -162,15 +165,26 @@ class McpHttpService
     /**
      * MCP 監査1行を記録する。記録失敗は握りつぶす。
      */
-    private function recordAudit(string $toolName, string $result, ?string $errorCode, int $startedAtMs, ?string $clientIp): void
-    {
+    private function recordAudit(
+        string $toolName,
+        string $result,
+        ?string $errorCode,
+        int $startedAtMs,
+        ?string $clientIp
+    ): void {
         if ($this->mcpAuditRepository === null) {
             return;
         }
         try {
             $durationMs = (int) (microtime(true) * 1000) - $startedAtMs;
             $ipHash = $clientIp !== null && $clientIp !== '' ? hash('sha256', $clientIp) : null;
-            $this->mcpAuditRepository->record($toolName !== '' ? $toolName : '(unknown)', $result, $errorCode, $durationMs, $ipHash);
+            $this->mcpAuditRepository->record(
+                $toolName !== '' ? $toolName : '(unknown)',
+                $result,
+                $errorCode,
+                $durationMs,
+                $ipHash
+            );
         } catch (\Throwable $e) {
             // 監査失敗は本処理に影響させない
         }

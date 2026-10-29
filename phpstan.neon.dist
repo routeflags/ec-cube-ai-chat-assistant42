@@ -7,6 +7,8 @@ parameters:
 
     # 複数ファイルで共有する配列形状の別名（PHPDoc の重複定義を避ける）
     typeAliases:
+        # MCP ツール定義（ProductToolDefinition::DEFINITIONS の要素）
+        mcpToolDefinition: 'array{type: string, name: string, description: string, input_schema: array<string, mixed>}'
         # ai_models.json の 1 モデル定義（未設定キーは既定値で補完されるため optional）
         aiModel: 'array{id: string, name?: string, description?: string, supports_tools?: bool, supports_reasoning_with_tools?: bool, cost_tier?: string, is_default?: bool}'
         # ai_models.json の 1 モデル定義 + 所属プロバイダ（getAllModels の戻り値）

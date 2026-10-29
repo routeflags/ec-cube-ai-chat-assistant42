@@ -63,7 +63,7 @@ class AnthropicAgent implements AiAgentInterface
     /**
      * {@inheritdoc}
      *
-     * @param array<int, array{type: string, name: string, description: string, input_schema: array<string, mixed>}> $tools
+     * @param mcpToolDefinition[] $tools
      * @param array<int, array{role: string, content: string}> $history
      *
      * @return array{reply: string, tools_used: string[], token_input: int, token_output: int}

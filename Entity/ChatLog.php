@@ -92,13 +92,22 @@ class ChatLog extends \Eccube\Entity\AbstractEntity
     /**
      * メール返信先のハッシュ（HMAC-SHA256, 64hex）。集計・レート制限・検索用（不可逆）。
      */
-    #[ORM\Column(type: Types::STRING, length: 64, nullable: true, options: ['comment' => 'hmac_sha256(normalized_email, APP_SECRET pepper) 64hex'])]
+    #[ORM\Column(
+        type: Types::STRING,
+        length: 64,
+        nullable: true,
+        options: ['comment' => 'hmac_sha256(normalized_email, APP_SECRET pepper) 64hex']
+    )]
     private ?string $email_reply_address_hash = null;
 
     /**
      * メール返信先の暗号文（AES-256-GCM, base64(nonce12+cipher+tag16)）。送信時に復号。30日で自動削除。
      */
-    #[ORM\Column(type: Types::TEXT, nullable: true, options: ['comment' => 'AES-256-GCM encrypted email, purge after 30 days'])]
+    #[ORM\Column(
+        type: Types::TEXT,
+        nullable: true,
+        options: ['comment' => 'AES-256-GCM encrypted email, purge after 30 days']
+    )]
     private ?string $email_reply_address_enc = null;
 
     /**
@@ -359,7 +368,9 @@ class ChatLog extends \Eccube\Entity\AbstractEntity
 
     public function setEmailRepliedAt(?\DateTimeInterface $emailRepliedAt): self
     {
-        $this->email_replied_at = $emailRepliedAt instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($emailRepliedAt) : $emailRepliedAt;
+        $this->email_replied_at = $emailRepliedAt instanceof \DateTimeImmutable
+            ? \DateTime::createFromImmutable($emailRepliedAt)
+            : $emailRepliedAt;
         return $this;
     }
 
@@ -371,7 +382,9 @@ class ChatLog extends \Eccube\Entity\AbstractEntity
 
     public function setCreatedAt(\DateTimeInterface $createdAt): self
     {
-        $this->created_at = $createdAt instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($createdAt) : $createdAt;
+        $this->created_at = $createdAt instanceof \DateTimeImmutable
+            ? \DateTime::createFromImmutable($createdAt)
+            : $createdAt;
         return $this;
     }
 
@@ -383,7 +396,9 @@ class ChatLog extends \Eccube\Entity\AbstractEntity
 
     public function setSyncedAt(?\DateTimeInterface $syncedAt): self
     {
-        $this->synced_at = $syncedAt instanceof \DateTimeImmutable ? \DateTime::createFromImmutable($syncedAt) : $syncedAt;
+        $this->synced_at = $syncedAt instanceof \DateTimeImmutable
+            ? \DateTime::createFromImmutable($syncedAt)
+            : $syncedAt;
         return $this;
     }
 }
