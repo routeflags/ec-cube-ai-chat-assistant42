@@ -14,6 +14,11 @@
     <!-- Coding Standard -->
     <rule ref="PSR12"/>
 
+    <!-- bin/ は CLI エントリポイント（関数定義 + 実行の同居が前提）なので PSR1 の side-effect ルールは除外 -->
+    <rule ref="PSR1.Files.SideEffects">
+        <exclude-pattern>*/bin/*</exclude-pattern>
+    </rule>
+
     <!-- 行長: 120 まで許容、150 でエラー。DoctrineMigrations / Tests は除外（自動生成・フィクスチャで長行が不可避） -->
     <rule ref="Generic.Files.LineLength">
         <properties>
@@ -45,5 +50,8 @@
     <exclude-pattern>node_modules/*</exclude-pattern>
     <exclude-pattern>artifacts/*</exclude-pattern>
     <exclude-pattern>Documents/*</exclude-pattern>
+    <!-- EC-CUBE のスタブは本体 API を写した 1 行 1 メソッドの偽物で、phpstan の解析対象からも外している。
+         PSR12 に整形すると却って対応関係が追いにくくなるため対象外とする。 -->
+    <exclude-pattern>*/Tests/Stubs/*</exclude-pattern>
 
 </ruleset>

@@ -87,7 +87,11 @@ class ChatLogRepository extends AbstractRepository
             ->select('COUNT(log.id)')
             ->where('log.session_id = :sid')
             ->andWhere('log.created_at > :since')
-            ->andWhere('(log.email_reply_address_hash IS NOT NULL OR log.email_reply_address_enc IS NOT NULL OR log.email_reply_address IS NOT NULL)')
+            ->andWhere(
+                '(log.email_reply_address_hash IS NOT NULL'
+                . ' OR log.email_reply_address_enc IS NOT NULL'
+                . ' OR log.email_reply_address IS NOT NULL)'
+            )
             ->setParameter('sid', $sessionId)
             ->setParameter('since', $since)
             ->getQuery()
@@ -103,7 +107,11 @@ class ChatLogRepository extends AbstractRepository
             ->select('COUNT(log.id)')
             ->where('log.client_ip = :ip')
             ->andWhere('log.created_at > :since')
-            ->andWhere('(log.email_reply_address_hash IS NOT NULL OR log.email_reply_address_enc IS NOT NULL OR log.email_reply_address IS NOT NULL)')
+            ->andWhere(
+                '(log.email_reply_address_hash IS NOT NULL'
+                . ' OR log.email_reply_address_enc IS NOT NULL'
+                . ' OR log.email_reply_address IS NOT NULL)'
+            )
             ->setParameter('ip', $ip)
             ->setParameter('since', $since)
             ->getQuery()
@@ -117,7 +125,11 @@ class ChatLogRepository extends AbstractRepository
     {
         return (int) $this->createQueryBuilder('log')
             ->select('COUNT(log.id)')
-            ->where('(log.email_reply_address_hash IS NOT NULL OR log.email_reply_address_enc IS NOT NULL OR log.email_reply_address IS NOT NULL)')
+            ->where(
+                '(log.email_reply_address_hash IS NOT NULL'
+                . ' OR log.email_reply_address_enc IS NOT NULL'
+                . ' OR log.email_reply_address IS NOT NULL)'
+            )
             ->andWhere('log.email_replied_at IS NULL')
             ->getQuery()
             ->getSingleScalarResult();
@@ -531,7 +543,14 @@ class ChatLogRepository extends AbstractRepository
     /**
      * 指定期間の KPI を集計して返す。
      *
-     * @return array{total: int, resolved: int, errors: int, avg_response_ms: float, resolution_rate: float, error_rate: float}
+     * @return array{
+     *     total: int,
+     *     resolved: int,
+     *     errors: int,
+     *     avg_response_ms: float,
+     *     resolution_rate: float,
+     *     error_rate: float
+     * }
      */
     public function fetchKpi(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
@@ -593,7 +612,8 @@ class ChatLogRepository extends AbstractRepository
                 log.provider AS provider,
                 COUNT(log.id) AS count,
                 AVG(CASE WHEN log.response_time_ms IS NOT NULL THEN log.response_time_ms ELSE 0 END) AS avg_response_ms,
-                SUM(CASE WHEN log.error_message IS NOT NULL AND log.error_message != \'\' THEN 1 ELSE 0 END) AS error_count
+                SUM(CASE WHEN log.error_message IS NOT NULL
+                    AND log.error_message != \'\' THEN 1 ELSE 0 END) AS error_count
             ')
             ->where('log.created_at >= :start')
             ->andWhere('log.created_at < :end')
@@ -623,7 +643,8 @@ class ChatLogRepository extends AbstractRepository
                 AVG(CASE WHEN log.response_time_ms IS NOT NULL THEN log.response_time_ms ELSE 0 END) AS avg_response_ms,
                 AVG(CASE WHEN log.token_input IS NOT NULL THEN log.token_input ELSE 0 END) AS avg_token_input,
                 AVG(CASE WHEN log.token_output IS NOT NULL THEN log.token_output ELSE 0 END) AS avg_token_output,
-                SUM(CASE WHEN log.error_message IS NOT NULL AND log.error_message != \'\' THEN 1 ELSE 0 END) AS error_count
+                SUM(CASE WHEN log.error_message IS NOT NULL
+                    AND log.error_message != \'\' THEN 1 ELSE 0 END) AS error_count
             ')
             ->where('log.created_at >= :start')
             ->andWhere('log.created_at < :end')

@@ -128,7 +128,12 @@ class ChatLog extends \Eccube\Entity\AbstractEntity
     /**
      * メール返信先のハッシュ（HMAC-SHA256, 64hex）。集計・レート制限・検索用（不可逆）。
      *
-     * @ORM\Column(type="string", length=64, nullable=true, options={"comment":"hmac_sha256(normalized_email, APP_SECRET pepper) 64hex"})
+     * @ORM\Column(
+     *     type="string",
+     *     length=64,
+     *     nullable=true,
+     *     options={"comment":"hmac_sha256(normalized_email, APP_SECRET pepper) 64hex"}
+     * )
      */
     private ?string $email_reply_address_hash = null;
 

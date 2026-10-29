@@ -28,7 +28,8 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * Streamable HTTP (POST /mcp) と Discovery (GET /.well-known/mcp.json) を提供する。
  * CORS は Controller 直付与方式で付与し、EventListener 新設はしない。
- * RateLimit は CacheInterface (cache.app) で mcp.ratelimit.{ip}.{tool}.{minute} キー管理（PSR-6 合法、IP は ":" "." "/" を "_" にサニタイズ）。
+ * RateLimit は CacheInterface (cache.app) で mcp.ratelimit.{ip}.{tool}.{minute}
+ * キー管理（PSR-6 合法、IP は ":" "." "/" を "_" にサニタイズ）。
  */
 class McpHttpController
 {
@@ -108,7 +109,11 @@ class McpHttpController
         // 軽量 Content-Type 415: JSON 以外は 415 で拒否（MCP Inspector は JSON を送るため影響なし）
         $contentType = (string) $request->headers->get('Content-Type', '');
         if ($contentType !== '' && stripos($contentType, 'application/json') === false) {
-            $error = $this->mcpHttpService->writeErrorResponse(null, -32700, 'Parse error: Content-Type must be application/json');
+            $error = $this->mcpHttpService->writeErrorResponse(
+                null,
+                -32700,
+                'Parse error: Content-Type must be application/json'
+            );
             $resp = $this->jsonResponseWithCors($error, 415);
             $resp->headers->set('Content-Type', 'application/json; charset=utf-8');
 
@@ -159,10 +164,8 @@ class McpHttpController
             return $response;
         }
 
-        // Authorization 受け口（将来の write 系で 401 に分岐する TODO を残す）
-        $authHeader = $request->headers->get('Authorization');
-        // TODO: write 系では Bearer 検証して 401 を返す（現行 read-only のため無視して 200 を返す）
-        // if ($authHeader !== null) { // 将来用: log or validate }
+        // TODO: Authorization ヘッダーの受け口。write 系では Bearer 検証して 401 を返す
+        // （現行は read-only のためヘッダーは参照しない）
 
         // レート制限 — toolName で分岐（get_stock は 60、他は 120）
         $toolName = 'default';

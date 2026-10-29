@@ -500,7 +500,11 @@ class NotificationService
         if ($resolvedIp === $host) {
             return false;
         }
-        return filter_var($resolvedIp, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false;
+        return filter_var(
+            $resolvedIp,
+            FILTER_VALIDATE_IP,
+            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+        ) === false;
     }
 
     private function hasDotHexSegment(string $host): bool

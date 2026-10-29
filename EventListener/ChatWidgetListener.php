@@ -56,7 +56,10 @@ class ChatWidgetListener implements EventSubscriberInterface
         $event->setParameter('chat_widget_color', $designSettings['widget_color'] ?? '#2ec9bb');
         $event->setParameter('chat_widget_size', $designSettings['widget_size'] ?? 'medium');
         $event->setParameter('chat_widget_position', $designSettings['position'] ?? 'bottom-right');
-        $event->setParameter('chat_greeting_message', $designSettings['greeting_message'] ?? 'こんにちは！商品についてお気軽にご質問ください。');
+        $event->setParameter(
+            'chat_greeting_message',
+            $designSettings['greeting_message'] ?? 'こんにちは！商品についてお気軽にご質問ください。'
+        );
         $event->setParameter('chat_assistant_display_name', $designSettings['assistant_display_name'] ?? '商品アドバイザー');
         // ライセンス情報（design_settings.json 正本、Twigでハードコード禁止）
         $event->setParameter('chat_license_footer_label', $designSettings['license_footer_label'] ?? 'ライセンスについて');
@@ -71,9 +74,18 @@ class ChatWidgetListener implements EventSubscriberInterface
             'chat_license_item1_body',
             $designSettings['license_item1_body'] ?? '© 2024-2026 ROUTE FLAGS Co., Ltd. All Rights Reserved.'
         );
-        $event->setParameter('chat_license_item2_heading', $designSettings['license_item2_heading'] ?? 'ライセンス (GPL-2.0-only)');
-        $event->setParameter('chat_license_item2_body', $designSettings['license_item2_body'] ?? '本ソフトウェアのソースコードは GPL-2.0-only で提供されています。');
-        $event->setParameter('chat_license_item3_heading', $designSettings['license_item3_heading'] ?? 'オープンソースソフトウェアの利用');
+        $event->setParameter(
+            'chat_license_item2_heading',
+            $designSettings['license_item2_heading'] ?? 'ライセンス (GPL-2.0-only)'
+        );
+        $event->setParameter(
+            'chat_license_item2_body',
+            $designSettings['license_item2_body'] ?? '本ソフトウェアのソースコードは GPL-2.0-only で提供されています。'
+        );
+        $event->setParameter(
+            'chat_license_item3_heading',
+            $designSettings['license_item3_heading'] ?? 'オープンソースソフトウェアの利用'
+        );
         $event->setParameter(
             'chat_license_item3_body',
             $designSettings['license_item3_body'] ?? '本ソフトウェアは EC-CUBE 4.2 ほか composer.json 記載のOSSを利用しています。'

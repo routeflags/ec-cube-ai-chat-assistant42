@@ -49,38 +49,66 @@ class PageContextService
 
         $context = [];
 
-        if (isset($raw['url']) && is_string($raw['url'])) {
-            $url = trim($raw['url']);
-            // hash 断片はセッショントークン等を含みうるため除去
-            $hashPos = strpos($url, '#');
-            if ($hashPos !== false) {
-                $url = substr($url, 0, $hashPos);
-            }
-            $url = trim($url);
-            if ($url !== '') {
-                $context['url'] = mb_substr($url, 0, self::MAX_URL_LENGTH);
-            }
+        $url = $this->normalizeUrl($raw['url'] ?? null);
+        if ($url !== null) {
+            $context['url'] = $url;
         }
 
-        if (isset($raw['title']) && is_string($raw['title'])) {
-            $title = trim($raw['title']);
-            if ($title !== '') {
-                $context['title'] = mb_substr($title, 0, self::MAX_TITLE_LENGTH);
-            }
+        $title = $this->normalizeTitle($raw['title'] ?? null);
+        if ($title !== null) {
+            $context['title'] = $title;
         }
 
-        if (isset($raw['product_id'])) {
-            $productId = filter_var(
-                $raw['product_id'],
-                FILTER_VALIDATE_INT,
-                ['options' => ['min_range' => 1]]
-            );
-            if ($productId !== false) {
-                $context['product_id'] = $productId;
-            }
+        $productId = $this->normalizeProductId($raw['product_id'] ?? null);
+        if ($productId !== null) {
+            $context['product_id'] = $productId;
         }
 
         return $context === [] ? null : $context;
+    }
+
+    /**
+     * URL を正規化する（hash 断片の除去・長さ制限）。
+     */
+    private function normalizeUrl(mixed $value): ?string
+    {
+        if (!is_string($value)) {
+            return null;
+        }
+
+        // hash 断片はセッショントークン等を含みうるため除去
+        $hashPos = strpos($value, '#');
+        $url = trim($hashPos === false ? $value : substr($value, 0, $hashPos));
+
+        return $url === '' ? null : mb_substr($url, 0, self::MAX_URL_LENGTH);
+    }
+
+    /**
+     * タイトルを正規化する（trim・長さ制限）。
+     */
+    private function normalizeTitle(mixed $value): ?string
+    {
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $title = trim($value);
+
+        return $title === '' ? null : mb_substr($title, 0, self::MAX_TITLE_LENGTH);
+    }
+
+    /**
+     * 商品 ID を正規化する（1 以上の整数のみ許可）。
+     */
+    private function normalizeProductId(mixed $value): ?int
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $productId = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+
+        return $productId === false ? null : $productId;
     }
 
     /**

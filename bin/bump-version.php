@@ -1,5 +1,6 @@
 #!/usr/bin/env php
 <?php
+
 // バージョン同期スクリプト（AGENTS.md「Version sync」5箇所）。
 // Usage:
 //   php bin/bump-version.php 1.1.3            # 明示指定
@@ -13,8 +14,9 @@ declare(strict_types=1);
 
 function currentVersion(): string
 {
-    $c = json_decode((string) file_get_contents('composer.json'), true);
-    return is_array($c) && isset($c['version']) ? (string) $c['version'] : '0.0.0';
+    $composer = json_decode((string) file_get_contents('composer.json'), true);
+
+    return is_array($composer) && isset($composer['version']) ? (string) $composer['version'] : '0.0.0';
 }
 
 function nextVersion(string $cur, string $level): string
@@ -22,16 +24,13 @@ function nextVersion(string $cur, string $level): string
     $parts = array_map('intval', explode('.', $cur) + [0, 0, 0]);
     [$major, $minor, $patch] = [$parts[0], $parts[1], $parts[2]];
     if ($level === 'major') {
-        $major++;
-        $minor = 0;
-        $patch = 0;
-    } elseif ($level === 'minor') {
-        $minor++;
-        $patch = 0;
-    } else {
-        $patch++;
+        return ($major + 1) . '.0.0';
     }
-    return "{$major}.{$minor}.{$patch}";
+    if ($level === 'minor') {
+        return "{$major}." . ($minor + 1) . '.0';
+    }
+
+    return "{$major}.{$minor}." . ($patch + 1);
 }
 
 $explicit = null;

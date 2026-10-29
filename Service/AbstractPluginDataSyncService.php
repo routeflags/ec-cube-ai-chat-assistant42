@@ -186,7 +186,10 @@ abstract class AbstractPluginDataSyncService
                 'http_errors' => false,
             ]);
         } catch (TransferException $e) {
-            $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => $e->getMessage()]);
+            $this->logger->warning(
+                $this->getSyncFailureLogMessage(),
+                ['error' => $e->getMessage()]
+            );
 
             return null;
         }
@@ -230,7 +233,10 @@ abstract class AbstractPluginDataSyncService
         if ($status === 200) {
             return true;
         }
-        $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => 'HTTP status ' . $status]);
+        $this->logger->warning(
+            $this->getSyncFailureLogMessage(),
+            ['error' => 'HTTP status ' . $status]
+        );
 
         return false;
     }
@@ -242,14 +248,20 @@ abstract class AbstractPluginDataSyncService
     {
         $contentType = $response->getHeaderLine('Content-Type');
         if ($contentType !== '' && stripos($contentType, 'application/json') === false) {
-            $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => 'Invalid Content-Type: ' . $contentType]);
+            $this->logger->warning(
+                $this->getSyncFailureLogMessage(),
+                ['error' => 'Invalid Content-Type: ' . $contentType]
+            );
 
             return null;
         }
 
         $body = (string) $response->getBody();
         if (strlen($body) > static::MAX_PAYLOAD_BYTES) {
-            $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => 'Payload too large: ' . strlen($body)]);
+            $this->logger->warning(
+                $this->getSyncFailureLogMessage(),
+                ['error' => 'Payload too large: ' . strlen($body)]
+            );
 
             return null;
         }
@@ -266,7 +278,10 @@ abstract class AbstractPluginDataSyncService
     {
         $decoded = json_decode($body, true);
         if (!is_array($decoded)) {
-            $this->logger->warning($this->getSyncFailureLogMessage(), ['error' => 'Invalid JSON: ' . json_last_error_msg()]);
+            $this->logger->warning(
+                $this->getSyncFailureLogMessage(),
+                ['error' => 'Invalid JSON: ' . json_last_error_msg()]
+            );
 
             return null;
         }

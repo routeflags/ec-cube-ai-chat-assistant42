@@ -45,8 +45,13 @@ class McpAuditRepository extends AbstractRepository
      * 監査1行を記録する。記録失敗時は例外を投げず false を返す
      * （本処理の応答に影響させない）。
      */
-    public function record(string $toolName, string $result, ?string $errorCode, ?int $durationMs, ?string $clientIpHash): bool
-    {
+    public function record(
+        string $toolName,
+        string $result,
+        ?string $errorCode,
+        ?int $durationMs,
+        ?string $clientIpHash
+    ): bool {
         try {
             $audit = (new McpAudit())
                 ->setToolName(substr($toolName, 0, 64))

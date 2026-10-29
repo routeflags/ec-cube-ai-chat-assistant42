@@ -134,7 +134,14 @@ class DashboardController extends AbstractController
     /**
      * 指定期間の KPI を集計して返す。
      *
-     * @return array{total: int, resolved: int, errors: int, avg_response_ms: float, resolution_rate: float, error_rate: float}
+     * @return array{
+     *     total: int,
+     *     resolved: int,
+     *     errors: int,
+     *     avg_response_ms: float,
+     *     resolution_rate: float,
+     *     error_rate: float
+     * }
      */
     private function fetchKpi(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
@@ -164,7 +171,14 @@ class DashboardController extends AbstractController
     /**
      * モデル別の使用統計を取得する。
      *
-     * @return array<array{model: string, count: int, avg_response_ms: float, avg_token_input: float, avg_token_output: float, error_count: int}>
+     * @return array<array{
+     *     model: string,
+     *     count: int,
+     *     avg_response_ms: float,
+     *     avg_token_input: float,
+     *     avg_token_output: float,
+     *     error_count: int
+     * }>
      */
     private function fetchModelStats(DateTimeImmutable $start, DateTimeImmutable $end): array
     {
@@ -284,8 +298,12 @@ class DashboardController extends AbstractController
      * @param string[] $allModelIds
      * @param aiModelProviders $modelsByProvider
      */
-    private function handleSettingsPost(Request $request, Config $config, array $allModelIds, array $modelsByProvider): Response
-    {
+    private function handleSettingsPost(
+        Request $request,
+        Config $config,
+        array $allModelIds,
+        array $modelsByProvider
+    ): Response {
         $csrfResponse = $this->validateCsrfOrRedirect();
         if ($csrfResponse !== null) {
             return $csrfResponse;
@@ -315,8 +333,12 @@ class DashboardController extends AbstractController
     /**
      * 検証済みの設定を保存し、成功リダイレクトを返す。
      */
-    private function persistSettingsAndRedirect(Request $request, Config $config, string $provider, string $model): Response
-    {
+    private function persistSettingsAndRedirect(
+        Request $request,
+        Config $config,
+        string $provider,
+        string $model
+    ): Response {
         $this->applySettingsFromRequest($request, $config, $provider, $model);
         $this->entityManager->flush();
         $this->addSuccess('設定を保存しました。', 'admin');
@@ -360,8 +382,13 @@ class DashboardController extends AbstractController
      * @param string[] $allModelIds
      * @param aiModelProviders $modelsByProvider
      */
-    private function validateModelOrRedirect(string $model, string $provider, Config $config, array $allModelIds, array $modelsByProvider): ?Response
-    {
+    private function validateModelOrRedirect(
+        string $model,
+        string $provider,
+        Config $config,
+        array $allModelIds,
+        array $modelsByProvider
+    ): ?Response {
         $error = $this->validateModelValue($model, $provider, $config, $allModelIds, $modelsByProvider);
         if ($error === null) {
             return null;
@@ -454,8 +481,13 @@ class DashboardController extends AbstractController
      *
      * @return string|null エラー時はメッセージ、正常時は null
      */
-    private function validateModelValue(string $model, string $provider, Config $config, array $allModelIds, array $modelsByProvider): ?string
-    {
+    private function validateModelValue(
+        string $model,
+        string $provider,
+        Config $config,
+        array $allModelIds,
+        array $modelsByProvider
+    ): ?string {
         if (mb_strlen($model) > self::MODEL_MAX_LENGTH) {
             return 'モデル名が長すぎます。';
         }

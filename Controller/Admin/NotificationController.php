@@ -108,8 +108,14 @@ class NotificationController extends AbstractController
             return $this->redirectToRoute('admin_ai_chat_assistant_notification_index');
         }
 
-        $notification->setNotificationType((string) $request->request->get('notification_type', $notification->getNotificationType()));
-        $notification->setTriggerEvent((string) $request->request->get('trigger_event', $notification->getTriggerEvent()));
+        $notification->setNotificationType((string) $request->request->get(
+            'notification_type',
+            $notification->getNotificationType()
+        ));
+        $notification->setTriggerEvent((string) $request->request->get(
+            'trigger_event',
+            $notification->getTriggerEvent()
+        ));
         $notification->setConfigJson($this->buildConfigJson($request));
         $notification->setIsActive((int) $request->request->get('is_active', $notification->getIsActive()));
         $notification->setUpdateDate(new DateTimeImmutable());
@@ -172,7 +178,10 @@ class NotificationController extends AbstractController
                 'headers' => $this->encryptIfNeeded((string) $request->request->get('webhook_headers', '')),
             ],
             'line' => [
-                'channel_access_token' => $this->encryptIfNeeded((string) $request->request->get('line_channel_access_token', '')),
+                'channel_access_token' => $this->encryptIfNeeded((string) $request->request->get(
+                    'line_channel_access_token',
+                    ''
+                )),
                 'user_id' => $request->request->get('line_user_id', ''),
             ],
             default => [],

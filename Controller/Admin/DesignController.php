@@ -135,15 +135,27 @@ class DesignController extends AbstractController
             'widget_size' => $request->request->get('widget_size', $default('widget_size')),
             'position' => $request->request->get('position', $default('position')),
             'greeting_message' => $request->request->get('greeting_message', $default('greeting_message')),
-            'assistant_display_name' => $request->request->get('assistant_display_name', $default('assistant_display_name')),
+            'assistant_display_name' => $request->request->get(
+                'assistant_display_name',
+                $default('assistant_display_name')
+            ),
             'license_footer_label' => $request->request->get('license_footer_label', $default('license_footer_label')),
             'license_title' => $request->request->get('license_title', $default('license_title')),
             'license_lead' => $request->request->get('license_lead', $default('license_lead')),
-            'license_item1_heading' => $request->request->get('license_item1_heading', $default('license_item1_heading')),
+            'license_item1_heading' => $request->request->get(
+                'license_item1_heading',
+                $default('license_item1_heading')
+            ),
             'license_item1_body' => $request->request->get('license_item1_body', $default('license_item1_body')),
-            'license_item2_heading' => $request->request->get('license_item2_heading', $default('license_item2_heading')),
+            'license_item2_heading' => $request->request->get(
+                'license_item2_heading',
+                $default('license_item2_heading')
+            ),
             'license_item2_body' => $request->request->get('license_item2_body', $default('license_item2_body')),
-            'license_item3_heading' => $request->request->get('license_item3_heading', $default('license_item3_heading')),
+            'license_item3_heading' => $request->request->get(
+                'license_item3_heading',
+                $default('license_item3_heading')
+            ),
             'license_item3_body' => $request->request->get('license_item3_body', $default('license_item3_body')),
         ];
 

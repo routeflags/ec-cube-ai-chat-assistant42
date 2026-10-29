@@ -48,7 +48,10 @@ class ChatFlowService
     public function checkAccessRules(string $sessionId, string $userMessage = ''): array
     {
         // $sessionId は監査ログと将来のセッション紐づけのためにログへ記録する
-        $this->logger?->debug('checkAccessRules', ['sessionId' => $sessionId, 'messageLength' => mb_strlen($userMessage)]);
+        $this->logger?->debug(
+            'checkAccessRules',
+            ['sessionId' => $sessionId, 'messageLength' => mb_strlen($userMessage)]
+        );
         $conn = $this->entityManager->getConnection();
 
         // アクティブなルールを取得
@@ -199,7 +202,10 @@ class ChatFlowService
                     $matched = mb_strtolower($userMessage) === mb_strtolower($scenario['trigger_keyword']);
                     break;
                 case 'contains':
-                    $matched = mb_strpos(mb_strtolower($userMessage), mb_strtolower($scenario['trigger_keyword'])) !== false;
+                    $matched = mb_strpos(
+                        mb_strtolower($userMessage),
+                        mb_strtolower($scenario['trigger_keyword'])
+                    ) !== false;
                     break;
                 case 'regex':
                     $matched = $this->matchesRegex($scenario['trigger_keyword'], $userMessage);

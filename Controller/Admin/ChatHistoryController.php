@@ -131,8 +131,14 @@ class ChatHistoryController extends AbstractController
      * @param chatHistoryFilters $filters
      * @param array<string, int> $sessionCounts
      */
-    private function renderGroupedHistory(array $logs, int $total, int $page, array $filters, array $sessionCounts, int $lastPage = 1): Response
-    {
+    private function renderGroupedHistory(
+        array $logs,
+        int $total,
+        int $page,
+        array $filters,
+        array $sessionCounts,
+        int $lastPage = 1
+    ): Response {
         return $this->render('@AiChatAssistant42/admin/chat_history.twig', [
             'menus' => ['setting', 'ai_chat_assistant', 'ai_chat_assistant_history'],
             'filters' => $filters,
@@ -209,7 +215,11 @@ class ChatHistoryController extends AbstractController
     {
         $currentPage = max(1, (int) ($request->query->get('page', $request->request->get('page', 1))));
 
-        if (!$this->isCsrfTokenValid('admin_ai_chat_assistant_history_' . $id, (string) $request->request->get('_token'))) {
+        $isTokenValid = $this->isCsrfTokenValid(
+            'admin_ai_chat_assistant_history_' . $id,
+            (string) $request->request->get('_token')
+        );
+        if (!$isTokenValid) {
             $this->addError('不正なリクエストです。', 'admin');
 
             return $this->redirectToRoute('admin_ai_chat_assistant_history', ['page' => $currentPage]);

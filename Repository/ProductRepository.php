@@ -83,7 +83,10 @@ class ProductRepository extends AbstractRepository
                 {
                     // $id を検証して監査ログに残す（フォールバックでは id=1 のみが正規）
                     if ($id !== 1) {
-                        $this->fallbackLogger->debug(sprintf('[AiChatAssistant42] Fallback BaseInfoRepository::get unexpected id=%s', (string) $id));
+                        $this->fallbackLogger->debug(sprintf(
+                            '[AiChatAssistant42] Fallback BaseInfoRepository::get unexpected id=%s',
+                            (string) $id
+                        ));
                     }
 
                     return new class extends \Eccube\Entity\BaseInfo {
@@ -177,7 +180,15 @@ class ProductRepository extends AbstractRepository
         // DBAL QueryBuilder に統一。LIMIT/OFFSET は setMaxResults/setFirstResult に任せ、
         // LIKE はプレースホルダに % を含めて渡すことで DB 差異を吸収する。
         $qb = $this->connection->createQueryBuilder()
-            ->select('p.id', 'p.name', 'pc.price02 AS price', 'ps.stock', 'pc.stock_unlimited', 'p.description_list', 'p.update_date')
+            ->select(
+                'p.id',
+                'p.name',
+                'pc.price02 AS price',
+                'ps.stock',
+                'pc.stock_unlimited',
+                'p.description_list',
+                'p.update_date'
+            )
             ->from('dtb_product', 'p')
             ->innerJoin('p', 'dtb_product_class', 'pc', 'pc.product_id = p.id')
             ->leftJoin('p', 'dtb_product_stock', 'ps', 'ps.product_class_id = pc.id')
@@ -194,7 +205,11 @@ class ProductRepository extends AbstractRepository
             $escaped = $this->escapeLikeKeyword($keyword);
             $likeKeyword = '%' . $escaped . '%';
             $escape = $this->likeEscapeClause();
-            $qb->andWhere("(p.name LIKE :kw {$escape} OR p.search_word LIKE :kw_sw {$escape} OR pc.product_code LIKE :kw_code {$escape})")
+            $qb->andWhere(
+                "(p.name LIKE :kw {$escape}"
+                . " OR p.search_word LIKE :kw_sw {$escape}"
+                . " OR pc.product_code LIKE :kw_code {$escape})"
+            )
                 ->setParameter('kw', $likeKeyword)
                 ->setParameter('kw_sw', $likeKeyword)
                 ->setParameter('kw_code', $likeKeyword);
@@ -226,7 +241,14 @@ class ProductRepository extends AbstractRepository
     public function getDetail(int $productId): ?array
     {
         $qb = $this->connection->createQueryBuilder()
-            ->select('p.id', 'p.name', 'p.description_list', 'p.create_date', 'p.update_date', 'p.product_status_id AS status_id')
+            ->select(
+                'p.id',
+                'p.name',
+                'p.description_list',
+                'p.create_date',
+                'p.update_date',
+                'p.product_status_id AS status_id'
+            )
             ->from('dtb_product', 'p')
             ->where('p.id = :product_id')
             ->andWhere('p.product_status_id = 1')
