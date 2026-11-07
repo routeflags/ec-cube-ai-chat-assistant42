@@ -26,9 +26,9 @@
 | プロトコル | クライアント要求の `protocolVersion` を交渉して返す（2025-11-25 / 2025-06-18 / 2025-03-26 / 2024-11-05、未指定・未対応時は 2025-06-18） | `Service/McpHttpService.php` |
 | ツール | 7 種・すべて読み取り専用: `search_products` / `get_product_detail` / `get_stock` / `get_categories` / `get_category_products` / `get_tags` / `search_by_tag` | `Service/ProductToolDefinition.php`, `Service/ProductToolExecutor.php` |
 | メタデータ | `name` / `title` / `description` / `inputSchema` / `annotations` とサーバー `instructions` を返す。`outputSchema` / `structuredContent` は未対応 | `Service/McpHttpService.php`, `Service/ProductToolDefinition.php` |
-| 認証 | なし。`Authorization` は受け取るが未検証（write 系追加時の TODO コメントのみ） | `Controller/McpHttpController.php:164` |
-| レート制限 | クライアント IP ＋ ツール名単位、120 req/min（`get_stock` は 60）。`cache.app` に PSR-6 保存、read-modify-write で非アトミック | `Service/RateLimitService.php` |
-| CORS | `Access-Control-Allow-Origin: *` ＋ `Permissions-Policy: tools=self` | `Controller/McpHttpController.php:262` |
+| 認証 | 任意の接続トークン（`Authorization: Bearer` / `X-MCP-Token`）を設定可能。未設定なら無認証 | `Service/McpAccessPolicy.php`, `Entity/Config.php` |
+| レート制限 | 120 req/min（`get_stock` は 60）。トークン提示時はトークン単位、未提示時は IP 単位。`cache.app` に PSR-6 保存 | `Service/RateLimitService.php`, `Service/McpAccessPolicy.php` |
+| CORS | 許可オリジン設定時は一致した Origin のみ、未設定は `*` | `Controller/McpHttpController.php`, `Service/McpAccessPolicy.php` |
 | 監査 | ツール名・結果・所要時間・IP ハッシュを記録（失敗は握りつぶし） | `Service/McpHttpService.php`, `Repository/McpAuditRepository.php` |
 | データ範囲 | 商品・カテゴリ・タグ・在庫のみ。**顧客情報・注文情報は返さない** | `Repository/ProductRepository.php` |
 | テスト | Unit（`McpHttpServiceTest` / `RateLimitServiceTest`）、HTTP e2e（`e2e/mcp.spec.ts`）、`make verify` / `make test-unit` / `make test-matrix` | `Tests/`, `bin/verify-plugin.sh`, `Makefile` |
@@ -125,7 +125,7 @@ flowchart LR
 | 13 | 組織 / 事業者 verification、`api.apps.write` 権限 | 未取得 | Phase 3 の前提作業 | 必須（Phase 3） |
 | 14 | 単一 MCP URL（または Template URL） | 店舗ごとに異なるドメイン | 第 4 章のモデル選択で解決 | 必須（Phase 3） |
 
-**実装状況**: #1 / #2 / #4 / #7 / #8 は対応済み（§6 Phase 0）。#3（接続トークン）・#6（トークン単位のレート制限）・#9（構造化出力）・#11（CORS）は認証と管理画面の実装時にまとめて対応（§6 の見送り理由）。#12〜#14 は Phase 3 の前提。
+**実装状況**: #1 / #2 / #3 / #4 / #6 / #7 / #8 / #11 は対応済み（§6 Phase 0・Phase 1）。#9（構造化出力）は注文ツールの形状確定時にまとめて対応。#12〜#14 は Phase 3 の前提。
 
 ---
 
@@ -164,20 +164,22 @@ npx @modelcontextprotocol/inspector
 | `Controller/McpHttpController.php` | `initialize` に `params.protocolVersion` を渡す |
 | `Repository/ProductRepository.php` | `getDetail()` から `status_id` / `create_date` / `update_date` を取得しない（MCP に内部列を返さない） |
 | `Tests/Unit/Service/McpHttpServiceTest.php`, `e2e/mcp.spec.ts` | メタデータ、交渉、カタログの単一性、命令形の不在を検証 |
+| `Entity/Config.php`, `DoctrineMigrations/Version20260910000000.php` | MCP 接続トークン・CORS 許可オリジンの列を追加（どちらも nullable） |
+| `Service/McpAccessPolicy.php` | トークン検証（Bearer / X-MCP-Token）、トークン単位のレート制限キー、オリジン判定 |
+| `Controller/McpHttpController.php` | 401 + `WWW-Authenticate`、CORS 許可オリジンの適用、キーの切り替え |
+| `Controller/Admin/DashboardController.php`, `Resource/template/admin/settings.twig` | 外部AI接続の設定 UI（トークン・許可オリジン・解除） |
 
 #### 見送り（理由付き）
 
 | 項目 | 理由 | 再開条件 |
 | --- | --- | --- |
 | `outputSchema` / `structuredContent` | 戻り値が DB 由来で揺れ、固定スキーマは誤検証を招く。ChatGPT 側では任意項目 | 注文ツール（第 7 章）の戻り値形状を確定する際に併せて設定 |
-| レート制限のトークン単位化 | トークン発行元（OAuth）が未実装で、キーにできる識別子が無い | 第 7 章の認証実装と同時 |
-| CORS の既定値変更 | 既存のブラウザ連携（WebMCP）を壊す恐れがある | Phase 1 の管理画面で許可オリジン設定を追加する時 |
 
 ### Phase 1: 店舗セルフ接続（審査不要）
 
 粗見積り 3〜4 人日（管理画面・ドキュメント・実接続確認）。
 
-- 管理画面に「外部 AI 接続」設定を追加: 公開 ON/OFF（既定 OFF）、接続トークンの発行 / 失効、許可オリジン、直近の監査ログ表示。
+- 管理画面に「外部AI接続（MCP）」設定を追加（**実装済み**）: 接続トークン（16 文字以上、任意）と CORS 許可オリジン。トークン未設定なら従来どおり無認証で公開する（既存接続を壊さないため、公開 ON/OFF の既定 OFF は採用しなかった）。ChatGPT / Claude は独自ヘッダを送れないため、トークンはブラウザ・ローカルエージェント向けの制限である点を UI にも明記。
 - `Documents/CHATGPT_CONNECT.md` を新設し、ChatGPT（プラグイン → カスタム MCP サーバー追加）と Claude（コネクター追加）の手順を記載（**作成済み**）。developer mode の有効化、Plus/Pro は読み取り専用までという制約も明記。
 - 完了条件: 実店舗（検証店舗）で「初心者向けの商品を探して」→「一番安いのは？」→「在庫ある？」が ChatGPT 上で通る。
 
@@ -246,11 +248,13 @@ B は個人情報を返すため、ディレクトリ登録の審査水準も一
 - **住所・氏名は会員の登録情報を使う**。ツール引数で受け取ると誤配送と PII 露出の両方を招く。
 - **決済手段はホワイトリスト**で絞る。カード系決済プラグインが有効でも、注文ツールは振込系のみ受け付ける。
 
-### 7.4 この段階で必要なオーナー判断
+### 7.4 この段階で決定済み
 
-- 注文を許可する支払方法（振込 / 代引 / 店頭払い など）
-- 1 注文あたりの金額上限を設けるか
-- テスト注文を本番 DB に残すか、検証店舗で行うか
+| 項目 | 決定 |
+| --- | --- |
+| 許可する支払方法 | **銀行振込のみ**（代引・店頭払いは要望が出たら追加） |
+| 1 注文あたりの金額上限 | **設ける**（初期値は 5 万円想定。実装時に管理画面で変更可能にする） |
+| テスト注文 | **検証店舗で行う**（本番 DB にテスト注文を残さない） |
 
 ---
 
@@ -316,7 +320,7 @@ B は個人情報を返すため、ディレクトリ登録の審査水準も一
 | 4 | 会員データ | 注文まで対応する（第 7 章）。決済はカード不要、振込など外部リダイレクトの無い手段のみ |
 | 5 | 表示名 | 「AIチャットアシスタント」を主（公開直前に確定） |
 
-残る判断は 3 点: 注文で許可する支払方法、1 注文あたりの金額上限、テスト注文の運用（第 7.4）。
+注文段階の追加決定: 支払方法は銀行振込のみ / 1 注文あたり 5 万円を上限の初期値とする / テスト注文は検証店舗で行う（第 7.4）。
 
 ### 10.4 決めた後の流れ（目安）
 

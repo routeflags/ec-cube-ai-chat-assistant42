@@ -16,6 +16,7 @@ declare(strict_types=1);
 namespace Plugin\AiChatAssistant42\Controller;
 
 use Plugin\AiChatAssistant42\Repository\ProductRepository;
+use Plugin\AiChatAssistant42\Service\McpAccessPolicy;
 use Plugin\AiChatAssistant42\Service\McpHttpService;
 use Plugin\AiChatAssistant42\Service\RateLimitExceededException;
 use Plugin\AiChatAssistant42\Service\RateLimitService;
@@ -38,6 +39,7 @@ class McpHttpController
         private McpHttpService $mcpHttpService,
         private RateLimitService $rateLimitService,
         private ?ShopContextService $shopContextService = null,
+        private ?McpAccessPolicy $accessPolicy = null,
     ) {
     }
 
@@ -53,9 +55,9 @@ class McpHttpController
         // 未設定時は全ユーザが同一バケット (127.0.0.1) を共有し誤爆するため framework.yaml で設定すること。
         $ip = $request->getClientIp() ?? 'unknown';
         try {
-            $this->rateLimitService->enforce($ip, 'well_known');
+            $this->rateLimitService->enforce($this->rateLimitKey($request, $ip), 'well_known');
         } catch (RateLimitExceededException $e) {
-            return $this->wellKnownRateLimitResponse($e);
+            return $this->wellKnownRateLimitResponse($e, $this->corsOrigin($request));
         }
 
         $baseUrl = $this->resolveBaseUrl($request);
@@ -65,7 +67,7 @@ class McpHttpController
 
         $response = new JsonResponse($data, 200, [], false);
         $response->headers->set('Content-Type', 'application/json; charset=utf-8');
-        $this->addCorsHeaders($response);
+        $this->addCorsHeaders($response, $this->corsOrigin($request));
         // WebMCP discovery: RFC 8288 link to the MCP endpoint
         $response->headers->set('Link', '</mcp>; rel="mcp"');
         // Cache-Control は setPublic()/setMaxAge() で付与し private との不整合を避ける
@@ -85,14 +87,14 @@ class McpHttpController
     {
         // CORS preflight
         if ($request->getMethod() === 'OPTIONS') {
-            return $this->optionsResponse();
+            return $this->optionsResponse($this->corsOrigin($request));
         }
 
         // Phase1: GET /mcp は 405 で明示（SSE は Phase3 延期）
         if ($request->getMethod() === 'GET') {
             $response = new JsonResponse(['error' => 'Method Not Allowed. Use POST /mcp'], 405);
             $response->headers->set('Allow', 'POST, OPTIONS');
-            $this->addCorsHeaders($response);
+            $this->addCorsHeaders($response, $this->corsOrigin($request));
             $response->headers->set('Content-Type', 'application/json; charset=utf-8');
 
             return $response;
@@ -102,16 +104,18 @@ class McpHttpController
         if ($request->getMethod() !== 'POST') {
             $response = new JsonResponse(['error' => 'Method Not Allowed'], 405);
             $response->headers->set('Allow', 'POST, OPTIONS');
-            $this->addCorsHeaders($response);
+            $this->addCorsHeaders($response, $this->corsOrigin($request));
 
             return $response;
         }
+
+        $origin = $this->corsOrigin($request);
 
         // 軽量 Content-Type 415: JSON 以外は 415 で拒否（MCP Inspector は JSON を送るため影響なし）
         $contentType = $request->headers->get('Content-Type', '');
         if ($contentType !== '' && stripos($contentType, 'application/json') === false) {
             $error = $this->mcpHttpService->writeErrorResponse(null, -32700, 'Parse error: Content-Type must be application/json');
-            $resp = $this->jsonResponseWithCors($error, 415);
+            $resp = $this->jsonResponseWithCors($error, 415, $origin);
             $resp->headers->set('Content-Type', 'application/json; charset=utf-8');
 
             return $resp;
@@ -121,14 +125,14 @@ class McpHttpController
 
         if ($content === '') {
             $error = $this->mcpHttpService->writeErrorResponse(null, -32700, 'Parse error: empty body');
-            return $this->jsonResponseWithCors($error, 200);
+            return $this->jsonResponseWithCors($error, 200, $origin);
         }
 
         try {
             $data = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
         } catch (\JsonException $e) {
             $error = $this->mcpHttpService->writeErrorResponse(null, -32700, 'Parse error: ' . $e->getMessage());
-            return $this->jsonResponseWithCors($error, 200);
+            return $this->jsonResponseWithCors($error, 200, $origin);
         }
 
         // batch リクエスト（配列）は未対応 → -32600
@@ -136,12 +140,12 @@ class McpHttpController
         // 元の JSON テキストが "[" で始まる場合のみ batch とみなす。
         if (str_starts_with(ltrim($content), '[') && is_array($data) && array_is_list($data)) {
             $error = $this->mcpHttpService->writeErrorResponse(null, -32600, 'Invalid Request: batch not supported');
-            return $this->jsonResponseWithCors($error, 200);
+            return $this->jsonResponseWithCors($error, 200, $origin);
         }
 
         if (!is_array($data)) {
             $error = $this->mcpHttpService->writeErrorResponse(null, -32700, 'Parse error: invalid JSON');
-            return $this->jsonResponseWithCors($error, 200);
+            return $this->jsonResponseWithCors($error, 200, $origin);
         }
 
         $method = $data['method'] ?? null;
@@ -150,21 +154,21 @@ class McpHttpController
         // 軽量 jsonrpc:"2.0" 検証 — 存在し 2.0 以外なら -32600
         if (array_key_exists('jsonrpc', $data) && $data['jsonrpc'] !== '2.0') {
             $error = $this->mcpHttpService->writeErrorResponse($id, -32600, 'Invalid Request: jsonrpc must be "2.0"');
-            return $this->jsonResponseWithCors($error, 200);
+            return $this->jsonResponseWithCors($error, 200, $origin);
+        }
+
+        // 管理画面でトークンを設定している場合のみ認証を要求する（未設定は従来どおり公開）
+        if (!$this->isAuthorized($request)) {
+            return $this->unauthorizedResponse($id, $origin);
         }
 
         // notifications/initialized は通知（id 無し）→ 204 で応答不要
         if ($method === 'notifications/initialized') {
             $response = new Response('', 204);
-            $this->addCorsHeaders($response);
+            $this->addCorsHeaders($response, $origin);
 
             return $response;
         }
-
-        // Authorization 受け口（将来の write 系で 401 に分岐する TODO を残す）
-        $authHeader = $request->headers->get('Authorization');
-        // TODO: write 系では Bearer 検証して 401 を返す（現行 read-only のため無視して 200 を返す）
-        // if ($authHeader !== null) { // 将来用: log or validate }
 
         // レート制限 — toolName で分岐（get_stock は 60、他は 120）
         $toolName = 'default';
@@ -176,9 +180,9 @@ class McpHttpController
 
         $ip = $request->getClientIp() ?? 'unknown';
         try {
-            $this->rateLimitService->enforce($ip, $toolName);
+            $this->rateLimitService->enforce($this->rateLimitKey($request, $ip), $toolName);
         } catch (RateLimitExceededException $e) {
-            return $this->rateLimitResponse($id, $e);
+            return $this->rateLimitResponse($id, $e, $origin);
         }
 
         try {
@@ -198,13 +202,13 @@ class McpHttpController
             $result = $this->mcpHttpService->writeErrorResponse($id, -32603, 'Internal error: ' . $e->getMessage());
         }
 
-        return $this->jsonResponseWithCors($result, 200);
+        return $this->jsonResponseWithCors($result, 200, $origin);
     }
 
-    private function jsonResponseWithCors(array $data, int $status): JsonResponse
+    private function jsonResponseWithCors(array $data, int $status, ?string $origin = null): JsonResponse
     {
         $response = new JsonResponse($data, $status, [], false);
-        $this->addCorsHeaders($response);
+        $this->addCorsHeaders($response, $origin);
         $response->headers->set('Content-Type', 'application/json; charset=utf-8');
         // POST /mcp の tools/call は no-store
         $response->setPrivate();
@@ -214,7 +218,7 @@ class McpHttpController
         return $response;
     }
 
-    private function rateLimitResponse(mixed $id, RateLimitExceededException $e): JsonResponse
+    private function rateLimitResponse(mixed $id, RateLimitExceededException $e, ?string $origin = null): JsonResponse
     {
         $body = [
             'jsonrpc' => '2.0',
@@ -236,7 +240,7 @@ class McpHttpController
         return $response;
     }
 
-    private function wellKnownRateLimitResponse(RateLimitExceededException $e): JsonResponse
+    private function wellKnownRateLimitResponse(RateLimitExceededException $e, ?string $origin = null): JsonResponse
     {
         // Discovery (GET /.well-known/mcp.json) は REST なので JSON-RPC ラップせず REST 形式で返す
         $response = new JsonResponse(['error' => 'Too Many Requests'], 429, [], false);
@@ -251,24 +255,86 @@ class McpHttpController
         return $response;
     }
 
-    private function optionsResponse(): Response
+    private function optionsResponse(?string $origin = null): Response
     {
         $response = new Response('', 204);
         $this->addCorsHeaders($response);
         $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-        $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
+        $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-MCP-Token, Accept');
         $response->headers->set('Access-Control-Max-Age', '86400');
 
         return $response;
     }
 
-    private function addCorsHeaders(Response $response): void
+    private function addCorsHeaders(Response $response, ?string $origin = null): void
     {
-        $response->headers->set('Access-Control-Allow-Origin', '*');
+        if ($origin !== null) {
+            $response->headers->set('Access-Control-Allow-Origin', $origin);
+        }
         $response->headers->set('Vary', 'Origin');
         // Do not set Allow-Credentials with wildcard
         // WebMCP tools permission: top-level documents may register tools; cross-origin iframes need allow="tools"
         $response->headers->set('Permissions-Policy', 'tools=self');
+    }
+
+    /**
+     * リクエストがアクセストークンを満たしているか。
+     *
+     * ポリシー未接続またはトークン未設定の場合は常に true（従来動作）。
+     */
+    private function isAuthorized(Request $request): bool
+    {
+        if ($this->accessPolicy === null) {
+            return true;
+        }
+
+        return $this->accessPolicy->isAuthorized(
+            $request->headers->get('Authorization'),
+            $request->headers->get('X-MCP-Token')
+        );
+    }
+
+    /**
+     * レート制限のキー。トークン提示時はトークン単位、未提示時は IP 単位。
+     */
+    private function rateLimitKey(Request $request, string $clientIp): string
+    {
+        if ($this->accessPolicy === null) {
+            return $clientIp;
+        }
+
+        return $this->accessPolicy->rateLimitKey(
+            $clientIp,
+            $request->headers->get('Authorization'),
+            $request->headers->get('X-MCP-Token')
+        );
+    }
+
+    /**
+     * CORS の応答値を決める。ポリシー未接続時は従来どおり `*`。
+     */
+    private function corsOrigin(Request $request): ?string
+    {
+        if ($this->accessPolicy === null) {
+            return '*';
+        }
+
+        return $this->accessPolicy->allowedOrigin($request->headers->get('Origin'));
+    }
+
+    /**
+     * アクセストークン未提示・不一致時の 401。
+     *
+     * WWW-Authenticate は MCP の認可仕様が期待する入口。
+     * 将来 OAuth を入れる際は resource_metadata を指すよう拡張する。
+     */
+    private function unauthorizedResponse(mixed $id, ?string $origin): JsonResponse
+    {
+        $error = $this->mcpHttpService->writeErrorResponse($id, -32001, 'Unauthorized: MCP access token required');
+        $response = $this->jsonResponseWithCors($error, 401, $origin);
+        $response->headers->set('WWW-Authenticate', 'Bearer realm="mcp"');
+
+        return $response;
     }
 
     private function resolveBaseUrl(Request $request): string

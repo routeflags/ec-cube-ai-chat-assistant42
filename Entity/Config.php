@@ -87,6 +87,20 @@ class Config extends \Eccube\Entity\AbstractEntity
     private int $rate_limit_per_minute = 30;
 
     /**
+     * 外部 AI 接続用のアクセストークン。未設定なら従来どおり無認証で公開する。
+     *
+     * @ORM\Column(name="mcp_access_token", type="string", length=128, nullable=true)
+     */
+    private ?string $mcp_access_token = null;
+
+    /**
+     * CORS を許可するオリジン（カンマ/空白/改行区切り）。未設定なら `*`。
+     *
+     * @ORM\Column(name="mcp_allowed_origins", type="string", length=512, nullable=true)
+     */
+    private ?string $mcp_allowed_origins = null;
+
+    /**
      * @ORM\Column(type="datetimetz")
      */
     private ?\DateTimeInterface $create_date = null;
@@ -236,6 +250,47 @@ class Config extends \Eccube\Entity\AbstractEntity
     public function setRateLimitPerMinute(int $rateLimitPerMinute): self
     {
         $this->rate_limit_per_minute = $rateLimitPerMinute;
+        return $this;
+    }
+
+    /**
+     * 外部 AI 接続用のトークン。未設定なら null。
+     */
+    public function getMcpAccessToken(): ?string
+    {
+        return $this->mcp_access_token;
+    }
+
+    public function setMcpAccessToken(?string $mcpAccessToken): self
+    {
+        $this->mcp_access_token = ($mcpAccessToken === null || $mcpAccessToken === '') ? null : $mcpAccessToken;
+        return $this;
+    }
+
+    /**
+     * 管理画面表示用のマスク済みトークン。末尾 4 文字のみ残す。
+     */
+    public function getMaskedMcpAccessToken(): string
+    {
+        if ($this->mcp_access_token === null) {
+            return '';
+        }
+
+        return '••••' . substr($this->mcp_access_token, -4);
+    }
+
+    /**
+     * CORS 許可オリジンの生文字列（未設定なら null）。
+     */
+    public function getMcpAllowedOrigins(): ?string
+    {
+        return $this->mcp_allowed_origins;
+    }
+
+    public function setMcpAllowedOrigins(?string $mcpAllowedOrigins): self
+    {
+        $trimmed = $mcpAllowedOrigins === null ? '' : trim($mcpAllowedOrigins);
+        $this->mcp_allowed_origins = ($trimmed === '') ? null : $trimmed;
         return $this;
     }
 

@@ -245,6 +245,7 @@ class DashboardController extends AbstractController
             'modelsByProvider' => $modelsByProvider,
             'allModelIds' => $allModelIds,
             'maskedKeys' => $maskedKeys,
+            'maskedMcpToken' => $config->getMaskedMcpAccessToken(),
         ]);
     }
 
@@ -304,8 +305,37 @@ class DashboardController extends AbstractController
         if ($maxTokensResponse !== null) {
             return $maxTokensResponse;
         }
+        $mcpTokenResponse = $this->validateMcpTokenOrRedirect($request);
+        if ($mcpTokenResponse !== null) {
+            return $mcpTokenResponse;
+        }
 
         return $this->persistSettingsAndRedirect($request, $config, $provider, $model);
+    }
+
+    /**
+     * 外部 AI 接続トークンの長さを検証する。
+     *
+     * 短いトークンは総当たりで破られるため、16 文字未満は保存させない。
+     */
+    private function validateMcpTokenOrRedirect(Request $request): ?Response
+    {
+        if (!$request->request->has('mcp_access_token')) {
+            return null;
+        }
+
+        $token = trim((string) $request->request->get('mcp_access_token', ''));
+        if ($token === '') {
+            return null;
+        }
+
+        if (mb_strlen($token) < 16) {
+            $this->addError('外部AI接続トークンは16文字以上で入力してください。', 'admin');
+
+            return $this->redirectToRoute('admin_ai_chat_assistant_settings');
+        }
+
+        return null;
     }
 
     /**
@@ -492,6 +522,31 @@ class DashboardController extends AbstractController
         $config->setResponseMode((string) $request->request->get('response_mode', 'hybrid'));
         $this->applyApiKeysFromRequest($request, $config);
         $this->applySystemPromptFromRequest($request, $config);
+        $this->applyMcpAccessFromRequest($request, $config);
+    }
+
+    /**
+     * 外部 AI 接続設定（トークン・許可オリジン）をリクエストから反映する。
+     *
+     * トークンは空文字で上書きしない（既存を保つ）。
+     * 明示的な解除は `mcp_access_token_clear` チェックボックスで行う。
+     */
+    private function applyMcpAccessFromRequest(Request $request, Config $config): void
+    {
+        if ($request->request->has('mcp_access_token_clear')) {
+            $config->setMcpAccessToken(null);
+        }
+
+        if ($request->request->has('mcp_access_token')) {
+            $token = trim((string) $request->request->get('mcp_access_token', ''));
+            if ($token !== '') {
+                $config->setMcpAccessToken($token);
+            }
+        }
+
+        if ($request->request->has('mcp_allowed_origins')) {
+            $config->setMcpAllowedOrigins((string) $request->request->get('mcp_allowed_origins', ''));
+        }
     }
 
     /**

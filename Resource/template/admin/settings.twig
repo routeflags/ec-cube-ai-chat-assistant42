@@ -125,6 +125,43 @@
         </div>
       </div>
 
+      {# 外部AI接続（MCP） #}
+      <div class="card mb-4">
+        <div class="card-header">
+          <span class="card-title">外部AI接続（MCP）</span>
+        </div>
+        <div class="card-body">
+          <p class="text-muted">
+            ChatGPT や Claude から、この店の商品検索・在庫確認を行えるようにする設定です。<br>
+            トークンを設定すると、<code>/mcp</code> へのアクセスに <code>Authorization: Bearer &lt;token&gt;</code> または
+            <code>X-MCP-Token: &lt;token&gt;</code> が必要になります。未設定のときは誰でも読み取りできます。<br>
+            <strong>注意:</strong> ChatGPT / Claude は独自ヘッダを送れないため、トークンを設定すると OAuth 対応まではこれらのサービスから接続できません。
+            ブラウザやローカルエージェントからの接続を絞りたい場合に使用してください。
+          </p>
+          <div class="form-group">
+            <label for="mcp_access_token">接続トークン</label>
+            <input type="password" name="mcp_access_token" id="mcp_access_token" class="form-control"
+                   value="" autocomplete="new-password"
+                   placeholder="{{ maskedMcpToken ? maskedMcpToken : '未設定（無認証で公開）' }}">
+            {% if maskedMcpToken %}
+              <small class="text-muted">設定済み ({{ maskedMcpToken }})。新しいトークンを入力しない限り変更されません。</small>
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" name="mcp_access_token_clear" id="mcp_access_token_clear" value="1">
+                <label class="form-check-label" for="mcp_access_token_clear">トークンを削除する（無認証に戻す）</label>
+              </div>
+            {% endif %}
+            <small class="text-muted d-block">16文字以上。例: <code>php -r 'echo bin2hex(random_bytes(16));'</code></small>
+          </div>
+          <div class="form-group">
+            <label for="mcp_allowed_origins">CORS 許可オリジン（任意）</label>
+            <input type="text" name="mcp_allowed_origins" id="mcp_allowed_origins" class="form-control"
+                   value="{{ config and config.getMcpAllowedOrigins() ? config.getMcpAllowedOrigins() : '' }}"
+                   placeholder="未設定なら全てのオリジンを許可（*）">
+            <small class="text-muted">ブラウザから直接呼ぶ場合のみ設定します。カンマ区切り（例: <code>https://shop.example.com</code>）。ChatGPT / Claude はサーバー間通信のため影響を受けません。</small>
+          </div>
+        </div>
+      </div>
+
       <div class="c-conversionArea__btnArea">
         <button type="submit" class="btn btn-primary">保存する</button>
       </div>

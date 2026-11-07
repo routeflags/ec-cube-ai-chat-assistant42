@@ -94,6 +94,21 @@ https://<店舗ドメイン>/.well-known/mcp.json
 - 接続はいつでも解除できる。解除後は相手側からツールは見えない。
 - 注文機能を追加する段階では認証（OAuth）が必須になる。詳細は [ChatGPT プラグイン登録計画](CHATGPT_PLUGIN_PLAN.md) の第 7 章。
 
+### 接続を絞りたい場合
+
+管理画面の「外部AI接続（MCP）」で接続トークンと CORS 許可オリジンを設定できる。ただし:
+
+- **ChatGPT / Claude は独自ヘッダ（`X-MCP-Token`）や API キーを送れない**。トークンを設定すると、OAuth に対応するまではこれらから接続できなくなる。トークンはブラウザ・ローカルエージェント・社内ツール向けの制限と考える。
+- CORS 許可オリジンは、ブラウザから直接 `/mcp` を呼ぶ場合だけ効く。ChatGPT / Claude はサーバー間通信なので影響を受けない。
+- トークンを設定した状態では、ブラウザで `/.well-known/mcp.json` を開く確認は使えない（Discovery は公開のままだが、`tools/list` はトークン必須）。代わりに:
+
+```bash
+curl -s -X POST https://<店舗ドメイン>/mcp \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer <token>" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
 ---
 
 ## 6. 解除方法
