@@ -98,7 +98,8 @@ class McpAccessPolicyTest extends TestCase
         $policy = new McpAccessPolicy(null, null, 'https://shop.example.com,https://admin.example.com');
 
         $this->assertSame('https://shop.example.com', $policy->allowedOrigin('https://shop.example.com'));
-        $this->assertSame('https://admin.example.com', $policy->allowedOrigin('https://admin.example.com/'));
+        // CORS は要求された Origin をそのまま返す必要がある（正規化するとブラウザが拒否する）
+        $this->assertSame('https://admin.example.com/', $policy->allowedOrigin('https://admin.example.com/'));
     }
 
     public function testAllowedOriginRejectsUnknownOrigin(): void

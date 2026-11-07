@@ -3,7 +3,7 @@
 注文系ツール（会員固有の読み書き）を追加するための認可基盤。ChatGPT / Claude は「独自 API キー」を送れないため、会員の識別は OAuth 2.1 でしか実現できない。
 
 - 前提: [ChatGPT プラグイン登録計画](CHATGPT_PLUGIN_PLAN.md) 第 7 章、[接続手順](CHATGPT_CONNECT.md)
-- ステータス: **設計（本ドキュメント）とメタデータ宣言まで。認可エンドポイントは未実装**（ブラウザと DB が無い環境でセキュリティコードを書き上げないため、意図的に分割している）
+- ステータス: **PR 2 まで実装済み**（テーブル・スコープ・PKCE・リダイレクト検証・認可コード/トークンのライフサイクル。SQLite で 12 ケース検証）。`/authorize` と `/token` の HTTP エンドポイントは未実装
 
 ---
 
@@ -158,8 +158,8 @@ HTTP レベルでは `401` + `WWW-Authenticate: Bearer resource_metadata="..."`�
 
 | PR | 内容 | 受入条件 |
 | --- | --- | --- |
-| 1 | メタデータ 2 本 + `securitySchemes` 宣言 | `curl` で両文書が返る。既存 e2e が緑 |
-| 2 | テーブル + リポジトリ + トークン発行 / 検証（純粋ロジック + Unit） | PKCE 検証・単回使用・期限・`resource` 一致の Unit が緑 |
+| 1 | メタデータ 2 本 + `securitySchemes` 宣言 | `securitySchemes` は宣言済み。メタデータは `/authorize` 実装後に公開する（存在しないエンドポイントを広告しないため） |
+| 2 | テーブル + リポジトリ + トークン発行 / 検証（純粋ロジック + Unit） | **完了**。SQLite の Unit 12 ケース（単回使用、PKCE、期限、リフレッシュローテーション、resource 不一致） |
 | 3 | `/authorize`（GET/POST）+ 同意画面 + 会員ログイン誘導 | ブラウザで同意→コード発行まで通る（Docker） |
 | 4 | `/token`（code 交換・refresh・revoke）+ CIMD/DCR | curl でコード交換、MCP Inspector で接続 |
 | 5 | ツール実装（履歴→カート→注文）と `securitySchemes` 更新 | 実機 ChatGPT で履歴照会、次にカート投入 |
