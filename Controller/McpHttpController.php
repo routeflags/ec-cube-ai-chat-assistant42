@@ -183,7 +183,12 @@ class McpHttpController
 
         try {
             $result = match ($method) {
-                'initialize' => $this->mcpHttpService->handleInitialize($id),
+                'initialize' => $this->mcpHttpService->handleInitialize(
+                    $id,
+                    isset($data['params']['protocolVersion']) && is_string($data['params']['protocolVersion'])
+                        ? $data['params']['protocolVersion']
+                        : null
+                ),
                 'tools/list' => $this->mcpHttpService->handleToolsList($id),
                 'tools/call' => $this->mcpHttpService->handleToolsCall($data, $id, $ip),
                 null => $this->mcpHttpService->writeErrorResponse($id, -32600, 'Invalid Request: method is required'),

@@ -25,17 +25,30 @@ namespace Plugin\AiChatAssistant42\Service;
 final class ProductToolDefinition
 {
     /**
-     * @var array<int, array{type: string, name: string, description: string, input_schema: array}>
+     * 全ツール共通の安全注釈。
+     *
+     * 本サーバーは店舗の商品カタログを読むだけで、状態を変えない。
+     * 外部ネットワークも参照しない（自店舗 DB の閉じた範囲）。
+     * ChatGPT / Claude の審査では、この注釈が実挙動と一致していることが確認される。
+     */
+    private const READ_ONLY_ANNOTATIONS = [
+        'readOnlyHint' => true,
+        'destructiveHint' => false,
+        'openWorldHint' => false,
+    ];
+
+    /**
+     * @var array<int, array{type: string, name: string, title: string, description: string, annotations: array{readOnlyHint: bool, destructiveHint: bool, openWorldHint: bool}, input_schema: array}>
      */
     private const DEFINITIONS = [
         [
             'type' => 'function',
             'name' => 'search_products',
-            'description' => '商品をキーワードとカテゴリで検索します。'
-                . '商品名・検索ワード・商品コードが対象です。'
-                . '返却される価格は税抜価格です（EC-CUBE の price02 は税抜保存）。'
-                . '返却される各商品の url はショップの商品詳細ページの絶対URLです。'
-                . '相対パスや https://www.example.com は使用しないでください。',
+            'title' => '商品を検索する',
+            'description' => '商品名・検索ワード・商品コードを対象にキーワード検索し、カテゴリでも絞り込めます。'
+                . '価格は税抜価格です（EC-CUBE の price02 は税抜保存）。'
+                . '各商品の url は、ショップの商品詳細ページの絶対 URL です。',
+            'annotations' => self::READ_ONLY_ANNOTATIONS,
             'input_schema' => [
                 'type' => 'object',
                 'properties' => [
@@ -49,10 +62,11 @@ final class ProductToolDefinition
         [
             'type' => 'function',
             'name' => 'get_product_detail',
-            'description' => '商品の詳細情報を取得します。規格・在庫・カテゴリ・画像・タグを含みます。'
-                . '返却される価格は税抜価格です（EC-CUBE の price02 は税抜保存）。'
-                . '返却される url はショップの商品詳細ページの絶対URLです。'
-                . '相対パスや https://www.example.com は使用しないでください。',
+            'title' => '商品の詳細を取得する',
+            'description' => '1 商品の詳細を返します。規格・在庫・カテゴリ・画像・タグを含みます。'
+                . '価格は税抜価格です（EC-CUBE の price02 は税抜保存）。'
+                . 'url は、ショップの商品詳細ページの絶対 URL です。',
+            'annotations' => self::READ_ONLY_ANNOTATIONS,
             'input_schema' => [
                 'type' => 'object',
                 'properties' => [
@@ -64,10 +78,10 @@ final class ProductToolDefinition
         [
             'type' => 'function',
             'name' => 'get_stock',
-            'description' => '商品の規格ごとの在庫情報を取得します。'
-                . '返却される価格は税抜価格です（EC-CUBE の price02 は税抜保存）。'
-                . '返却される在庫情報と紐づく商品URLはショップの商品詳細ページの絶対URLで案内してください。'
-                . '相対パスや https://www.example.com は使用しないでください。',
+            'title' => '在庫を確認する',
+            'description' => '商品 ID に対する規格（product_class）ごとの在庫数を返します。'
+                . '価格は税抜価格です。',
+            'annotations' => self::READ_ONLY_ANNOTATIONS,
             'input_schema' => [
                 'type' => 'object',
                 'properties' => [
@@ -79,7 +93,9 @@ final class ProductToolDefinition
         [
             'type' => 'function',
             'name' => 'get_categories',
-            'description' => 'カテゴリ階層を取得します。親カテゴリ ID を指定すると子カテゴリのみ返します。',
+            'title' => 'カテゴリ一覧を取得する',
+            'description' => 'カテゴリ階層を返します。parent_id を指定すると、その子カテゴリのみを返します。',
+            'annotations' => self::READ_ONLY_ANNOTATIONS,
             'input_schema' => [
                 'type' => 'object',
                 'properties' => [
@@ -90,7 +106,10 @@ final class ProductToolDefinition
         [
             'type' => 'function',
             'name' => 'get_category_products',
-            'description' => '指定カテゴリに属する商品一覧を取得します。返却される各商品の url はショップの商品詳細ページの絶対URLです。相対パスや https://www.example.com は使用しないでください。',
+            'title' => 'カテゴリの商品を取得する',
+            'description' => '指定カテゴリに属する商品一覧を返します。'
+                . '価格は税抜価格です。各商品の url は、ショップの商品詳細ページの絶対 URL です。',
+            'annotations' => self::READ_ONLY_ANNOTATIONS,
             'input_schema' => [
                 'type' => 'object',
                 'properties' => [
@@ -104,13 +123,18 @@ final class ProductToolDefinition
         [
             'type' => 'function',
             'name' => 'get_tags',
-            'description' => '全タグ一覧を取得します。',
+            'title' => 'タグ一覧を取得する',
+            'description' => '登録されている全タグを返します。',
+            'annotations' => self::READ_ONLY_ANNOTATIONS,
             'input_schema' => ['type' => 'object', 'properties' => []],
         ],
         [
             'type' => 'function',
             'name' => 'search_by_tag',
-            'description' => '特定タグに紐づく商品を検索します。返却される各商品の url はショップの商品詳細ページの絶対URLです。相対パスや https://www.example.com は使用しないでください。',
+            'title' => 'タグの商品を検索する',
+            'description' => '指定タグに紐づく商品一覧を返します。'
+                . '価格は税抜価格です。各商品の url は、ショップの商品詳細ページの絶対 URL です。',
+            'annotations' => self::READ_ONLY_ANNOTATIONS,
             'input_schema' => [
                 'type' => 'object',
                 'properties' => [
@@ -128,7 +152,7 @@ final class ProductToolDefinition
     }
 
     /**
-     * @return array<int, array{type: string, name: string, description: string, input_schema: array}>
+     * @return array<int, array{type: string, name: string, title: string, description: string, annotations: array{readOnlyHint: bool, destructiveHint: bool, openWorldHint: bool}, input_schema: array}>
      */
     public static function all(): array
     {

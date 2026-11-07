@@ -18,6 +18,7 @@ namespace Plugin\AiChatAssistant42\Tests\Unit\Service;
 use PHPUnit\Framework\TestCase;
 use Plugin\AiChatAssistant42\Repository\ProductRepository;
 use Plugin\AiChatAssistant42\Service\McpHttpService;
+use Plugin\AiChatAssistant42\Service\ProductToolDefinition;
 use Plugin\AiChatAssistant42\Service\ShopContextService;
 
 /**
@@ -34,6 +35,17 @@ class McpHttpServiceTest extends TestCase
     {
         $this->productRepository = $this->createMock(ProductRepository::class);
         $this->productRepository->method('getToolDefinitions')->willReturn([]);
+    }
+
+    /**
+     * @param array<int, array> $definitions
+     */
+    private function createService(array $definitions = []): McpHttpService
+    {
+        $repository = $this->createMock(ProductRepository::class);
+        $repository->method('getToolDefinitions')->willReturn($definitions);
+
+        return new McpHttpService($repository);
     }
 
     public function testDisplayNameUsesConfiguredShopName(): void
@@ -86,5 +98,81 @@ class McpHttpServiceTest extends TestCase
         $payload = $service->buildWellKnownPayload('https://example.test');
 
         $this->assertSame('ec-mcp', $payload['serverInfo']['name']);
+    }
+
+    // ------------------------------------------------------------------
+    //  ツールメタデータ（ChatGPT / Claude の登録要件）
+    // ------------------------------------------------------------------
+
+    public function testToolCatalogExposesTitleAndAnnotations(): void
+    {
+        $service = $this->createService(ProductToolDefinition::all());
+        $catalog = $service->buildToolCatalog();
+
+        $this->assertCount(7, $catalog);
+        foreach ($catalog as $tool) {
+            $this->assertNotSame('', $tool['title']);
+            $this->assertTrue($tool['annotations']['readOnlyHint'], $tool['name']);
+            $this->assertFalse($tool['annotations']['destructiveHint'], $tool['name']);
+            $this->assertFalse($tool['annotations']['openWorldHint'], $tool['name']);
+            $this->assertArrayHasKey('type', $tool['inputSchema']);
+        }
+    }
+
+    public function testToolsListAndDiscoveryShareOneCatalog(): void
+    {
+        $service = $this->createService(ProductToolDefinition::all());
+
+        $list = $service->handleToolsList(1);
+        $wellKnown = $service->buildWellKnownPayload('https://example.test');
+
+        $this->assertSame($wellKnown['tools'], $list['result']['tools']);
+    }
+
+    public function testToolDescriptionsCarryNoBehaviouralInstructions(): void
+    {
+        foreach (ProductToolDefinition::all() as $tool) {
+            $this->assertStringNotContainsString('してください', $tool['description'], $tool['name']);
+            $this->assertStringNotContainsString('example.com', $tool['description'], $tool['name']);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    //  プロトコルバージョン交渉
+    // ------------------------------------------------------------------
+
+    public function testInitializeEchoesSupportedProtocolVersion(): void
+    {
+        $service = $this->createService();
+        $result = $service->handleInitialize(1, '2025-06-18');
+
+        $this->assertSame('2025-06-18', $result['result']['protocolVersion']);
+        $this->assertNotSame('', $result['result']['instructions']);
+    }
+
+    public function testInitializeAcceptsEveryAdvertisedVersion(): void
+    {
+        $service = $this->createService();
+
+        foreach (McpHttpService::SUPPORTED_PROTOCOL_VERSIONS as $version) {
+            $result = $service->handleInitialize(1, $version);
+            $this->assertSame($version, $result['result']['protocolVersion']);
+        }
+    }
+
+    public function testInitializeFallsBackForUnsupportedVersion(): void
+    {
+        $service = $this->createService();
+        $result = $service->handleInitialize(1, '1999-01-01');
+
+        $this->assertSame(McpHttpService::PROTOCOL_VERSION, $result['result']['protocolVersion']);
+    }
+
+    public function testInitializeFallsBackWithoutVersion(): void
+    {
+        $service = $this->createService();
+        $result = $service->handleInitialize(1);
+
+        $this->assertSame(McpHttpService::PROTOCOL_VERSION, $result['result']['protocolVersion']);
     }
 }

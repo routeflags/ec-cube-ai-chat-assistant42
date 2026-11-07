@@ -86,7 +86,7 @@ test.describe('T-01 Discovery GET /.well-known/mcp.json', () => {
 
     const body = await res.json();
     expect(body.serverInfo?.name).toBe('ec-mcp');
-    expect(body.protocolVersion).toBe('2024-11-05');
+    expect(body.protocolVersion).toBe('2025-06-18');
     expect(body.transport?.type).toBe('streamable-http');
     expect(body.transport?.url).toMatch(/\/mcp$/);
     expect(Array.isArray(body.tools)).toBeTruthy();
@@ -141,6 +141,29 @@ test.describe('T-02 Connection POST /mcp initialize', () => {
     expect(body.result?.serverInfo?.name).toBe('ec-mcp');
     expect(body.result?.protocolVersion).toBe('2024-11-05');
     expect(body.result?.capabilities?.tools?.listChanged).toBe(false);
+    expect(body.result?.instructions).toBeTruthy();
+
+    await api.dispose();
+  });
+
+  test('negotiates protocolVersion and falls back when unsupported', async () => {
+    const api = await request.newContext();
+
+    const echoed = await postMcp(api, {
+      jsonrpc: '2.0',
+      id: 2,
+      method: 'initialize',
+      params: { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'test', version: '1.0.0' } },
+    });
+    expect((await echoed.json()).result?.protocolVersion).toBe('2025-11-25');
+
+    const fallback = await postMcp(api, {
+      jsonrpc: '2.0',
+      id: 3,
+      method: 'initialize',
+      params: { protocolVersion: '1999-01-01', capabilities: {}, clientInfo: { name: 'test', version: '1.0.0' } },
+    });
+    expect((await fallback.json()).result?.protocolVersion).toBe('2025-06-18');
 
     await api.dispose();
   });
@@ -183,6 +206,18 @@ test.describe('T-03 POST /mcp tools/list', () => {
     for (let i = 0; i < wellKnownTools.length; i++) {
       expect(listTools[i].name).toBe(wellKnownTools[i].name);
       expect(listTools[i].inputSchema).toEqual(wellKnownTools[i].inputSchema);
+    }
+
+    // ChatGPT / Claude の登録審査で見られるメタデータ（title / annotations）
+    for (const tool of listTools as Array<{
+      name: string;
+      title?: string;
+      annotations?: Record<string, unknown>;
+    }>) {
+      expect(tool.title, `${tool.name}: title`).toBeTruthy();
+      expect(tool.annotations?.readOnlyHint, `${tool.name}: readOnlyHint`).toBe(true);
+      expect(tool.annotations?.destructiveHint, `${tool.name}: destructiveHint`).toBe(false);
+      expect(tool.annotations?.openWorldHint, `${tool.name}: openWorldHint`).toBe(false);
     }
 
     // private cache for tools/list? Actually controller sets no-store for POST /mcp

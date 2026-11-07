@@ -216,6 +216,9 @@ class ProductRepository extends AbstractRepository
     /**
      * 商品の詳細情報を返す。
      *
+     * 外部の AI クライアント（MCP）にもそのまま返るため、内部管理用の列
+     * （product_status_id / create_date / update_date）は取得しない。
+     *
      * @param int $productId 商品 ID
      *
      * @return array|null 商品情報（存在しない場合は null）
@@ -223,7 +226,7 @@ class ProductRepository extends AbstractRepository
     public function getDetail(int $productId): ?array
     {
         $qb = $this->connection->createQueryBuilder()
-            ->select('p.id', 'p.name', 'p.description_list', 'p.create_date', 'p.update_date', 'p.product_status_id AS status_id')
+            ->select('p.id', 'p.name', 'p.description_list')
             ->from('dtb_product', 'p')
             ->where('p.id = :product_id')
             ->andWhere('p.product_status_id = 1')

@@ -15,12 +15,12 @@ Playwright の `request` API で再現する真の HTTP e2e。`McpHttpController
 配置: `e2e/mcp.spec.ts` + `playwright.config.ts`。EC-CUBE 4.2 制約
 (`Resource/config/routes.yaml` 手書き) を壊さず、既存の Unit/Integration と seam を分ける。
 
-## シナリオ対応 (8タスク / 10シナリオ → 33テスト)
+## シナリオ対応 (8タスク / 10シナリオ → 34テスト)
 
 | Spec | 設計 §5.1 | テスト | 検証 |
 |------|-----------|--------|------|
 | T-01 | `GET /.well-known/mcp.json` → 200 | `T-01 Discovery` 2 tests | `application/json` + `tools.length==7` + `transport.type==streamable-http` + `serverInfo.name==ec-mcp` + CORS `*` + `Cache-Control: public,max-age=300` + `Vary: Origin` + alias `/.well-known/mcp` |
-| T-02 | `POST /mcp initialize` → 200 | `T-02 Connection` 2 tests | `result.serverInfo.name==ec-mcp` + `protocolVersion 2024-11-05` + `notifications/initialized → 204` |
+| T-02 | `POST /mcp initialize` → 200 | `T-02 Connection` 3 tests | `result.serverInfo.name==ec-mcp` + `protocolVersion` 交渉（要求値のエコー / 未対応は 2025-06-18）+ `instructions` + `notifications/initialized → 204` |
 | T-03 | `POST /mcp tools/list` → 7件 | `T-03 tools/list` 1 test | 7件 + wellKnown と一致 (diff) |
 | T-04 | `POST /mcp tools/call x7` → 200 | `T-04 tools/call x7` 7 tests | `search_products/get_product_detail/get_stock/get_categories/get_category_products/get_tags/search_by_tag` → 200 + `content[0].type==text` + JSON valid |
 | T-05 | エラー | `T-05 Error handling` 9 tests | invalid json -32700, method欠落 -32600, unknown -32601, unknown_tool isError:true, jsonrpc:"1.0" -32600, batch [] -32600, text/plain 415, GET /mcp 405 + Allow: POST, OPTIONS 204 + Allow-Methods/Headers + Max-Age |
@@ -45,7 +45,7 @@ npx playwright install --with-deps chromium
 
 # 通常は E2E_BASE_URL が無いと全テスト skip (graceful)
 npx playwright test --config=playwright.config.ts --reporter=list
-# → 33 skipped
+# → 34 skipped
 ```
 
 ## Docker での試験実施 (推奨)
@@ -103,7 +103,7 @@ e2e は Docker 上でのみ実行する explicit な `npm run test:e2e` に分�
 
 | 症状 | 原因 | 対処 |
 |------|------|------|
-| `33 skipped` | `E2E_BASE_URL` 未設定 | `E2E_BASE_URL=http://localhost:8080` を付けて実行 |
+| `34 skipped` | `E2E_BASE_URL` 未設定 | `E2E_BASE_URL=http://localhost:8080` を付けて実行 |
 | `E2E target not reachable` | `docker compose up` していない | `docker compose -f /tmp/eccube-verify-4.2/docker-compose.verify.yml ps` で確認 |
 | `E2E target not reachable` on `8080` | host `8080` が code-server 等に占拠 | `ECCUBE_PORT=8085` で起動し `E2E_BASE_URL=http://localhost:8085` で実行（例: `ECCUBE_PORT=8085 docker compose -f docker-compose.verify.yml up -d && E2E_BASE_URL=http://localhost:8085 npx playwright test`） |
 | `500` on `/mcp` | `cache:clear` 未実行 / `trusted_proxies` 未設定 | `bin/console cache:clear --no-warmup && cache:warmup` |
@@ -112,7 +112,7 @@ e2e は Docker 上でのみ実行する explicit な `npm run test:e2e` に分�
 
 ## 成果物
 
-- `e2e/mcp.spec.ts` — 33 tests, 8タスク分 10シナリオ
+- `e2e/mcp.spec.ts` — 34 tests, 8タスク分 10シナリオ
 - `playwright.config.ts` — `E2E_BASE_URL` 対応, `workers:1, fullyParallel:false`
 - `package.json` — `playwright` devDependency + `test:e2e` スクリプト
 - `e2e/README.md` — 本ファイル
@@ -124,5 +124,5 @@ e2e は Docker 上でのみ実行する explicit な `npm run test:e2e` に分�
 ```bash
 ECCUBE_PORT=8085 PLUGIN_DIR="$(pwd)" docker compose -f Tests/Docker/docker-compose.verify.yml up -d --build
 E2E_BASE_URL=http://localhost:8085 npx playwright test --config=playwright.config.ts --reporter=list
-# → 33 passed
+# → 34 passed
 ```

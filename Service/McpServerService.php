@@ -83,10 +83,14 @@ class McpServerService
 
             $method = $request['method'] ?? '';
             $id = $request['id'] ?? null;
+            $params = is_array($request['params'] ?? null) ? $request['params'] : [];
+            $requestedVersion = isset($params['protocolVersion']) && is_string($params['protocolVersion'])
+                ? $params['protocolVersion']
+                : null;
 
             try {
                 match ($method) {
-                    'initialize' => $this->handleInitialize($id),
+                    'initialize' => $this->handleInitialize($id, $requestedVersion),
                     'tools/list' => $this->handleToolsList($id),
                     'tools/call' => $this->handleToolsCall($request, $id),
                     'notifications/initialized' => null,
@@ -104,11 +108,12 @@ class McpServerService
      * クライアントとのプロトコルバージョンとサーバー能力を返す。
      * MCP 仕様では最初にこのハンドシェイクが要求される。
      *
-     * @param mixed $id JSON-RPC リクエスト ID
+     * @param mixed       $id               JSON-RPC リクエスト ID
+     * @param string|null $requestedVersion クライアント要求の protocolVersion
      */
-    private function handleInitialize(mixed $id): void
+    private function handleInitialize(mixed $id, ?string $requestedVersion = null): void
     {
-        $response = $this->mcpHttpService->handleInitialize($id);
+        $response = $this->mcpHttpService->handleInitialize($id, $requestedVersion);
         $this->writeResponse($response);
     }
 
