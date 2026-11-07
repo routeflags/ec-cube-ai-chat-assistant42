@@ -116,6 +116,7 @@ class McpHttpServiceTest extends TestCase
             $this->assertFalse($tool['annotations']['destructiveHint'], $tool['name']);
             $this->assertFalse($tool['annotations']['openWorldHint'], $tool['name']);
             $this->assertArrayHasKey('type', $tool['inputSchema']);
+            $this->assertSame([['type' => 'noauth']], $tool['_meta']['securitySchemes'], $tool['name']);
         }
     }
 

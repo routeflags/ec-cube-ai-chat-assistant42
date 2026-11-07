@@ -140,18 +140,27 @@ class McpHttpService
      * 以前は両者に同じマッピングを別々に書いていたため、キー追加時に
      * 片方だけが古くなるリスクがあった。ツールの公開表現はここを正本とする。
      *
-     * @return array<int, array{name: string, title: string, description: string, inputSchema: array, annotations: array}>
+     * @return array<int, array{name: string, title: string, description: string, inputSchema: array, annotations: array, _meta?: array}>
      */
     public function buildToolCatalog(): array
     {
         return array_map(
-            fn (array $tool): array => [
-                'name' => $tool['name'],
-                'title' => $tool['title'] ?? $tool['name'],
-                'description' => $tool['description'],
-                'inputSchema' => $tool['input_schema'],
-                'annotations' => $tool['annotations'] ?? [],
-            ],
+            static function (array $tool): array {
+                $mapped = [
+                    'name' => $tool['name'],
+                    'title' => $tool['title'] ?? $tool['name'],
+                    'description' => $tool['description'],
+                    'inputSchema' => $tool['input_schema'],
+                    'annotations' => $tool['annotations'] ?? [],
+                ];
+
+                // ツール単位の認可宣言。ChatGPT / Claude はここを見て接続（OAuth）を促す。
+                if (isset($tool['security_schemes']) && $tool['security_schemes'] !== []) {
+                    $mapped['_meta'] = ['securitySchemes' => $tool['security_schemes']];
+                }
+
+                return $mapped;
+            },
             $this->productRepository->getToolDefinitions()
         );
     }

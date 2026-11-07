@@ -213,11 +213,13 @@ test.describe('T-03 POST /mcp tools/list', () => {
       name: string;
       title?: string;
       annotations?: Record<string, unknown>;
+      _meta?: { securitySchemes?: Array<{ type: string }> };
     }>) {
       expect(tool.title, `${tool.name}: title`).toBeTruthy();
       expect(tool.annotations?.readOnlyHint, `${tool.name}: readOnlyHint`).toBe(true);
       expect(tool.annotations?.destructiveHint, `${tool.name}: destructiveHint`).toBe(false);
       expect(tool.annotations?.openWorldHint, `${tool.name}: openWorldHint`).toBe(false);
+      expect(tool._meta?.securitySchemes?.[0]?.type, `${tool.name}: securitySchemes`).toBe('noauth');
     }
 
     // private cache for tools/list? Actually controller sets no-store for POST /mcp

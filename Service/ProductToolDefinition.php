@@ -38,7 +38,17 @@ final class ProductToolDefinition
     ];
 
     /**
-     * @var array<int, array{type: string, name: string, title: string, description: string, annotations: array{readOnlyHint: bool, destructiveHint: bool, openWorldHint: bool}, input_schema: array}>
+     * ツールごとの認可要件（OpenAI は `_meta.securitySchemes` を読む）。
+     *
+     * 現在の 7 ツールは店頭の商品情報と同じ公開データなので、無認証で呼べる。
+     * 注文系（会員固有）を追加する際は `['type' => 'oauth2', 'scopes' => [...]]` を宣言する。
+     * サーバー全体でまとめて指定せずツール単位で宣言するのは、後から個別に
+     * 厳しくするため（OpenAI の推奨）。
+     */
+    private const PUBLIC_SECURITY = [['type' => 'noauth']];
+
+    /**
+     * @var array<int, array{type: string, name: string, title: string, description: string, annotations: array{readOnlyHint: bool, destructiveHint: bool, openWorldHint: bool}, security_schemes: array, input_schema: array}>
      */
     private const DEFINITIONS = [
         [
@@ -49,6 +59,7 @@ final class ProductToolDefinition
                 . '価格は税抜価格です（EC-CUBE の price02 は税抜保存）。'
                 . '各商品の url は、ショップの商品詳細ページの絶対 URL です。',
             'annotations' => self::READ_ONLY_ANNOTATIONS,
+            'security_schemes' => self::PUBLIC_SECURITY,
             'input_schema' => [
                 'type' => 'object',
                 'properties' => [
@@ -67,6 +78,7 @@ final class ProductToolDefinition
                 . '価格は税抜価格です（EC-CUBE の price02 は税抜保存）。'
                 . 'url は、ショップの商品詳細ページの絶対 URL です。',
             'annotations' => self::READ_ONLY_ANNOTATIONS,
+            'security_schemes' => self::PUBLIC_SECURITY,
             'input_schema' => [
                 'type' => 'object',
                 'properties' => [
@@ -82,6 +94,7 @@ final class ProductToolDefinition
             'description' => '商品 ID に対する規格（product_class）ごとの在庫数を返します。'
                 . '価格は税抜価格です。',
             'annotations' => self::READ_ONLY_ANNOTATIONS,
+            'security_schemes' => self::PUBLIC_SECURITY,
             'input_schema' => [
                 'type' => 'object',
                 'properties' => [
@@ -96,6 +109,7 @@ final class ProductToolDefinition
             'title' => 'カテゴリ一覧を取得する',
             'description' => 'カテゴリ階層を返します。parent_id を指定すると、その子カテゴリのみを返します。',
             'annotations' => self::READ_ONLY_ANNOTATIONS,
+            'security_schemes' => self::PUBLIC_SECURITY,
             'input_schema' => [
                 'type' => 'object',
                 'properties' => [
@@ -110,6 +124,7 @@ final class ProductToolDefinition
             'description' => '指定カテゴリに属する商品一覧を返します。'
                 . '価格は税抜価格です。各商品の url は、ショップの商品詳細ページの絶対 URL です。',
             'annotations' => self::READ_ONLY_ANNOTATIONS,
+            'security_schemes' => self::PUBLIC_SECURITY,
             'input_schema' => [
                 'type' => 'object',
                 'properties' => [
@@ -126,6 +141,7 @@ final class ProductToolDefinition
             'title' => 'タグ一覧を取得する',
             'description' => '登録されている全タグを返します。',
             'annotations' => self::READ_ONLY_ANNOTATIONS,
+            'security_schemes' => self::PUBLIC_SECURITY,
             'input_schema' => ['type' => 'object', 'properties' => []],
         ],
         [
@@ -135,6 +151,7 @@ final class ProductToolDefinition
             'description' => '指定タグに紐づく商品一覧を返します。'
                 . '価格は税抜価格です。各商品の url は、ショップの商品詳細ページの絶対 URL です。',
             'annotations' => self::READ_ONLY_ANNOTATIONS,
+            'security_schemes' => self::PUBLIC_SECURITY,
             'input_schema' => [
                 'type' => 'object',
                 'properties' => [
@@ -152,7 +169,7 @@ final class ProductToolDefinition
     }
 
     /**
-     * @return array<int, array{type: string, name: string, title: string, description: string, annotations: array{readOnlyHint: bool, destructiveHint: bool, openWorldHint: bool}, input_schema: array}>
+     * @return array<int, array{type: string, name: string, title: string, description: string, annotations: array{readOnlyHint: bool, destructiveHint: bool, openWorldHint: bool}, security_schemes: array, input_schema: array}>
      */
     public static function all(): array
     {
