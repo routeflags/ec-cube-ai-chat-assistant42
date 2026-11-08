@@ -27,7 +27,7 @@ use Plugin\AiChatAssistant42\Repository\McpOAuthRepository;
  * - redirect_uri と resource は「完全一致」で検証する
  * - 平文のトークンは返却時のみ。DB にはハッシュだけを置く
  */
-final class McpOAuthService
+class McpOAuthService
 {
     public const CODE_TTL_SECONDS = 60;
     public const ACCESS_TTL_SECONDS = 3600;

@@ -134,7 +134,7 @@ class ContainerSmokeTest extends TestCase
     public function testAllControllersAreCovered(): void
     {
         $cases = $this->provideAllControllers();
-        $expectedCount = 11;
+        $expectedCount = 12;
         self::assertCount($expectedCount, $cases, "Controller 数が {$expectedCount} と異なります — 新規 Controller 追加時に dataProvider を更新し、漏れなくテストしてください");
     }
 

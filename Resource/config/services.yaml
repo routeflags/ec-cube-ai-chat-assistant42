@@ -39,6 +39,16 @@ services:
         arguments:
             - '@Plugin\AiChatAssistant42\Repository\ConfigRepository'
 
+    Plugin\AiChatAssistant42\Service\McpOAuthService:
+        arguments:
+            - '@Plugin\AiChatAssistant42\Repository\McpOAuthRepository'
+
+    Plugin\AiChatAssistant42\Controller\McpOAuthController:
+        public: true
+        tags: ['controller.service_arguments']
+        arguments:
+            - '@Plugin\AiChatAssistant42\Service\McpOAuthService'
+
     Plugin\AiChatAssistant42\Controller\McpHttpController:
         public: true
         tags: ['controller.service_arguments']

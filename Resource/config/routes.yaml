@@ -199,3 +199,17 @@ mcp_http:
     methods: [GET, POST, OPTIONS]
     defaults:
         _controller: Plugin\AiChatAssistant42\Controller\McpHttpController::handle
+
+# MCP OAuth（トークンエンドポイント）。認可画面は会員ログイン前提のため別途。
+# パスは EC-CUBE 本体や他プラグインとの衝突を避けてプラグイン名前空間に置く。
+mcp_oauth_token:
+    path: /ai-chat-assistant/oauth/token
+    methods: [POST]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\McpOAuthController::token
+
+mcp_oauth_revoke:
+    path: /ai-chat-assistant/oauth/revoke
+    methods: [POST]
+    defaults:
+        _controller: Plugin\AiChatAssistant42\Controller\McpOAuthController::revoke

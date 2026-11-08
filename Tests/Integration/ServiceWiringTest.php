@@ -45,6 +45,7 @@ class ServiceWiringTest extends TestCase
             'Plugin\AiChatAssistant42\Controller\Api\ChatApiController',
             'Plugin\AiChatAssistant42\Controller\Api\ModelApiController',
             'Plugin\AiChatAssistant42\Controller\McpHttpController',
+            'Plugin\AiChatAssistant42\Controller\McpOAuthController',
         ];
 
         sort($expected);
